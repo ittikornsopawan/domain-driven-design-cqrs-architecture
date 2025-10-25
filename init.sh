@@ -79,10 +79,12 @@ dotnet add src/Infrastructure/Infrastructure.csproj reference \
     src/Shared/Shared.csproj
 
 dotnet add test/Application.Test/Application.Test.csproj reference \
-    src/Application/Application.csproj
+    src/Application/Application.csproj \
+    src/Shared/Shared.csproj
 
 dotnet add test/Domain.Test/Domain.Test.csproj reference \
-    src/Domain/Domain.csproj
+    src/Domain/Domain.csproj \
+    src/Shared/Shared.csproj
 
 set -e
 
