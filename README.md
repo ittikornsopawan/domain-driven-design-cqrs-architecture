@@ -171,39 +171,39 @@ flowchart LR
 📦 {SOLUTION NAME}.sln
 ├── 📂 src
 │   ├── 📂 Domain
-│   │   ├── Entities/
-│   │   ├── Events/
-│   │   ├── ValueObjects/
-│   │   └── DependencyInjection.cs
+│   │   ├── Entities/                  # 💡 Contains core business entities (e.g., User, Order, Product)
+│   │   ├── Events/                    # 💡 Contains domain events triggered within the system (e.g., OrderCreatedEvent)
+│   │   ├── ValueObjects/              # 💡 Stores immutable objects representing domain concepts (e.g., Money, Email, Address)
+│   │   └── DependencyInjection.cs     # 💡 Registers domain-level services or event handlers
 │   │
 │   ├── 📂 Application
-│   │   ├── Features/
-│   │   │   ├── Commands/
-│   │   │   ├── Queries/
-│   │   │   ├── Validators/
-│   │   │   └── Mapping/
-│   │   ├── DTOs/
-│   │   ├── Behaviors/
-│   │   └── DependencyInjection.cs
+│   │   ├── {Features}/                # 💡 Organized by feature (e.g., Users, Orders) — following Vertical Slice Architecture
+│   │   │   ├── Commands/              # 💡 Contains CQRS Commands that modify system state (e.g., CreateUserCommand)
+│   │   │   ├── Queries/               # 💡 Contains CQRS Queries that read data (e.g., GetUserListQuery)
+│   │   │   ├── Validators/            # 💡 Contains FluentValidation classes for Commands/Queries
+│   │   │   └── Mapping/               # 💡 AutoMapper profiles for mapping between DTOs and Entities
+│   │   ├── DTOs/                      # 💡 Data Transfer Objects used between layers
+│   │   ├── Behaviors/                 # 💡 MediatR pipeline behaviors (e.g., Logging, Validation, Performance)
+│   │   └── DependencyInjection.cs     # 💡 Registers application-level dependencies (e.g., MediatR, AutoMapper, Validators)
 │   │
 │   ├── 📂 Infrastructure
-│   │   ├── Persistence/
-│   │   ├── Repositories/
-│   │   └── DependencyInjection.cs
+│   │   ├── Persistence/               # 💡 Contains EF Core DbContext, Migrations, and entity configurations
+│   │   ├── Repositories/              # 💡 Repository implementations that interact with the database
+│   │   └── DependencyInjection.cs     # 💡 Registers Infrastructure dependencies (DbContext, Repositories, External Services)
 │   │
 │   ├── 📂 Presentation
-│   │   ├── Controllers/
-│   │   ├── Requests/
-│   │   ├── Models/
-│   │   └── appsettings.json
+│   │   ├── Controllers/               # 💡 API controllers that handle HTTP requests and call MediatR handlers
+│   │   ├── Requests/                  # 💡 Models for incoming HTTP requests (e.g., CreateUserRequest)
+│   │   ├── Models/                    # 💡 Response or View Models returned to clients
+│   │   └── appsettings.json           # 💡 Configuration file (connection strings, logging, JWT settings, etc.)
 │   │
 │   └── 📂 Shared
-│       ├── Common/
-│       └── Extensions/
+│       ├── Common/                    # 💡 Common utilities or base classes shared across layers
+│       └── Extensions/                # 💡 Extension methods for .NET or custom application logic
 │
 └── 📂 tests
-    ├── Domain.Tests/
-    └── Application.Tests/
+    ├── Domain.Tests/                  # 💡 Unit tests for Domain layer (Entities, ValueObjects, Domain Events)
+    └── Application.Tests/             # 💡 Unit tests for Application layer (Command/Query Handlers, Validation)
 ```
 
 ## 🧩 Design Principles
