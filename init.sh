@@ -9,6 +9,32 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
+set -e
+
+# ------------------------------
+# Pre-check: OS + .NET SDK
+# ------------------------------
+
+OS_TYPE="unknown"
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    OS_TYPE="linux"
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    OS_TYPE="macos"
+elif [[ "$OSTYPE" == "msys"* ]] || [[ "$OSTYPE" == "cygwin"* ]]; then
+    OS_TYPE="windows"
+fi
+echo "🔍 Detected OS: $OS_TYPE"
+
+if ! command -v dotnet &> /dev/null; then
+    echo "⚠️  .NET SDK not found! Please install .NET SDK first."
+    exit 1
+else
+    DOTNET_VERSION=$(dotnet --version)
+    echo "✅ .NET SDK detected: $DOTNET_VERSION"
+fi
+
+echo "✅ Pre-check passed! Proceeding with solution initialization..."
+
 SOLUTION_NAME=$1
 
 # Create folders
@@ -58,58 +84,65 @@ dotnet add test/Application.Test/Application.Test.csproj reference \
 dotnet add test/Domain.Test/Domain.Test.csproj reference \
     src/Domain/Domain.csproj
 
+set -e
 
+echo "🔍 Checking .NET SDK version..."
+DOTNET_VERSION=$(dotnet --version)
+echo "✅ Detected .NET SDK version: $DOTNET_VERSION"
 
 # NuGet packages per project
 PACKAGES=(
-  "src/Presentation:AutoMapper:15.0.1"
-  "src/Presentation:AutoMapper.Extensions.Microsoft.DependencyInjection:12.0.1"
-  "src/Presentation:FluentValidation:12.0.0"
-  "src/Presentation:FluentValidation.DependencyInjectionExtensions:12.0.0"
-  "src/Presentation:MediatR:13.0.0"
-  "src/Presentation:Microsoft.AspNetCore.OpenApi:9.0.9"
-  "src/Presentation:Microsoft.EntityFrameworkCore:9.0.9"
-  "src/Presentation:Microsoft.EntityFrameworkCore.Design:9.0.9"
-  "src/Presentation:Microsoft.EntityFrameworkCore.Relational:9.0.9"
-  "src/Presentation:Npgsql.EntityFrameworkCore.PostgreSQL:9.0.4"
-  "src/Presentation:Serilog.AspNetCore:9.0.0"
-  "src/Presentation:Serilog.Settings.Configuration:9.0.0"
-  "src/Presentation:Swashbuckle.AspNetCore:9.0.4"
+  "src/Presentation:AutoMapper"
+  "src/Presentation:AutoMapper.Extensions.Microsoft.DependencyInjection"
+  "src/Presentation:FluentValidation"
+  "src/Presentation:FluentValidation.DependencyInjectionExtensions"
+  "src/Presentation:MediatR"
+  "src/Presentation:Microsoft.AspNetCore.OpenApi"
+  "src/Presentation:Microsoft.EntityFrameworkCore"
+  "src/Presentation:Microsoft.EntityFrameworkCore.Design"
+  "src/Presentation:Microsoft.EntityFrameworkCore.Relational"
+  "src/Presentation:Npgsql.EntityFrameworkCore.PostgreSQL"
+  "src/Presentation:Serilog.AspNetCore"
+  "src/Presentation:Serilog.Settings.Configuration"
+  "src/Presentation:Swashbuckle.AspNetCore"
 
-  "src/Application:AutoMapper:15.0.1"
-  "src/Application:AutoMapper.Extensions.Microsoft.DependencyInjection:12.0.1"
-  "src/Application:FluentValidation:12.0.0"
-  "src/Application:FluentValidation.DependencyInjectionExtensions:12.0.0"
-  "src/Application:MediatR:13.0.0"
+  "src/Application:AutoMapper"
+  "src/Application:AutoMapper.Extensions.Microsoft.DependencyInjection"
+  "src/Application:FluentValidation"
+  "src/Application:FluentValidation.DependencyInjectionExtensions"
+  "src/Application:MediatR"
 
-  "src/Domain:MediatR:13.0.0"
-  "src/Domain:Microsoft.Extensions.DependencyInjection:9.0.9"
+  "src/Domain:MediatR"
+  "src/Domain:Microsoft.Extensions.DependencyInjection"
 
-  "src/Infrastructure:AutoMapper:15.0.1"
-  "src/Infrastructure:AutoMapper.Extensions.Microsoft.DependencyInjection:12.0.1"
-  "src/Infrastructure:MediatR:13.0.0"
-  "src/Infrastructure:Microsoft.EntityFrameworkCore:9.0.9"
-  "src/Infrastructure:Microsoft.EntityFrameworkCore.Design:9.0.9"
-  "src/Infrastructure:Microsoft.EntityFrameworkCore.Relational:9.0.9"
-  "src/Infrastructure:Microsoft.Extensions.DependencyInjection:9.0.9"
-  "src/Infrastructure:Npgsql.EntityFrameworkCore.PostgreSQL:9.0.4"
+  "src/Infrastructure:AutoMapper"
+  "src/Infrastructure:AutoMapper.Extensions.Microsoft.DependencyInjection"
+  "src/Infrastructure:MediatR"
+  "src/Infrastructure:Microsoft.EntityFrameworkCore"
+  "src/Infrastructure:Microsoft.EntityFrameworkCore.Design"
+  "src/Infrastructure:Microsoft.EntityFrameworkCore.Relational"
+  "src/Infrastructure:Microsoft.Extensions.DependencyInjection"
+  "src/Infrastructure:Npgsql.EntityFrameworkCore.PostgreSQL"
 
-  "src/Migrator:Microsoft.Extensions.Configuration:9.0.9"
-  "src/Migrator:Microsoft.Extensions.Configuration.Binder:9.0.9"
-  "src/Migrator:Microsoft.Extensions.Configuration.Json:9.0.9"
-  "src/Migrator:Microsoft.Extensions.DependencyInjection:9.0.9"
-  "src/Migrator:Microsoft.Extensions.Logging:9.0.9"
-  "src/Migrator:Npgsql:9.0.3"
+  "src/Migrator:Microsoft.Extensions.Configuration"
+  "src/Migrator:Microsoft.Extensions.Configuration.Binder"
+  "src/Migrator:Microsoft.Extensions.Configuration.Json"
+  "src/Migrator:Microsoft.Extensions.DependencyInjection"
+  "src/Migrator:Microsoft.Extensions.Logging"
+  "src/Migrator:Npgsql"
 )
 
-echo "INSTALL PACKAGE"
-for p in "${PACKAGES[@]}"; do
-  proj="${p%%:*}"
-  pkg="${p#*:}"
-  name="${pkg%%:*}"
-  version="${pkg##*:}"
-  dotnet add "$proj/${proj##*/}.csproj" package "$name" --version "$version"
+echo "📦 Installing latest NuGet packages..."
+
+for entry in "${PACKAGES[@]}"; do
+    IFS=":" read -r proj pkg <<< "$entry"
+    echo "🔄 Installing latest version of $pkg in $proj..."
+    dotnet add "$proj" package "$pkg" --version "*" || {
+        echo "⚠️ Failed to install $pkg in $proj — skipping..."
+    }
 done
+
+echo "✅ All packages installed with latest versions!"
 
 # Cleanup default files
 find . -type f -name "Class1.cs" -delete
@@ -127,6 +160,7 @@ mkdir -p src/Presentation/Logs
 mkdir -p src/Presentation/Models
 mkdir -p src/Presentation/Requests
 mkdir -p src/Presentation/Resources
+mkdir -p src/Presentation/Controllers
 
 PRES_SUBFOLDERS=(
   "Common"
@@ -137,12 +171,13 @@ PRES_SUBFOLDERS=(
   "Models"
   "Requests"
   "Resources"
+  "Controllers"
 )
 
 for sub in "${PRES_SUBFOLDERS[@]}"; do
   folder="src/Presentation/$sub"
   mkdir -p "$folder"
-  touch "$folder/.gitkeep"
+#   touch "$folder/.gitkeep"
 done
 
 ENV_FILES=(
@@ -160,13 +195,42 @@ done
 for file in "${ENV_FILES[@]}"; do
   cat > "src/Presentation/$file" <<EOL
 {
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft.AspNetCore": "Warning"
-    }
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=product_db;Username=postgres;Password=password1234"
   },
-  "AllowedHosts": "*"
+  "Redis": {
+    "Host": "localhost",
+    "Port": 6379,
+    "Password": "password1234"
+  },
+  "Encryption": {
+    "Key": "d4b9c21ee8f35a16ec2d7166c5f429e4e1aef1fc2a184e6b1fb5cf1e95a2782e",
+    "IV": "9d46d95b2f37c5cc983b298bb87c6f89"
+  },
+  "DbEncryption": {
+    "Key": "f7a3c87e5bd4126e9a6a15ef91b49b0df17c9e86a1f25e3c8d4f03dcbbab12e0",
+    "IV": "7c2e91a4b5d3fa87e9c4c128a97e38cb"
+  },
+  "Serilog": {
+    "WriteTo": [
+      {
+        "Name": "File",
+        "Args": {
+          "path": "Logs/dev-log-.txt",
+          "rollingInterval": "Day",
+          "outputTemplate": "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"
+        }
+      }
+    ]
+  },
+  "Token": {
+    "ExpireBufferMinutes": 15,
+    "AccessTokenExpirationMinutes": 60,
+    "RefreshTokenExpirationDays": 30
+  },
+  "Pagination": {
+    "DefaultPageSize": 20
+  }
 }
 EOL
 done
@@ -215,11 +279,6 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
 }
 EOL
 
-# Create subfolders in Application and add .gitkeep
-
-# Create Extensions folder and FileExtension.cs
-mkdir -p src/Presentation/Common/Extensions
-
 cat <<EOL > src/Presentation/Common/Extensions/FileExtension.cs
 using System;
 using System.IO;
@@ -248,6 +307,94 @@ public static class FileExtension
 }
 EOL
 
+cat <<EOL > src/Presentation/Controllers/BaseController.cs
+using System.Net;
+using Shared.Common;
+using Shared.Configurations;
+using Shared.Extensions;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Options;
+
+namespace Presentation.Controllers;
+
+public class BaseController : ControllerBase, IActionFilter
+{
+    public readonly AppSettings _appSettings;
+    public HeaderModel? _header;
+
+    public BaseController(IOptions<AppSettings> appSettings)
+    {
+        _appSettings = appSettings.Value;
+    }
+
+    [NonAction]
+    public void OnActionExecuting(ActionExecutingContext context)
+    {
+        var accessToken = Request.Headers["Authorization"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(accessToken)) accessToken = accessToken.Substring("Bearer ".Length);
+
+        _header = new HeaderModel
+        {
+            accessToken = accessToken ?? string.Empty,
+            refreshAccessToken = Request.Headers["refresh-access-token"].FirstOrDefault() ?? string.Empty,
+            clientId = Request.Headers["client-id"].FirstOrDefault() ?? string.Empty,
+            clientSecret = Request.Headers["client-secret"].FirstOrDefault() ?? string.Empty,
+            deviceId = Request.Headers["device-id"].FirstOrDefault() ?? string.Empty,
+            userAgent = Request.Headers.UserAgent.ToString() ?? string.Empty,
+            ipAddress = Request.HttpContext.Connection.RemoteIpAddress?.ToString() ?? string.Empty
+        };
+    }
+
+    [NonAction]
+    public void OnActionExecuted(ActionExecutedContext context)
+    {
+    }
+
+    protected IActionResult ResponseHandler(HttpStatusCode statusCode = HttpStatusCode.OK)
+    {
+        return StatusCode((int)statusCode, new ResponseModel
+        {
+            status = new StatusResponseModel
+            {
+                statusCode = statusCode,
+                timestamp = DateTime.UtcNow
+            }
+        });
+    }
+
+    protected IActionResult ResponseHandler(HttpStatusCode statusCode = HttpStatusCode.OK, string? bizErrorCode = null)
+    {
+        return StatusCode((int)statusCode, new ResponseModel
+        {
+            status = new StatusResponseModel
+            {
+                statusCode = statusCode,
+                bizErrorCode = bizErrorCode,
+                bizErrorMessage = ErrorHandlerExtension.GetErrorMessage(bizErrorCode ?? string.Empty),
+                timestamp = DateTime.UtcNow
+            }
+        });
+    }
+
+    protected IActionResult ResponseHandler<T>(T result, HttpStatusCode statusCode = HttpStatusCode.OK, string? bizErrorCode = null)
+    {
+        return StatusCode((int)statusCode, new ResponseModel<T>
+        {
+            status = new StatusResponseModel
+            {
+                statusCode = statusCode,
+                bizErrorCode = bizErrorCode,
+                bizErrorMessage = ErrorHandlerExtension.GetErrorMessage(bizErrorCode ?? string.Empty),
+                timestamp = DateTime.UtcNow
+            },
+            data = result
+        });
+    }
+}
+EOL
+
+
 mkdir -p src/Application/Common
 
 PRES_SUBFOLDERS=(
@@ -257,7 +404,7 @@ PRES_SUBFOLDERS=(
 for sub in "${PRES_SUBFOLDERS[@]}"; do
   folder="src/Application/$sub"
   mkdir -p "$folder"
-  touch "$folder/.gitkeep"
+#   touch "$folder/.gitkeep"
 done
 
 # Create DependencyInjection.cs in Application
@@ -417,7 +564,7 @@ PRES_SUBFOLDERS=(
 for sub in "${PRES_SUBFOLDERS[@]}"; do
   folder="src/Domain/$sub"
   mkdir -p "$folder"
-  touch "$folder/.gitkeep"
+#   touch "$folder/.gitkeep"
 done
 
 # Create DependencyInjection.cs in Domain
@@ -570,7 +717,7 @@ PRES_SUBFOLDERS=(
 for sub in "${PRES_SUBFOLDERS[@]}"; do
   folder="src/Infrastructure/$sub"
   mkdir -p "$folder"
-  touch "$folder/.gitkeep"
+#   touch "$folder/.gitkeep"
 done
 
 cat <<EOL > src/Infrastructure/Common/BaseRepository.cs
@@ -669,7 +816,7 @@ PRES_SUBFOLDERS=(
 for sub in "${PRES_SUBFOLDERS[@]}"; do
   folder="src/Migrator/$sub"
   mkdir -p "$folder"
-  touch "$folder/.gitkeep"
+#   touch "$folder/.gitkeep"
 done
 
 ENV_FILES=(
@@ -687,13 +834,42 @@ done
 for file in "${ENV_FILES[@]}"; do
   cat > "src/Migrator/$file" <<EOL
 {
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft.AspNetCore": "Warning"
-    }
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=product_db;Username=postgres;Password=password1234"
   },
-  "AllowedHosts": "*"
+  "Redis": {
+    "Host": "localhost",
+    "Port": 6379,
+    "Password": "password1234"
+  },
+  "Encryption": {
+    "Key": "d4b9c21ee8f35a16ec2d7166c5f429e4e1aef1fc2a184e6b1fb5cf1e95a2782e",
+    "IV": "9d46d95b2f37c5cc983b298bb87c6f89"
+  },
+  "DbEncryption": {
+    "Key": "f7a3c87e5bd4126e9a6a15ef91b49b0df17c9e86a1f25e3c8d4f03dcbbab12e0",
+    "IV": "7c2e91a4b5d3fa87e9c4c128a97e38cb"
+  },
+  "Serilog": {
+    "WriteTo": [
+      {
+        "Name": "File",
+        "Args": {
+          "path": "Logs/dev-log-.txt",
+          "rollingInterval": "Day",
+          "outputTemplate": "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"
+        }
+      }
+    ]
+  },
+  "Token": {
+    "ExpireBufferMinutes": 15,
+    "AccessTokenExpirationMinutes": 60,
+    "RefreshTokenExpirationDays": 30
+  },
+  "Pagination": {
+    "DefaultPageSize": 20
+  }
 }
 EOL
 done
@@ -1088,7 +1264,7 @@ PRES_SUBFOLDERS=(
 for sub in "${PRES_SUBFOLDERS[@]}"; do
   folder="src/Shared/$sub"
   mkdir -p "$folder"
-  touch "$folder/.gitkeep"
+#   touch "$folder/.gitkeep"
 done
 
 cat <<EOL > src/Shared/Common/HeaderModel.cs
@@ -1322,12 +1498,55 @@ EOL
 
 echo "✅ Solution structure created successfully!"
 
-cd $SOLUTION_NAME || exit 1
+# ------------------------------
+# Check .NET SDK version
+# ------------------------------
+DOTNET_VERSION=$(dotnet --version)
+STABLE_VERSION_REGEX="^[0-9]+\.[0-9]+\.[0-9]+$"
 
-echo "🧹 Cleaning solution..."
-dotnet clean
+if [[ ! $DOTNET_VERSION =~ $STABLE_VERSION_REGEX ]]; then
+    echo "⚠️ Detected .NET SDK version: $DOTNET_VERSION"
+    echo "⚠️ Warning: This might not be a stable version. Consider using a stable .NET SDK."
+else
+    echo "✅ .NET SDK version $DOTNET_VERSION is stable."
+fi
 
-echo "🏗 Building solution..."
-dotnet build
+# ------------------------------
+# Define Projects
+# ------------------------------
+PROJECTS=(
+    "src/Migrator/Migrator.csproj"
+    "src/Shared/Shared.csproj"
+    "src/Infrastructure/Infrastructure.csproj"
+    "src/Domain/Domain.csproj"
+    "src/Application/Application.csproj"
+    "src/Presentation/Presentation.csproj"
+)
+
+echo "🔄 Checking NuGet packages for all projects..."
+
+for proj in "${PROJECTS[@]}"; do
+    echo "📦 Project: $proj"
+    
+    OUTDATED=$(dotnet list "$proj" package --outdated)
+
+    if [[ $OUTDATED == *"No outdated packages"* ]]; then
+        echo "✅ No updates required for $proj"
+    else
+        echo "⚠️ Found outdated packages in $proj"
+        echo "$OUTDATED"
+        
+        while read -r line; do
+            PKG=$(echo $line | awk '{print $1}')
+            
+            if [[ $PKG != ">" && $PKG != "Package" && -n $PKG ]]; then
+                echo "🔄 Upgrading $PKG in $proj..."
+                dotnet add "$proj" package "$PKG" --prerelease
+            fi
+        done <<< "$(echo "$OUTDATED" | tail -n +3)"
+    fi
+done
+
+echo "✅ All projects processed!"
 
 echo "✅ Build finished!"

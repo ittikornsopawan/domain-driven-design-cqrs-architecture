@@ -1,0 +1,48 @@
+# =========================
+# Visual Studio / .NET
+# =========================
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.ncb
+*.aps
+*.opendb
+
+# Build results
+bin/
+obj/
+out/
+*.log
+
+# Rider IDE
+.idea/
+
+# NuGet
+*.nupkg
+# Uncomment if you have packages folder (usually for older projects)
+# packages/
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+# VS Code
+.vscode/
+
+# Dotnet Tool manifest
+.dotnet-tools.json
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# Publish folders
+publish/
