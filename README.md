@@ -47,32 +47,38 @@ flowchart LR
 ## 🧠 Installed Packages / Dependencies per Layer
 
 ### 📌 Presentation
+
 - `Microsoft.AspNetCore.Mvc`
 - `FluentValidation.AspNetCore`
 - `Swashbuckle.AspNetCore` (Swagger / OpenAPI)
 
 ### 📌 Application
+
 - `MediatR`
 - `FluentValidation`
 - `AutoMapper`
 - `Ardalis.GuardClauses` (optional for validation)
 
 ### 📌 Domain
+
 - `System.ComponentModel.Annotations` (validation attributes)
 - `LanguageExt` (optional for functional programming)
 
 ### 📌 Infrastructure
+
 - `Microsoft.EntityFrameworkCore`
 - `Npgsql.EntityFrameworkCore.PostgreSQL`
 - `RestSharp` (for external APIs)
 - `Dapper` (optional lightweight SQL)
 
 ### 📌 Shared
+
 - `Microsoft.Extensions.DependencyInjection`
 - `Serilog`
 - `Newtonsoft.Json` (optional for serialization)
 
 ### 📌 Tests
+
 - `xUnit`
 - `Moq`
 - `FluentAssertions`
@@ -91,8 +97,8 @@ flowchart LR
     CMD --> |Write| INF
     QRY --> |Read| INF
 
-    INF --> DB["🗄️ Database (PostgreSQL)"]:::database
-    INF --> EXT["🌐 External Services / APIs"]:::external
+    INF --> |Write / Read| DB["🗄️ Database (PostgreSQL)"]:::database
+    INF --> |Request| EXT["🌐 External Services / APIs"]:::external
     EXT --> |Callback / Webhook| API
 ```
 
