@@ -117,48 +117,53 @@ flowchart LR
 ## 🧠 Installed Packages / Dependencies per Layer
 
 ### 📌 Presentation
-- AutoMapper
-- AutoMapper.Extensions.Microsoft.DependencyInjection
-- FluentValidation
-- FluentValidation.DependencyInjectionExtensions
-- MediatR
-- Microsoft.AspNetCore.OpenApi
-- Microsoft.EntityFrameworkCore
-- Microsoft.EntityFrameworkCore.Design
-- Microsoft.EntityFrameworkCore.Relational
-- Npgsql.EntityFrameworkCore.PostgreSQL
-- Serilog.AspNetCore
-- Serilog.Settings.Configuration
-- Swashbuckle.AspNetCore
+
+- AutoMapper 15.0.1
+- AutoMapper.Extensions.Microsoft.DependencyInjection 12.0.1
+- FluentValidation 12.0.0
+- FluentValidation.DependencyInjectionExtensions 12.0.0
+- MediatR 13.0.0
+- Microsoft.AspNetCore.OpenApi 9.0.9
+- Microsoft.EntityFrameworkCore 9.0.9
+- Microsoft.EntityFrameworkCore.Design 9.0.9
+- Microsoft.EntityFrameworkCore.Relational 9.0.9
+- Npgsql.EntityFrameworkCore.PostgreSQL 9.0.4
+- Serilog.AspNetCore 9.0.0
+- Serilog.Settings.Configuration 9.0.0
+- Swashbuckle.AspNetCore 9.0.4
 
 ### 📌 Application
-- AutoMapper
-- AutoMapper.Extensions.Microsoft.DependencyInjection
-- FluentValidation
-- FluentValidation.DependencyInjectionExtensions
-- MediatR
+
+- AutoMapper 15.0.1
+- AutoMapper.Extensions.Microsoft.DependencyInjection 12.0.1
+- FluentValidation 12.0.0
+- FluentValidation.DependencyInjectionExtensions 12.0.0
+- MediatR 13.0.0
 
 ### 📌 Domain
-- MediatR
-- Microsoft.Extensions.DependencyInjection
+
+- MediatR 13.0.0
+- Microsoft.Extensions.DependencyInjection 9.0.9
 
 ### 📌 Infrastructure
-- AutoMapper
-- AutoMapper.Extensions.Microsoft.DependencyInjection
-- MediatR
-- Microsoft.EntityFrameworkCore
-- Microsoft.EntityFrameworkCore.Design
-- Microsoft.EntityFrameworkCore.Relational
-- Microsoft.Extensions.DependencyInjection
-- Npgsql.EntityFrameworkCore.PostgreSQL
+
+- AutoMapper 15.0.1
+- AutoMapper.Extensions.Microsoft.DependencyInjection 12.0.1
+- MediatR 13.0.0
+- Microsoft.EntityFrameworkCore 9.0.9
+- Microsoft.EntityFrameworkCore.Design 9.0.9
+- Microsoft.EntityFrameworkCore.Relational 9.0.9
+- Microsoft.Extensions.DependencyInjection 9.0.9
+- Npgsql.EntityFrameworkCore.PostgreSQL 9.0.4
 
 ### 📌 Migrator
-- Microsoft.Extensions.Configuration
-- Microsoft.Extensions.Configuration.Binder
-- Microsoft.Extensions.Configuration.Json
-- Microsoft.Extensions.DependencyInjection
-- Microsoft.Extensions.Logging
-- Npgsql
+
+- Microsoft.Extensions.Configuration 9.0.9
+- Microsoft.Extensions.Configuration.Binder 9.0.9
+- Microsoft.Extensions.Configuration.Json 9.0.9
+- Microsoft.Extensions.DependencyInjection 9.0.9
+- Microsoft.Extensions.Logging 9.0.9
+- Npgsql 9.0.3
 
 ## ⚙️ Project Structure
 
@@ -234,11 +239,20 @@ chmod +x init.sh
 
 ## 🧾 Credits & Author
 
-**Developed by:** System Analyst - Ittikorn Sopawan 🧠 <br/>
-**Architecture by:** Solution Architecture - Ittikorn Sopawan ⛬<br/>
-**Development by:** Softawre Developer - Ittikorn Sopawan ⛬<br/>
+**Developed by:**
+
+- 🧠 System Analyst - Ittikorn Sopawan
+
+**Architecture by:**
+
+- ⛬ Solution Architecture - Ittikorn Sopawan
+
+**Development by:**
+
+- 📑 Softawre Developer - Ittikorn Sopawan
+
 <!-- **Organization:** Socket9 <br/> -->
-**Year:** 2025<br/>
+**Year:** 2025
 
 > © 2025 Ittikorn Sopawan – All Rights Reserved  
 > Designed with ❤️ for scalable and maintainable software systems.
