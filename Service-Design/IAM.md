@@ -112,58 +112,79 @@ The service ensures consistency, security, and scalability for all identity-rela
 
 ```mermaid
 flowchart TD
-    subgraph Client
-        U[User / Application / Service]
+    %% ==========================
+    %% Clients
+    %% ==========================
+    subgraph Client["Client Layer"]
+        direction TB
+        Web["Web App"]
+        Mobile["Mobile App"]
+        Other["Integration"]
     end
 
-    subgraph API[".NET 9 API / Business Logic"]
-        B[Handle Auth & Identity Requests]
+    %% ==========================
+    %% API / Core Services
+    %% ==========================
+    subgraph Core["Core Application Layer (.NET 9 Microservices)"]
+        direction TB
+        AuthAPI["Auth Service<br/>(Handle Login, Tokens, MFA)"]
+        UserAPI["User Service<br/>(User, Role, Permission Management)"]
+        PolicyAPI["Policy Service<br/>(ABAC / RBAC Evaluation)"]
     end
 
-    subgraph AuthDB["PostgreSQL"]
-        DB[(Users, Roles, Permissions, Attributes)]
+    %% ==========================
+    %% Supporting Components
+    %% ==========================
+    subgraph Components["Supporting Components"]
+        direction TB
+        TokenService["Token Service<br/>(JWT RS256 Issue / Verify / Refresh)"]
+        Cache["Cache Service<br/>(Session / Token Cache)"]
+        SecretVault["Secret Vault<br/>(Manage Keys / Secrets)"]
+        Queue["Event Queue<br/>(Audit / Notification Events)"]
+        FileStorage["File Storage<br/>(Store Logs / Attachments)"]
     end
 
-    subgraph Cache["Redis"]
-        C[Session & Token Cache]
+    %% ==========================
+    %% Data Layer
+    %% ==========================
+    subgraph DataLayer["Data Layer"]
+        direction TB
+        LogDB["Audit Log DB<br/>(Login History, Activity Logs)"]
+        AuthDB["Auth Database<br/>(Users, Roles, Permissions, Sessions)"]
     end
 
-    subgraph Token["JWT_RS256"]
-        T[Issue / Verify / Refresh Tokens]
+    %% ==========================
+    %% DevOps Layer
+    %% ==========================
+    subgraph Platform["Deployment & Operations Layer"]
+        direction TB
+        Container["Container Orchestration<br/>(Docker + Kubernetes)"]
+        CICD["CI/CD Pipeline<br/>(GitHub Actions / GitLab CI)"]
+        Monitor["Monitoring & Metrics<br/>(CloudWatch / Prometheus / Grafana)"]
     end
 
-    subgraph ABAC["ABAC Engine"]
-        A[Evaluate Policies & Attributes]
-    end
+    %% ==========================
+    %% Flows
+    %% ==========================
+    Client -->|"Login / API Request"| AuthAPI
+    AuthAPI -->|"Validate User / Token"| UserAPI
+    AuthAPI -->|"Generate / Verify Token"| TokenService
+    AuthAPI -->|"Read Cache"| Cache
+    AuthAPI -->|"Write Logs / Events"| Queue
+    AuthAPI -->|"Read Secrets"| SecretVault
+    AuthAPI -->|"Store Session / Audit"| AuthDB
 
-    subgraph Secret["KMS / Vault"]
-        S[Store Secrets & Keys]
-    end
+    UserAPI -->|"Sync Policy / Role"| PolicyAPI
+    PolicyAPI -->|"Evaluate Access Rules"| AuthDB
+    PolicyAPI -->|"Cache Policy Rules"| Cache
 
-    subgraph Queue["Message Queue"]
-        M[Async Events: Audit, Notifications]
-    end
+    Queue -->|"Persist Logs"| LogDB
+    Queue -->|"Send Notifications"| FileStorage
 
-    subgraph Container["Docker + Kubernetes"]
-        K[Microservices Deployment]
-    end
-
-    subgraph CICD["GitHub Actions / GitLab CI"]
-        CI[Automated Build & Deploy]
-    end
-
-    %% Flow
-    U --> B
-    B --> DB
-    B --> C
-    B --> T
-    B --> A
-    A --> DB
-    T --> C
-    B --> M
-    B --> S
-    B --> K
-    K --> CI
+    %% DevOps Integration
+    Core --> Container
+    Container --> CICD
+    CICD --> Monitor
 ```
 
 ---
