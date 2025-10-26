@@ -1,5 +1,29 @@
 # 🧩 Overview
 
+| Title            | Description                                                                                                                                                                                           |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Design By        | Ittikorn Sopawan                                                                                                                                                                                      |
+| Design At        | 20-Oct-2025                                                                                                                                                                                           |
+| Version          | 1.0.0                                                                                                                                                                                                 |
+| Service Name     | IAM Service - For Ecosystem                                                                                                                                                                           |
+| Service Detailed | Provides Identity & Access Management for users, roles, permissions, authentication (login/2FA/social), authorization (RBAC/ABAC), session management, and attribute management within the ecosystem. |
+
+## 0. Change History
+
+- **20-Oct-2025:** - Ittikorn Sopawan
+  - **Version:** 1.0.0  
+  - **Change / Notes:**  
+    - Initialize full IAM Service specification  
+    - Define service overview, goals, and scope  
+    - Outline all domains: Authentication, Authorization (RBAC/ABAC), User Management, Session Management, Attribute Management, Infra/DevOps  
+    - Draft all entities, commands, queries, and handlers  
+    - Map initial API endpoints per domain  
+    - Create initial conceptual workflow diagrams (sequence / flow)  
+    - Define token lifecycle (JWT / Refresh / Revocation)  
+    - Plan initial observability: logging, metrics, alerts, audit trail  
+    - Specify infrastructure considerations (ECS, RDS, Redis, S3, KMS, Secrets Manager, ALB, API Gateway)  
+    - Include initial change history & versioning framework
+
 ## 1. Service Name
 
 > **Identity & Access Management (IAM) Service**
