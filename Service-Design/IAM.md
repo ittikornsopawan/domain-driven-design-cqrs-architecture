@@ -669,22 +669,45 @@ sequenceDiagram
     participant API as API: /api/auth/login/social
     participant CMD as Command: LoginViaSocialCommand
     participant H as Handler: LoginViaSocialCommandHandler
-    participant R1 as SocialAuthRepository
+    participant R_FB as FacebookAuthRepository
+    participant R_GO as GoogleAuthRepository
+    participant R_LINE as LineAuthRepository
     participant R2 as UserRepository
     participant R3 as AuthTokenRepository
     participant DB1 as Table: social_accounts
     participant DB2 as Table: users
     participant DB3 as Table: auth_tokens
+    participant FB_API as Facebook Graph API
+    participant GO_API as Google People API
+    participant LINE_API as Line API
 
-    U->>API: POST /api/auth/login/social (provider, token)
+    U->>API: POST /api/auth/login/social (provider, access_token)
     API->>CMD: Create LoginViaSocialCommand
     CMD->>H: Execute()
-    H->>R1: verifySocialToken(provider, token)
-    R1->>DB1: SELECT * FROM social_accounts
-    DB1-->>R1: Social identity validated
-    H->>R2: findOrCreateUserFromSocial()
-    R2->>DB2: SELECT / INSERT INTO users
-    DB2-->>R2: User data
+
+    alt Provider = Facebook
+        H->>R_FB: validateToken(access_token)
+        R_FB->>FB_API: GET /me?fields=id,name,email&access_token=token
+        FB_API-->>R_FB: {id, name, email, profile_pic}
+        R_FB->>DB1: SELECT * FROM social_accounts WHERE social_id=id
+        DB1-->>R_FB: Social account record or null
+    else Provider = Google
+        H->>R_GO: validateToken(access_token)
+        R_GO->>GO_API: GET /userinfo?access_token=token
+        GO_API-->>R_GO: {sub, name, email, picture}
+        R_GO->>DB1: SELECT * FROM social_accounts WHERE social_id=sub
+        DB1-->>R_GO: Social account record or null
+    else Provider = Line
+        H->>R_LINE: validateToken(access_token)
+        R_LINE->>LINE_API: GET /profile?access_token=token
+        LINE_API-->>R_LINE: {userId, displayName, pictureUrl}
+        R_LINE->>DB1: SELECT * FROM social_accounts WHERE social_id=userId
+        DB1-->>R_LINE: Social account record or null
+    end
+
+    H->>R2: findOrCreateUserFromSocial(profile_data)
+    R2->>DB2: SELECT / INSERT INTO users (name, email, etc)
+    DB2-->>R2: User record
     H->>R3: createAuthToken(user)
     R3->>DB3: INSERT INTO auth_tokens
     DB3-->>R3: Token created
