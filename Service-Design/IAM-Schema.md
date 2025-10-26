@@ -44,6 +44,496 @@
       - `t_user_consent_mappings`
     - > All tables include primary keys, foreign keys, indexes, and comments for columns and tables.
 
+## ER Diagram
+
+```mermaid
+erDiagram
+    %% Public Schema
+    m_parameters {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        TIMESTAMP effective_at
+        TIMESTAMP expires_at
+        VARCHAR key
+        VARCHAR category
+        VARCHAR language
+        TEXT value
+    }
+
+    t_addresses {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        TIMESTAMP effective_at
+        TIMESTAMP expires_at
+        VARCHAR type
+        BYTEA address
+        BYTEA address_additional
+        VARCHAR country_code
+        VARCHAR country_name
+        VARCHAR state
+        VARCHAR city
+        VARCHAR district
+        VARCHAR sub_district
+        VARCHAR postal_code
+        GEOGRAPHY geofence_area
+        GEOGRAPHY geofence_center
+        INT geofence_radius_meters
+    }
+
+    t_contacts {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        VARCHAR channel
+        VARCHAR contact
+        VARCHAR contact_name
+        JSONB available
+        TEXT remark
+    }
+
+    t_files {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        TIMESTAMP effective_at
+        TIMESTAMP expires_at
+        VARCHAR usage_type
+        VARCHAR file_path
+        VARCHAR file_name
+        BIGINT file_size
+        VARCHAR file_size_unit
+        VARCHAR file_dimension
+        VARCHAR file_extension
+        VARCHAR mime_type
+        TEXT description
+        VARCHAR storage_provider
+        VARCHAR storage_bucket
+        TEXT storage_key
+    }
+
+    t_personal_info {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        BYTEA sid
+        BYTEA prefix_name
+        BYTEA first_name
+        BYTEA middle_name
+        BYTEA last_name
+        BYTEA nick_name
+        BYTEA gender
+        BYTEA date_of_birth
+    }
+
+    t_personal_contacts {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        UUID personal_id FK
+        UUID contact_id FK
+    }
+
+    t_personal_addresses {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        UUID personal_id FK
+        UUID address_id FK
+    }
+
+    %% Authentication Schema
+    t_users {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        VARCHAR code
+        VARCHAR username
+    }
+
+    t_user_authentications {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        TIMESTAMP effective_at
+        TIMESTAMP expires_at
+        UUID user_id FK
+        BOOLEAN is_temporary
+        UUID algorithm_id FK
+        JSONB algorithm_keys
+        BYTEA password_hash
+    }
+
+    t_user_referrer_mappings {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID referrer_id FK
+        UUID user_id FK
+    }
+
+    %% Authorization Schema
+    m_attributes {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        BOOLEAN is_parameter
+        BOOLEAN is_required
+        BOOLEAN is_display
+        VARCHAR category
+        VARCHAR key
+        VARCHAR data_type
+        VARCHAR title
+        TEXT description
+    }
+
+    t_policies {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        VARCHAR name
+        TEXT description
+        VARCHAR code
+        VARCHAR effect
+        VARCHAR action
+        VARCHAR resource
+        TEXT condition_logic
+    }
+
+    t_policy_attribute_mappings {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        UUID policy_id FK
+        UUID attribute_id FK
+        VARCHAR operator
+        TEXT expected_value
+        VARCHAR logic_group
+    }
+
+    t_policy_decision_logs {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID user_id FK
+        UUID policy_id FK
+        VARCHAR resource
+        VARCHAR action
+        VARCHAR decision
+        JSONB evaluated_attributes
+        TEXT reason
+    }
+
+    t_user_attribute_mappings {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        UUID user_id FK
+        UUID attribute_id FK
+        TEXT value
+    }
+
+    m_user_groups {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        VARCHAR name
+        TEXT description
+    }
+
+    t_user_group_mappings {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        TIMESTAMP effective_at
+        TIMESTAMP expires_at
+        UUID user_group_id FK
+        UUID user_id FK
+    }
+
+    t_policy_user_group_mappings {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        UUID policy_id FK
+        UUID user_group_id FK
+        VARCHAR operator
+        TEXT expected_value
+        VARCHAR logic_group
+    }
+
+    %% Consent Schema
+    m_consent_types {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        VARCHAR name
+        VARCHAR title
+        TEXT description
+    }
+
+    m_consents {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        UUID type_id FK
+        VARCHAR name
+        VARCHAR title
+        TEXT content
+        VARCHAR version
+        BOOLEAN is_required
+        TEXT description
+    }
+
+    t_user_consent_mappings {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID consent_id FK
+        UUID type_id FK
+        VARCHAR version
+        UUID user_id FK
+        BOOLEAN result
+    }
+
+    %% Algorithm Schema
+    m_algorithms {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        TIMESTAMP effective_at
+        TIMESTAMP expires_at
+        VARCHAR name
+        BYTEA algorithm
+        JSONB key_required
+    }
+
+    %% Key Schema
+    m_key_types {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        TIMESTAMP effective_at
+        TIMESTAMP expires_at
+        VARCHAR name
+        VARCHAR title
+        TEXT description
+    }
+
+    m_keys {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        TIMESTAMP effective_at
+        TIMESTAMP expires_at
+        UUID type_id FK
+        BYTEA key
+    }
+
+    %% Relationships
+    t_users ||--o{ t_user_authentications : has
+    t_users ||--o{ t_user_referrer_mappings : has
+    t_users ||--o{ t_user_attribute_mappings : has
+    t_users ||--o{ t_user_group_mappings : has
+    t_users ||--o{ t_policy_decision_logs : created_by
+    t_users ||--o{ m_parameters : created_by
+    t_users ||--o{ t_contacts : created_by
+    t_users ||--o{ t_files : created_by
+    t_users ||--o{ t_personal_info : created_by
+    t_users ||--o{ t_personal_contacts : created_by
+    t_users ||--o{ t_personal_addresses : created_by
+    t_users ||--o{ m_user_groups : created_by
+
+    t_personal_info ||--o{ t_personal_contacts : id
+    t_personal_info ||--o{ t_personal_addresses : id
+    t_contacts ||--o{ t_personal_contacts : id
+    t_addresses ||--o{ t_personal_addresses : id
+
+    m_attributes ||--o{ t_user_attribute_mappings : id
+    m_attributes ||--o{ t_policy_attribute_mappings : id
+    t_policies ||--o{ t_policy_attribute_mappings : id
+    t_policies ||--o{ t_policy_decision_logs : id
+    m_user_groups ||--o{ t_user_group_mappings : id
+    t_user_group_mappings ||--o{ t_policy_user_group_mappings : id
+    t_policies ||--o{ t_policy_user_group_mappings : id
+
+    m_consent_types ||--o{ m_consents : id
+    m_consent_types ||--o{ t_user_consent_mappings : id
+    m_consents ||--o{ t_user_consent_mappings : id
+
+    m_key_types ||--o{ m_keys : id
+    m_algorithms ||--o{ t_user_authentications : id
+```
+
 ## Schema: Public
 
 ### Table: public.m_parameters
