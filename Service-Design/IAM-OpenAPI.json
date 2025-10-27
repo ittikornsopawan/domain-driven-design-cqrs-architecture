@@ -1,0 +1,3594 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "IAM Service API",
+    "description": "Identity & Access Management API for Ecosystem – handles Authentication, Authorization, User & Session Management.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Ittikorn Sopawan",
+      "email": "ittikorn.sopawan@gmail.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.example.com/iam",
+      "description": "Production Server"
+    },
+    {
+      "url": "https://pre-prod-api.example.com/iam",
+      "description": "Pre-Production Server"
+    },
+    {
+      "url": "https://staging-api.example.com/iam",
+      "description": "Staging Server"
+    },
+    {
+      "url": "https://uat-api.example.com/iam",
+      "description": "UAT Server"
+    },
+    {
+      "url": "https://qa-api.example.com/iam",
+      "description": "QA Server"
+    },
+    {
+      "url": "https://dev-api.example.com/iam",
+      "description": "DEV Server"
+    }
+  ],
+  "tags": [
+    { "name": "Health", "description": "Service health and readiness checks" },
+    {
+      "name": "Authentication",
+      "description": "User authentication and login operations"
+    },
+    {
+      "name": "Authorization (RBAC)",
+      "description": "User Group-based access control endpoints"
+    },
+    {
+      "name": "Authorization (ABAC)",
+      "description": "Attribute-based access control endpoints"
+    },
+    { "name": "User Management", "description": "Manage users and profiles" },
+    {
+      "name": "Session Management",
+      "description": "Manage user sessions and tokens"
+    },
+    {
+      "name": "Attribute Management",
+      "description": "Manage attributes used in ABAC"
+    },
+    {
+      "name": "Infra & DevOps",
+      "description": "Logging, auditing, and security alert operations"
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Check service health status",
+        "operationId": "checkHealth",
+        "responses": {
+          "200": { "description": "Service is healthy" }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register a new user",
+        "description": "Register a new user with personal, contact, authentication, referral, and address information.\n\n**Business Logic / Conditions:**\n- All personal and contact fields must be AES-256 encrypted.\n- `username`, `password`, and `confirmPassword` are required.\n- `password` and `confirmPassword` must match and comply with password policy.\n- Duplicate username/contact returns 409.\n- Missing/invalid fields return 400.\n- Returns user information upon successful registration; no access token is issued.",
+        "operationId": "registerUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/UserRegistrationResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate username/contact",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+              }
+            }
+          },
+          "422": {
+            "description": "Password mismatch/invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorPasswordMismatch"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register/mobile": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register a new user via mobile + OTP",
+        "description": "Register user using mobile number and OTP. No access token is issued in the response.",
+        "operationId": "registerMobile",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterMobileRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/UserRegistrationResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate mobile",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+              }
+            }
+          },
+          "422": {
+            "description": "OTP invalid or expired",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorOtpInvalid" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register/email": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register a new user via email + OTP",
+        "description": "Register user using email and OTP. No access token is issued in the response.",
+        "operationId": "registerEmail",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterEmailRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/UserRegistrationResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate email",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+              }
+            }
+          },
+          "422": {
+            "description": "OTP invalid or expired",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorOtpInvalid" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register/social": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register a new user via social OAuth",
+        "description": "Register user using social provider credentials. No access token is issued in the response.",
+        "operationId": "registerSocial",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterSocialRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/UserRegistrationResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate social account",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+              }
+            }
+          },
+          "422": {
+            "description": "OAuth token invalid or expired",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorSocialInvalid" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Authenticate user via username and password",
+        "description": "Authenticate a user using username and password credentials.\n\n**Business Logic / Conditions:**\n- All personal data fields must be AES-256 encrypted before submission.\n- The system validates the format of both `username` and `password` before proceeding.\n- `password` and `confirmPassword` must be identical and comply with the password policy: minimum 8 characters, including uppercase, lowercase, numeric, and special characters.\n- If the `username` or any `contact` already exists in the system, the API returns **409 Duplicate**.\n- If required fields are missing or the payload structure is invalid, the API returns **400 Bad Request**.\n- If password and confirm password do not match, or the format does not comply with security policy, the API returns **422 Unprocessable Entity**.",
+        "operationId": "loginUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful authentication – the user credentials are valid and access is granted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/LoginResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Missing or invalid input (e.g., missing username, password, or malformed JSON payload).",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate – The username or contact information already exists in the system.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity – Password validation failed (either mismatch or invalid format).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorPasswordMismatch"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login/mobile": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Authenticate via mobile number and OTP",
+        "description": "Authenticate a user using mobile number and OTP.\n\n**Business Logic / Conditions:**\n- All personal and contact fields must be AES-256 encrypted before submission.\n- OTP must match the value sent to the user's mobile number.\n- `reference_id` and `code_ref` must be valid and correspond to a previously generated OTP.\n- The system validates the format of `username` and all required fields.\n- If required fields are missing or payload structure is invalid, returns **400 Bad Request**.\n- If OTP verification fails or has expired, returns **422 Unprocessable Entity**.\n- If the user already exists with the same mobile contact, returns **409 Duplicate**.",
+        "operationId": "loginViaMobileOtp",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginMobileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authenticated successfully – OTP verified and user authenticated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/LoginMobileResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Missing or invalid input (e.g., missing OTP, username, or malformed payload).",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate – Mobile number already registered in the system.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity – OTP verification failed, expired, or invalid format.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorOtpInvalid" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login/email": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Authenticate via email OTP",
+        "description": "Authenticate a user using email and OTP.\n\n**Business Logic / Conditions:**\n- All personal and contact fields must be AES-256 encrypted before submission.\n- OTP must match the value sent to the user's email.\n- `reference_id` and `code_ref` must correspond to a previously generated OTP.\n- The system validates the format of `username` and required fields.\n- If required fields are missing or payload structure is invalid, returns **400 Bad Request**.\n- If OTP verification fails or is expired, returns **422 Unprocessable Entity**.\n- If the email is already associated with an existing user, returns **409 Duplicate**.",
+        "operationId": "loginViaEmailOtp",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginEmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authenticated successfully – OTP verified and user authenticated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/LoginEmailResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Missing or invalid input (e.g., missing OTP, username, or malformed payload).",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate – Email already registered in the system.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity – OTP verification failed, expired, or invalid format.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorOtpInvalid" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login/2fa": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Verify login using external 2FA mechanism",
+        "description": "Verify a one-time 2FA code generated by an authenticator app (e.g., Google Authenticator) after a successful initial login.\n\n**Business Logic / Conditions:**\n- User must have completed the first login step and be pending 2FA verification.\n- The 2FA code must match the TOTP generated for the user.\n- If the code is invalid or expired, returns 422 Unprocessable Entity.\n- Returns access token, refresh token, roles, and permissions upon successful verification.",
+        "operationId": "verifyTwoFactor",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "User ID pending 2FA verification"
+                  },
+                  "code": {
+                    "type": "string",
+                    "description": "6-digit code generated by authenticator app"
+                  }
+                },
+                "required": ["user_id", "code"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "2FA verified successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LoginResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Missing user ID or code",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity – 2FA code invalid or expired",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorOtpInvalid" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Access token invalid or session expired",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login/social": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Authenticate user via social provider OAuth",
+        "description": "Authenticate a user using social provider OAuth credentials.\n\n**Business Logic / Conditions:**\n- All personal and contact fields must be AES-256 encrypted before submission.\n- Social authentication requires valid access token and provider information.\n- `provider`, `providerName`, and `providerUserId` must match the social provider account.\n- System validates that `username` and required fields are present.\n- If required fields are missing or payload structure is invalid, returns **400 Bad Request**.\n- If the social account is already linked with another user, returns **409 Duplicate**.\n- If the access token is invalid or expired, returns **422 Unprocessable Entity**.",
+        "operationId": "loginViaSocial",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginSocialRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authenticated successfully – social login validated and user authenticated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/LoginSocialResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Missing or invalid input (e.g., missing access token or malformed payload).",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate – Social account already linked with another user.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity – Access token invalid or expired.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorSocialInvalid" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/authorize/rbac": {
+      "get": {
+        "tags": ["Authorization (RBAC)"],
+        "summary": "Check authentication and access token validity",
+        "description": "Verify if the provided access token is valid and the user is authenticated.\n\n**Business Logic / Conditions:**\n- Access token must be included in the Authorization header (Bearer).\n- Returns user information and assigned roles if the token is valid.\n- If the token is missing or invalid, returns 401 Unauthorized.",
+        "operationId": "checkAuthentication",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Access token is valid, user authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckAuthenticationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Access token is missing, expired, or invalid",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/authorize/rbac/permissions": {
+      "get": {
+        "tags": ["Authorization (RBAC)"],
+        "summary": "Check if the authenticated user has a specific permission",
+        "description": "Evaluate whether the user associated with the provided access token has the specified permission code.\n\n**Business Logic / Conditions:**\n- Access token must be included in the Authorization header (Bearer).\n- `policy_code` query parameter is required.\n- Returns `has_permission = true` if the user has the permission; otherwise false.\n- Returns 401 if the token is missing, expired, or invalid.",
+        "operationId": "checkRbacPermission",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "policy_code",
+            "in": "query",
+            "description": "The code of the permission to check",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Permission evaluation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckPermissionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Missing or invalid policy code",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Access token is missing or invalid",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user-group": {
+      "post": {
+        "tags": ["Authorization (RBAC)"],
+        "summary": "Create a new role with assigned permissions",
+        "description": "Create one or multiple user group in the system with assigned permissions.\n\n**Business Logic / Conditions:**\n- Each role must have a unique name.\n- `name` is required; `description` is optional.\n- If a role with the same name already exists, returns **409 Duplicate**.\n- If required fields are missing or payload is malformed, returns **400 Bad Request**.\n- **Requires valid access token in Authorization header (Bearer).**",
+        "operationId": "createRole",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User Group(s) created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CreateRoleResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Missing or invalid input.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate – User Group name already exists.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Access token is missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user-group/{id}": {
+      "put": {
+        "tags": ["Authorization (RBAC)"],
+        "summary": "Update an existing user group",
+        "description": "Update a user group identified by `id` along with its associated policies.\n\n**Business Logic / Conditions:**\n- `id` is required and must exist.\n- `name` must be unique within the system.\n- Policies can be assigned with operators: READ, WRITE, DELETE, ALL.\n- Requires valid access token in Authorization header (Bearer).",
+        "operationId": "updateUserGroup",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "User Group unique identifier (UUID)",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserGroupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User Group updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateUserGroupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Authorization (RBAC)"],
+        "summary": "Delete a user group",
+        "description": "Delete a user group identified by `id`. Requires valid access token.\n\n**Business Logic / Conditions:**\n- `id` must exist; otherwise, returns **404 Not Found**.",
+        "operationId": "deleteUserGroup",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "User Group unique identifier (UUID)",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User Group deleted successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of deleted user group"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user-group/{id}/assign": {
+      "post": {
+        "tags": ["Authorization (RBAC)"],
+        "summary": "Assign one or more user group to a user",
+        "description": "Assign a role (identified by `id`) to a user within a user group.\n\n**Business Logic / Conditions:**\n- `id` is the role ID and must exist.\n- `user_id` and `user_group_id` must exist in the system.\n- If the role is already assigned to the user, returns **409 Duplicate**.\n- Requires valid access token in Authorization header (Bearer).",
+        "operationId": "assignUserRole",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "User Group unique identifier (UUID)",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AssignUserRoleRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User Group assigned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignUserRoleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Missing or invalid input.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate – User Group is already assigned to the user.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Access token is missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user-group/{id}/revoke": {
+      "post": {
+        "tags": ["Authorization (RBAC)"],
+        "summary": "Revoke assigned user group from a user",
+        "description": "Revoke a User Group (identified by `id`) from a user in a user group.\n\n**Business Logic / Conditions:**\n- `id` is the role ID and must exist.\n- `user_id` and `user_group_id` must exist and have the role assigned.\n- If the assignment does not exist, returns **404 Not Found**.\n- Requires valid access token in Authorization header (Bearer).",
+        "operationId": "revokeUserRole",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "User Group Mapping unique identifier (UUID)",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RevokeUserRoleRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User Group revoked successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokeUserRoleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Missing or invalid input.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found – The role assignment does not exist.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Access token is missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/authorize/abac": {
+      "post": {
+        "tags": ["Authorization (ABAC)"],
+        "summary": "Evaluate user access using attributes and context",
+        "description": "Evaluate the authenticated user’s access based on ABAC attributes and context.\n\n**Business Logic / Conditions:**\n- Access token must be included in Authorization header (Bearer).\n- Returns user groups and the permissions the user has according to ABAC evaluation.\n- Returns 401 if the token is missing, expired, or invalid.",
+        "operationId": "evaluateAccess",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EvaluateAccessRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Access evaluated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluateAccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Missing or invalid attributes",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Access token missing or invalid",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/authorize/abac/permissions": {
+      "post": {
+        "tags": ["Authorization (ABAC)"],
+        "summary": "Check if a user has access for a specific attribute",
+        "description": "Evaluate whether the authenticated user has access based on a single ABAC attribute.\n\n**Business Logic / Conditions:**\n- Access token must be included in Authorization header (Bearer).\n- `attribute` query parameter is required.\n- Returns true if the user passes the attribute check, false otherwise.\n- Returns 401 if the access token is missing or invalid.",
+        "operationId": "checkAbacAttribute",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "attribute",
+            "in": "query",
+            "description": "The attribute to check access for",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attribute evaluation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "type": "boolean",
+                      "description": "true if access is allowed, false if denied"
+                    }
+                  },
+                  "required": ["status", "data"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Missing or invalid attribute",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Access token missing or invalid",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/policies": {
+      "post": {
+        "tags": ["Authorization (ABAC/RBAC)"],
+        "summary": "Create a new attribute-based access policy",
+        "description": "Create a new ABAC policy in the system.\n\n**Business Logic / Conditions:**\n- `code` and `name` are required and must be unique.\n- `effect` can be 'allow' or 'deny'.\n- `action`, `resource`, and `condition_logic` define the policy rules.\n- If `code` or `name` already exists, returns **409 Duplicate**.\n- If required fields are missing or payload is malformed, returns **400 Bad Request**.\n- **Requires valid access token in Authorization header (Bearer).**",
+        "operationId": "createPolicy",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePolicyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Policy created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CreatePolicyResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Missing or invalid input.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate – Policy code or name already exists.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Access token is missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/policies/{id}": {
+      "put": {
+        "tags": ["Authorization (ABAC/RBAC)"],
+        "summary": "Update existing ABAC/RBAC policy rules",
+        "description": "Update an ABAC/RBAC policy identified by `id`.\n\n**Business Logic / Conditions:**\n- `id` is required and must exist.\n- `code` and `name` must remain unique.\n- `effect` must be 'allow' or 'deny'.\n- Requires valid access token (Bearer).",
+        "operationId": "updatePolicy",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Policy unique identifier (UUID)",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePolicyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Policy updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePolicyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Authorization (ABAC/RBAC)"],
+        "summary": "Delete ABAC policy",
+        "description": "Delete an ABAC policy identified by `id`. Requires valid access token.",
+        "operationId": "deletePolicy",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Policy unique identifier (UUID)",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePolicyResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "post": {
+        "tags": ["User Management"],
+        "summary": "Create a new user record",
+        "description": "Create a new user with profile, authentication, referral, address, and contact information.",
+        "operationId": "createUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateUserRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserFullResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Invalid or missing fields",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{id}": {
+      "put": {
+        "tags": ["User Management"],
+        "summary": "Update user details",
+        "description": "Update an existing user's personal, address, and contact details.",
+        "operationId": "updateUser",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "User unique identifier (UUID)",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateUserRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserFullResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found – User not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["User Management"],
+        "summary": "Delete user record",
+        "description": "Delete an existing user by their unique ID.",
+        "operationId": "deleteUser",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "Deleted user ID"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found – User not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/profile": {
+      "get": {
+        "tags": ["User Management"],
+        "summary": "Retrieve authenticated user's profile",
+        "description": "Fetch the profile of the currently authenticated user using the access token.",
+        "operationId": "getAuthenticatedUserProfile",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "User profile retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserFullResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Access token missing or invalid",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/validate": {
+      "post": {
+        "tags": ["Session Management"],
+        "summary": "Validate user session or access token",
+        "description": "Validate the provided access token and return user roles and permissions if valid.\n\n**Business Logic / Conditions:**\n- Access token must be included in Authorization header (Bearer).\n- Returns 401 if token is missing, expired, or invalid.",
+        "operationId": "validateSession",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Session validated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionTokenResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Access token missing or invalid",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/refresh": {
+      "post": {
+        "tags": ["Session Management"],
+        "summary": "Generate a new access token using refresh token",
+        "description": "Refresh the access token using a valid refresh token.\n\n**Business Logic / Conditions:**\n- Refresh token must be provided in the request body.\n- Returns a new access token, refresh token, roles, and permissions.\n- Returns 401 if the refresh token is invalid or expired.",
+        "operationId": "refreshToken",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Refresh token to generate a new access token"
+                  }
+                },
+                "required": ["refreshToken"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token refreshed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionTokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Missing or invalid refresh token",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Refresh token invalid or expired",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/logout": {
+      "post": {
+        "tags": ["Session Management"],
+        "summary": "Logout user and invalidate active session",
+        "description": "Logout the user by invalidating the current access token and refresh token.\n\n**Business Logic / Conditions:**\n- Access token must be included in Authorization header (Bearer).\n- After logout, the access token and refresh token are no longer valid.\n- Returns 401 if the token is missing or already invalidated.",
+        "operationId": "logoutUser",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "User logged out successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "example": "User session invalidated successfully"
+                        }
+                      },
+                      "required": ["message"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Access token is missing or invalid",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/attributes": {
+      "get": {
+        "tags": ["Attribute Management"],
+        "summary": "Retrieve all user attributes",
+        "description": "Fetch all user-defined attribute definitions available in the system.\n\n**Business Logic / Conditions:**\n- Requires valid access token.\n- Returns an array of attributes.\n- Supports pagination and filtering in future versions.",
+        "operationId": "getUserAttributes",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Attributes retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AttributeResponse"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Access token is missing or invalid",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Attribute Management"],
+        "summary": "Add a new attribute definition",
+        "description": "Create one or more attribute definitions for ABAC policies or user metadata.\n\n**Business Logic / Conditions:**\n- Each attribute `key` must be unique.\n- `category`, `key`, `dataType`, and `title` are required.\n- Returns 409 if the key already exists.",
+        "operationId": "addAttribute",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/CreateAttributeRequest"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Attribute(s) created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AttributeResponse"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Missing or invalid fields",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate – Attribute key already exists",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/attributes/{id}": {
+      "put": {
+        "tags": ["Attribute Management"],
+        "summary": "Modify attribute data or values",
+        "description": "Update the metadata or configuration of an existing attribute definition.\n\n**Business Logic / Conditions:**\n- `id` is required and must exist.\n- Duplicate `key` not allowed.\n- Requires valid access token.",
+        "operationId": "updateAttribute",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Unique identifier (UUID) of the attribute to update",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAttributeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Attribute updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": { "$ref": "#/components/schemas/AttributeResponse" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Invalid payload or missing field",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found – Attribute not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Attribute Management"],
+        "summary": "Delete an existing attribute",
+        "description": "Delete an attribute by its `id`.\n\n**Business Logic / Conditions:**\n- `id` must exist.\n- Requires valid access token.\n- Returns 404 if not found.",
+        "operationId": "deleteAttribute",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Unique identifier (UUID) of the attribute",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attribute deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of deleted attribute"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found – Attribute not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/logs/auth": {
+      "post": {
+        "tags": ["Infra & DevOps"],
+        "summary": "Log authentication and security events",
+        "description": "Record authentication-related or security-related events such as login attempts, OTP verifications, password resets, and suspicious access patterns.\n\n**Business Logic / Conditions:**\n- Used internally by authentication microservice to persist audit logs.\n- Event data should include `eventType`, `userId`, and contextual metadata.\n- Returns 201 on successful log creation.",
+        "operationId": "logAuthEvent",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthLogRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Log recorded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthLogResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Invalid or missing log data",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/logs/auth/failed": {
+      "get": {
+        "tags": ["Infra & DevOps"],
+        "summary": "Retrieve list of failed login attempts",
+        "description": "Fetch a list of recent failed authentication attempts, filtered by time range, username, or IP address.\n\n**Business Logic / Conditions:**\n- Only accessible by system administrators.\n- Can be used for intrusion detection and rate-limiting analysis.\n- Requires valid admin access token (Bearer).",
+        "operationId": "getFailedLoginAttempts",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Start date/time filter (ISO 8601)",
+            "required": false,
+            "schema": { "type": "string", "format": "date-time" }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "End date/time filter (ISO 8601)",
+            "required": false,
+            "schema": { "type": "string", "format": "date-time" }
+          },
+          {
+            "name": "username",
+            "in": "query",
+            "description": "Filter by username",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "ipAddress",
+            "in": "query",
+            "description": "Filter by originating IP address",
+            "required": false,
+            "schema": { "type": "string", "format": "ipv4" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Failed login attempts retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FailedLoginListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts/security": {
+      "post": {
+        "tags": ["Infra & DevOps"],
+        "summary": "Send security-related notifications or alerts",
+        "description": "Send a security alert to the monitoring or notification system (e.g., Slack, PagerDuty, email, SMS).\n\n**Business Logic / Conditions:**\n- Triggered automatically when suspicious activity or system breach is detected.\n- Requires `severity`, `alertType`, and `description` fields.\n- Returns 201 if the alert is successfully logged or dispatched.",
+        "operationId": "sendSecurityAlert",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecurityAlertRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Security alert sent successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityAlertResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request – Invalid or missing alert information",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized – Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ResponseStatusDTO": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "HTTP status code or custom internal code"
+          },
+          "message": {
+            "type": "string",
+            "description": "General response message"
+          },
+          "bizErrorCode": {
+            "type": "string",
+            "description": "Business error code identifier"
+          },
+          "bizErrorMessage": {
+            "type": "string",
+            "description": "Detailed business error message"
+          }
+        },
+        "required": ["code", "message"]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "username": { "type": "string" }
+            },
+            "required": ["username"]
+          },
+          "authentication": {
+            "type": "object",
+            "properties": {
+              "password": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              }
+            },
+            "required": ["password"]
+          }
+        },
+        "required": ["user", "authentication"]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "code": { "type": "string" },
+              "username": { "type": "string" }
+            }
+          },
+          "personal": {
+            "type": "object",
+            "properties": {
+              "prefixName": { "type": "string" },
+              "firstName": { "type": "string" },
+              "middleName": { "type": "string" },
+              "lastName": { "type": "string" },
+              "nickName": { "type": "string" },
+              "gender": { "type": "string" },
+              "dateOfBirth": { "type": "string" }
+            }
+          },
+          "referral": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "code": { "type": "string" },
+              "username": { "type": "string" }
+            }
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "state": { "type": "string" },
+              "city": { "type": "string" },
+              "district": { "type": "string" },
+              "subDistrict": { "type": "string" },
+              "postalCode": { "type": "string" }
+            }
+          },
+          "contact": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
+                "contact": { "type": "string" }
+              }
+            }
+          },
+          "token": { "$ref": "#/components/schemas/LoginResponseToken" }
+        }
+      },
+      "ErrorBadRequest": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
+            "example": {
+              "code": 400,
+              "message": "Bad Request",
+              "bizErrorCode": "IAM_400",
+              "bizErrorMessage": "Invalid or missing required field."
+            }
+          }
+        }
+      },
+      "ErrorDuplicate": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
+            "example": {
+              "code": 409,
+              "message": "Duplicate Entry",
+              "bizErrorCode": "IAM_409",
+              "bizErrorMessage": "Username or contact already exists."
+            }
+          }
+        }
+      },
+      "ErrorPasswordMismatch": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
+            "example": {
+              "code": 422,
+              "message": "Unprocessable Entity",
+              "bizErrorCode": "IAM_422_001",
+              "bizErrorMessage": "Password and confirm password do not match."
+            }
+          }
+        }
+      },
+      "ErrorPasswordFormat": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
+            "example": {
+              "code": 422,
+              "message": "Unprocessable Entity",
+              "bizErrorCode": "IAM_422_002",
+              "bizErrorMessage": "Password format does not meet security policy."
+            }
+          }
+        }
+      },
+      "LoginMobileRequest": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": { "username": { "type": "string" } },
+            "required": ["username"]
+          },
+          "authentication": {
+            "type": "object",
+            "properties": {
+              "otp": { "type": "string" },
+              "code_ref": { "type": "string" },
+              "reference_id": { "type": "string", "format": "uuid" }
+            },
+            "required": ["otp", "code_ref", "reference_id"]
+          }
+        }
+      },
+      "LoginMobileResponse": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": { "username": { "type": "string" } }
+          },
+          "authentication": {
+            "type": "object",
+            "properties": {
+              "otp": { "type": "string" },
+              "code_ref": { "type": "string" },
+              "reference_id": { "type": "string", "format": "uuid" }
+            }
+          },
+          "personal": {
+            "type": "object",
+            "properties": {
+              "prefixName": { "type": "string" },
+              "firstName": { "type": "string" },
+              "middleName": { "type": "string" },
+              "lastName": { "type": "string" },
+              "nickName": { "type": "string" },
+              "gender": { "type": "string" },
+              "dateOfBirth": { "type": "string" }
+            }
+          },
+          "referral": {
+            "type": "object",
+            "properties": { "code": { "type": "string" } }
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "address": { "type": "string" },
+              "address_additional": { "type": "string" },
+              "state": { "type": "string" },
+              "city": { "type": "string" },
+              "district": { "type": "string" },
+              "subDistrict": { "type": "string" },
+              "postalCode": { "type": "string" }
+            }
+          },
+          "contact": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
+                "contact": { "type": "string" }
+              }
+            }
+          },
+          "token": { "$ref": "#/components/schemas/LoginResponseToken" }
+        }
+      },
+      "ErrorOtpInvalid": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
+            "example": {
+              "code": 422,
+              "message": "Unprocessable Entity",
+              "bizErrorCode": "IAM_422_OTP_INVALID",
+              "bizErrorMessage": "OTP is invalid, expired, or does not match."
+            }
+          }
+        }
+      },
+      "LoginEmailRequest": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": { "username": { "type": "string" } },
+            "required": ["username"]
+          },
+          "authentication": {
+            "type": "object",
+            "properties": {
+              "otp": { "type": "string" },
+              "code_ref": { "type": "string" },
+              "reference_id": { "type": "string", "format": "uuid" }
+            },
+            "required": ["otp", "code_ref", "reference_id"]
+          }
+        }
+      },
+      "LoginEmailResponse": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": { "username": { "type": "string" } }
+          },
+          "personal": {
+            "type": "object",
+            "properties": {
+              "prefixName": { "type": "string" },
+              "firstName": { "type": "string" },
+              "middleName": { "type": "string" },
+              "lastName": { "type": "string" },
+              "nickName": { "type": "string" },
+              "gender": { "type": "string" },
+              "dateOfBirth": { "type": "string" }
+            }
+          },
+          "referral": {
+            "type": "object",
+            "properties": { "code": { "type": "string" } }
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "address": { "type": "string" },
+              "address_additional": { "type": "string" },
+              "state": { "type": "string" },
+              "city": { "type": "string" },
+              "district": { "type": "string" },
+              "subDistrict": { "type": "string" },
+              "postalCode": { "type": "string" }
+            }
+          },
+          "contact": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
+                "contact": { "type": "string" }
+              }
+            }
+          },
+          "token": { "$ref": "#/components/schemas/LoginResponseToken" }
+        }
+      },
+      "LoginSocialRequest": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": { "username": { "type": "string" } },
+            "required": ["username"]
+          },
+          "authentication": {
+            "type": "object",
+            "properties": {
+              "provider": { "type": "string" },
+              "providerName": { "type": "string" },
+              "providerUserId": { "type": "string" },
+              "accessToken": { "type": "string" },
+              "refreshToken": { "type": "string" }
+            },
+            "required": ["provider", "providerUserId", "accessToken"]
+          }
+        }
+      },
+      "LoginSocialResponse": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": { "username": { "type": "string" } }
+          },
+          "authentication": {
+            "type": "object",
+            "properties": {
+              "provider": { "type": "string" },
+              "providerName": { "type": "string" },
+              "providerUserId": { "type": "string" },
+              "displayName": { "type": "string" },
+              "profilePictureUrl": { "type": "string" },
+              "accessToken": { "type": "string" },
+              "refreshToken": { "type": "string" },
+              "tokenExpiresAt": { "type": "string", "format": "date-time" },
+              "rawResponse": { "type": "string" }
+            }
+          },
+          "personal": {
+            "type": "object",
+            "properties": {
+              "prefixName": { "type": "string" },
+              "firstName": { "type": "string" },
+              "middleName": { "type": "string" },
+              "lastName": { "type": "string" },
+              "nickName": { "type": "string" },
+              "gender": { "type": "string" },
+              "dateOfBirth": { "type": "string" }
+            }
+          },
+          "referral": {
+            "type": "object",
+            "properties": { "code": { "type": "string" } }
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "address": { "type": "string" },
+              "address_additional": { "type": "string" },
+              "state": { "type": "string" },
+              "city": { "type": "string" },
+              "district": { "type": "string" },
+              "subDistrict": { "type": "string" },
+              "postalCode": { "type": "string" }
+            }
+          },
+          "contact": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
+                "contact": { "type": "string" }
+              }
+            }
+          },
+          "token": { "$ref": "#/components/schemas/LoginResponseToken" }
+        }
+      },
+      "ErrorSocialInvalid": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
+            "example": {
+              "code": 422,
+              "message": "Unprocessable Entity",
+              "bizErrorCode": "IAM_422_SOCIAL_INVALID",
+              "bizErrorMessage": "Social access token is invalid or expired."
+            }
+          }
+        }
+      },
+      "CreateRoleRequest": {
+        "type": "object",
+        "properties": {
+          "user-group": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "description": { "type": "string" }
+              },
+              "required": ["name"]
+            }
+          }
+        },
+        "required": ["user-group"]
+      },
+      "CreateRoleResponse": {
+        "type": "object",
+        "properties": {
+          "user-group": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string", "format": "uuid" },
+                "name": { "type": "string" },
+                "description": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "ErrorUnauthorized": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
+            "example": {
+              "code": 401,
+              "message": "Unauthorized",
+              "bizErrorCode": "IAM_401",
+              "bizErrorMessage": "Access token is missing, invalid, or expired."
+            }
+          }
+        }
+      },
+      "CreatePolicyRequest": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "effect": { "type": "string", "enum": ["allow", "deny"] },
+          "action": { "type": "string" },
+          "resource": { "type": "string" },
+          "condition_logic": { "type": "string" }
+        },
+        "required": [
+          "code",
+          "name",
+          "effect",
+          "action",
+          "resource",
+          "condition_logic"
+        ]
+      },
+      "CreatePolicyResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the policy"
+          },
+          "code": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "effect": { "type": "string" },
+          "action": { "type": "string" },
+          "resource": { "type": "string" },
+          "condition_logic": { "type": "string" }
+        }
+      },
+      "UpdatePolicyRequest": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "effect": { "type": "string", "enum": ["allow", "deny"] },
+          "action": { "type": "string" },
+          "resource": { "type": "string" },
+          "condition_logic": { "type": "string" }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "effect",
+          "action",
+          "resource",
+          "condition_logic"
+        ]
+      },
+      "ErrorNotFound": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
+            "example": {
+              "code": 404,
+              "message": "Not Found",
+              "bizErrorCode": "IAM_404",
+              "bizErrorMessage": "Policy with the specified ID does not exist."
+            }
+          }
+        }
+      },
+      "AssignUserRoleRequest": {
+        "type": "object",
+        "properties": {
+          "user_group_id": { "type": "string", "format": "uuid" },
+          "user_id": { "type": "string", "format": "uuid" }
+        },
+        "required": ["user_group_id", "user_id"]
+      },
+      "AssignUserRoleResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "$ref": "#/components/schemas/ResponseStatusDTO" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "user_group_mapping_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Unique identifier for the user-role assignment"
+              },
+              "user_group_id": { "type": "string", "format": "uuid" },
+              "user_id": { "type": "string", "format": "uuid" }
+            },
+            "required": ["user_group_mapping_id", "user_group_id", "user_id"]
+          }
+        }
+      },
+      "RevokeUserRoleRequest": {
+        "type": "object",
+        "properties": {
+          "user_group_id": { "type": "string", "format": "uuid" },
+          "user_id": { "type": "string", "format": "uuid" }
+        },
+        "required": ["user_group_id", "user_id"]
+      },
+      "RevokeUserRoleResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "$ref": "#/components/schemas/ResponseStatusDTO" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "user_group_mapping_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Unique identifier for the user-role assignment that was revoked"
+              },
+              "user_group_id": { "type": "string", "format": "uuid" },
+              "user_id": { "type": "string", "format": "uuid" }
+            },
+            "required": ["user_group_mapping_id", "user_group_id", "user_id"]
+          }
+        }
+      },
+      "UpdateUserGroupRequest": {
+        "type": "object",
+        "properties": {
+          "userGroup": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "description": { "type": "string" }
+            },
+            "required": ["name"]
+          },
+          "policies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "policy_id": { "type": "string", "format": "uuid" },
+                "operator": {
+                  "type": "string",
+                  "enum": ["READ", "WRITE", "DELETE", "ALL"]
+                }
+              },
+              "required": ["policy_id", "operator"]
+            }
+          }
+        },
+        "required": ["userGroup", "policies"]
+      },
+      "UpdateUserGroupResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "$ref": "#/components/schemas/ResponseStatusDTO" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "userGroup": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string", "format": "uuid" },
+                  "name": { "type": "string" },
+                  "description": { "type": "string" }
+                },
+                "required": ["id", "name"]
+              },
+              "policies": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "policy_id": { "type": "string", "format": "uuid" },
+                    "operator": {
+                      "type": "string",
+                      "enum": ["READ", "WRITE", "DELETE", "ALL"]
+                    }
+                  },
+                  "required": ["policy_id", "operator"]
+                }
+              }
+            },
+            "required": ["userGroup", "policies"]
+          }
+        }
+      },
+      "CheckAuthenticationResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "$ref": "#/components/schemas/ResponseStatusDTO" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "roles": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "List of role codes assigned to the user"
+              },
+              "permissions": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "List of permissions in the format {policy_code:effect}"
+              }
+            },
+            "required": ["user_id", "username", "roles"]
+          }
+        }
+      },
+      "CheckPermissionResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "$ref": "#/components/schemas/ResponseStatusDTO" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "user_id": { "type": "string", "format": "uuid" },
+              "username": { "type": "string" },
+              "policy_code": { "type": "string" },
+              "has_permission": { "type": "boolean" }
+            },
+            "required": ["user_id", "username", "policy_code", "has_permission"]
+          }
+        }
+      },
+      "LoginResponseToken": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT access token"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "description": "Token expiration in seconds"
+          },
+          "tokenType": {
+            "type": "string",
+            "description": "Token type, e.g., Bearer"
+          },
+          "refreshToken": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Refresh token to obtain new access token"
+          },
+          "roles": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of role codes assigned to the user"
+          },
+          "permissions": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of permissions in the format {policy_code:effect}"
+          }
+        },
+        "required": [
+          "accessToken",
+          "expiresIn",
+          "tokenType",
+          "refreshToken",
+          "roles",
+          "permissions"
+        ]
+      },
+      "SessionTokenResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "$ref": "#/components/schemas/ResponseStatusDTO" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "accessToken": {
+                "type": "string",
+                "description": "JWT access token"
+              },
+              "expiresIn": {
+                "type": "integer",
+                "description": "Token expiration in seconds"
+              },
+              "tokenType": {
+                "type": "string",
+                "description": "Token type, e.g., Bearer"
+              },
+              "refreshToken": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Refresh token to obtain new access token"
+              },
+              "roles": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "List of role codes assigned to the user"
+              },
+              "permissions": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "List of permissions in the format {policy_code:effect}"
+              }
+            },
+            "required": [
+              "accessToken",
+              "expiresIn",
+              "tokenType",
+              "refreshToken",
+              "roles",
+              "permissions"
+            ]
+          }
+        }
+      },
+      "EvaluatePolicyRequest": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the user for evaluation"
+          },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "description": "Key-value pairs of user attributes and context for ABAC evaluation"
+          }
+        },
+        "required": ["user_id", "attributes"]
+      },
+      "EvaluatePolicyResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "$ref": "#/components/schemas/ResponseStatusDTO" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "policies": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "policy_code": { "type": "string" },
+                    "effect": { "type": "string", "enum": ["allow", "deny"] }
+                  },
+                  "required": ["policy_code", "effect"]
+                }
+              }
+            },
+            "required": ["policies"]
+          }
+        }
+      },
+      "EvaluateAccessRequest": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User ID for evaluation"
+          },
+          "context": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "description": "Additional context key-value pairs for ABAC evaluation"
+          }
+        },
+        "required": ["user_id"]
+      },
+      "EvaluateAccessResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "$ref": "#/components/schemas/ResponseStatusDTO" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "userGroup": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "List of user groups the user belongs to"
+              },
+              "permissions": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "List of permissions in the format {policy_code}:{effect}"
+              }
+            },
+            "required": ["userGroup", "permissions"]
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "username": { "type": "string" }
+            },
+            "required": ["username"]
+          },
+          "personal": {
+            "type": "object",
+            "properties": {
+              "prefixName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "firstName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "middleName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "lastName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "nickName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "gender": { "type": "string", "description": "AES256_ENCRYPTED" },
+              "dateOfBirth": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              }
+            }
+          },
+          "authentication": {
+            "type": "object",
+            "properties": {
+              "password": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "confirmPassword": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              }
+            },
+            "required": ["password", "confirmPassword"]
+          },
+          "referral": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string" }
+            }
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "state": { "type": "string" },
+              "city": { "type": "string" },
+              "district": { "type": "string" },
+              "subDistrict": { "type": "string" },
+              "postalCode": { "type": "string" }
+            }
+          },
+          "contact": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
+                "contact": { "type": "string" }
+              },
+              "required": ["channel", "contact"]
+            }
+          }
+        },
+        "required": ["user", "authentication", "personal", "contact"]
+      },
+      "RegisterMobileRequest": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": { "username": { "type": "string" } },
+            "required": ["username"]
+          },
+          "authentication": {
+            "type": "object",
+            "properties": {
+              "otp": { "type": "string" },
+              "code_ref": { "type": "string" },
+              "reference_id": { "type": "string", "format": "uuid" }
+            },
+            "required": ["otp", "code_ref", "reference_id"]
+          },
+          "personal": {
+            "type": "object",
+            "properties": {
+              "prefixName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "firstName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "middleName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "lastName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "nickName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "gender": { "type": "string", "description": "AES256_ENCRYPTED" },
+              "dateOfBirth": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              }
+            }
+          },
+          "referral": {
+            "type": "object",
+            "properties": { "code": { "type": "string" } }
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "address_additional": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "state": { "type": "string" },
+              "city": { "type": "string" },
+              "district": { "type": "string" },
+              "subDistrict": { "type": "string" },
+              "postalCode": { "type": "string" }
+            }
+          },
+          "contact": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
+                "contact": {
+                  "type": "string",
+                  "description": "AES256_ENCRYPTED"
+                }
+              },
+              "required": ["channel", "contact"]
+            }
+          }
+        },
+        "required": ["user", "authentication", "personal", "contact"]
+      },
+      "RegisterEmailRequest": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": { "username": { "type": "string" } },
+            "required": ["username"]
+          },
+          "authentication": {
+            "type": "object",
+            "properties": {
+              "otp": { "type": "string" },
+              "code_ref": { "type": "string" },
+              "reference_id": { "type": "string", "format": "uuid" }
+            },
+            "required": ["otp", "code_ref", "reference_id"]
+          },
+          "personal": {
+            "type": "object",
+            "properties": {
+              "prefixName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "firstName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "middleName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "lastName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "nickName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "gender": { "type": "string", "description": "AES256_ENCRYPTED" },
+              "dateOfBirth": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              }
+            }
+          },
+          "referral": {
+            "type": "object",
+            "properties": { "code": { "type": "string" } }
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "address_additional": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "state": { "type": "string" },
+              "city": { "type": "string" },
+              "district": { "type": "string" },
+              "subDistrict": { "type": "string" },
+              "postalCode": { "type": "string" }
+            }
+          },
+          "contact": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
+                "contact": {
+                  "type": "string",
+                  "description": "AES256_ENCRYPTED"
+                }
+              },
+              "required": ["channel", "contact"]
+            }
+          }
+        },
+        "required": ["user", "authentication", "personal", "contact"]
+      },
+      "RegisterSocialRequest": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": { "username": { "type": "string" } },
+            "required": ["username"]
+          },
+          "authentication": {
+            "type": "object",
+            "properties": {
+              "provider": { "type": "string" },
+              "providerName": { "type": "string" },
+              "providerUserId": { "type": "string" },
+              "displayName": { "type": "string" },
+              "profilePictureUrl": { "type": "string" },
+              "accessToken": { "type": "string" },
+              "refreshToken": { "type": "string" },
+              "tokenExpiresAt": { "type": "string", "format": "date-time" },
+              "rawResponse": { "type": "string" }
+            },
+            "required": [
+              "provider",
+              "providerName",
+              "providerUserId",
+              "accessToken"
+            ]
+          },
+          "personal": {
+            "type": "object",
+            "properties": {
+              "prefixName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "firstName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "middleName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "lastName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "nickName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "gender": { "type": "string", "description": "AES256_ENCRYPTED" },
+              "dateOfBirth": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              }
+            }
+          },
+          "referral": {
+            "type": "object",
+            "properties": { "code": { "type": "string" } }
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "address_additional": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "state": { "type": "string" },
+              "city": { "type": "string" },
+              "district": { "type": "string" },
+              "subDistrict": { "type": "string" },
+              "postalCode": { "type": "string" }
+            }
+          },
+          "contact": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
+                "contact": {
+                  "type": "string",
+                  "description": "AES256_ENCRYPTED"
+                }
+              },
+              "required": ["channel", "contact"]
+            }
+          }
+        },
+        "required": ["user", "authentication", "personal", "contact"]
+      },
+      "UserRegistrationResponse": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "username": { "type": "string" }
+            },
+            "required": ["id", "username"]
+          },
+          "personal": {
+            "type": "object",
+            "properties": {
+              "prefixName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "firstName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "middleName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "lastName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "nickName": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "gender": { "type": "string", "description": "AES256_ENCRYPTED" },
+              "dateOfBirth": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              }
+            },
+            "required": ["firstName", "lastName"]
+          },
+          "referral": {
+            "type": "object",
+            "properties": { "code": { "type": "string" } }
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "address_additional": {
+                "type": "string",
+                "description": "AES256_ENCRYPTED"
+              },
+              "state": { "type": "string" },
+              "city": { "type": "string" },
+              "district": { "type": "string" },
+              "subDistrict": { "type": "string" },
+              "postalCode": { "type": "string" }
+            }
+          },
+          "contact": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
+                "contact": {
+                  "type": "string",
+                  "description": "AES256_ENCRYPTED"
+                }
+              },
+              "required": ["channel", "contact"]
+            }
+          }
+        },
+        "required": ["user", "personal", "contact"]
+      },
+      "CreateAttributeRequest": {
+        "type": "object",
+        "properties": {
+          "category": { "type": "string" },
+          "key": { "type": "string" },
+          "dataType": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "is_parameter": { "type": "boolean" },
+          "is_required": { "type": "boolean" },
+          "is_display": { "type": "boolean" }
+        },
+        "required": ["category", "key", "dataType", "title"]
+      },
+      "UpdateAttributeRequest": {
+        "type": "object",
+        "allOf": [
+          { "$ref": "#/components/schemas/CreateAttributeRequest" },
+          {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" }
+            },
+            "required": ["id"]
+          }
+        ]
+      },
+      "AttributeResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "category": { "type": "string" },
+          "key": { "type": "string" },
+          "dataType": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "is_parameter": { "type": "boolean" },
+          "is_required": { "type": "boolean" },
+          "is_display": { "type": "boolean" }
+        }
+      },
+      "CreateUserRequest": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "username": { "type": "string" }
+            },
+            "required": ["username"]
+          },
+          "personal": {
+            "type": "object",
+            "properties": {
+              "prefixName": { "type": "string" },
+              "firstName": { "type": "string" },
+              "middleName": { "type": "string" },
+              "lastName": { "type": "string" },
+              "nickName": { "type": "string" },
+              "gender": { "type": "string" },
+              "dateOfBirth": { "type": "string", "format": "date" }
+            }
+          },
+          "authentication": {
+            "type": "object",
+            "properties": {
+              "isTemporary": { "type": "boolean" }
+            }
+          },
+          "referral": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string" }
+            }
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "state": { "type": "string" },
+              "city": { "type": "string" },
+              "district": { "type": "string" },
+              "subDistrict": { "type": "string" },
+              "postalCode": { "type": "string" }
+            }
+          },
+          "contact": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
+                "contact": { "type": "string" }
+              },
+              "required": ["channel", "contact"]
+            }
+          }
+        },
+        "required": ["user", "personal", "contact"]
+      },
+      "UpdateUserRequest": {
+        "type": "object",
+        "allOf": [
+          { "$ref": "#/components/schemas/CreateUserRequest" },
+          {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" }
+            },
+            "required": ["id"]
+          }
+        ]
+      },
+      "UserResponse": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "username": { "type": "string" }
+            }
+          },
+          "personal": {
+            "type": "object",
+            "properties": {
+              "prefixName": { "type": "string" },
+              "firstName": { "type": "string" },
+              "middleName": { "type": "string" },
+              "lastName": { "type": "string" },
+              "nickName": { "type": "string" },
+              "gender": { "type": "string" },
+              "dateOfBirth": { "type": "string", "format": "date" }
+            }
+          },
+          "authentication": {
+            "type": "object",
+            "properties": {
+              "password": { "type": "string", "description": "PlainPassword" },
+              "isTemporary": { "type": "boolean" }
+            }
+          },
+          "referral": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string" }
+            }
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "state": { "type": "string" },
+              "city": { "type": "string" },
+              "district": { "type": "string" },
+              "subDistrict": { "type": "string" },
+              "postalCode": { "type": "string" }
+            }
+          },
+          "contact": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "channel": { "type": "string", "enum": ["MOBILE", "EMAIL"] },
+                "contact": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "UserFullResponse": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "username": { "type": "string" }
+            }
+          },
+          "personal": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "code": { "type": "string" },
+              "prefixName": { "type": "string" },
+              "firstName": { "type": "string" },
+              "middleName": { "type": "string" },
+              "lastName": { "type": "string" },
+              "nickName": { "type": "string" },
+              "gender": { "type": "string" },
+              "dateOfBirth": { "type": "string" }
+            }
+          },
+          "authentication": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "password": { "type": "string", "description": "PlainPassword" },
+              "isTemporary": { "type": "boolean" }
+            }
+          },
+          "referral": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "prefixName": { "type": "string" },
+              "firstName": { "type": "string" },
+              "middleName": { "type": "string" },
+              "lastName": { "type": "string" },
+              "nickName": { "type": "string" }
+            }
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "state": { "type": "string" },
+              "city": { "type": "string" },
+              "district": { "type": "string" },
+              "subDistrict": { "type": "string" },
+              "postalCode": { "type": "string" }
+            }
+          },
+          "contact": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "channel": { "type": "string", "enum": ["MOBILE", "EMAIL"] },
+                "contact": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "AuthLogRequest": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string", "format": "uuid" },
+          "username": { "type": "string" },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "LOGIN_SUCCESS",
+              "LOGIN_FAILED",
+              "LOGOUT",
+              "TOKEN_REFRESH",
+              "OTP_SENT",
+              "OTP_FAILED"
+            ]
+          },
+          "ipAddress": { "type": "string", "format": "ipv4" },
+          "userAgent": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "additionalInfo": { "type": "object" }
+        },
+        "required": ["eventType", "timestamp"]
+      },
+      "AuthLogResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "$ref": "#/components/schemas/ResponseStatusDTO" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "logId": { "type": "string", "format": "uuid" },
+              "eventType": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      },
+      "FailedLoginListResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "$ref": "#/components/schemas/ResponseStatusDTO" },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string", "format": "uuid" },
+                "username": { "type": "string" },
+                "ipAddress": { "type": "string" },
+                "userAgent": { "type": "string" },
+                "timestamp": { "type": "string", "format": "date-time" },
+                "failureReason": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "SecurityAlertRequest": {
+        "type": "object",
+        "properties": {
+          "alertType": {
+            "type": "string",
+            "enum": [
+              "SUSPICIOUS_LOGIN",
+              "MULTIPLE_FAILED_ATTEMPTS",
+              "TOKEN_ABUSE",
+              "DATA_BREACH",
+              "CONFIG_CHANGE"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+          },
+          "description": { "type": "string" },
+          "source": { "type": "string" },
+          "detectedAt": { "type": "string", "format": "date-time" },
+          "metadata": { "type": "object" }
+        },
+        "required": ["alertType", "severity", "description"]
+      },
+      "SecurityAlertResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "$ref": "#/components/schemas/ResponseStatusDTO" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "alertId": { "type": "string", "format": "uuid" },
+              "alertType": { "type": "string" },
+              "severity": { "type": "string" },
+              "createdAt": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

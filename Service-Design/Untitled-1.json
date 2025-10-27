@@ -1,0 +1,88 @@
+Request
+
+{
+    "user": {
+        "username": "string"
+    },
+    "personal": {
+        "prefixName": "string",
+        "firstName": "string",
+        "middleName": "string",
+        "lastName": "string",
+        "nickName": "string",
+        "gender": "string",
+        "dateOfBirth": "string"
+    },
+    "authentication": {
+        "isTemporary": true
+    },
+    "referral": {
+        "code": "string"
+    },
+    "address": {
+        "state": "string",
+        "city": "string",
+        "district": "string",
+        "subDistrict": "string",
+        "postalCode": "string"
+    },
+    "contact": [
+        {
+            "channel": "EMAIL",
+            "contact": "string"
+        },
+        {
+            "channel": "EMAIL",
+            "contact": "string"
+        }
+    ]
+}
+
+Response
+
+{
+    "user": {
+        "id": "string: UUID",
+        "username": "string"
+    },
+    "personal": {
+        "id": "string: UUID",
+        "prefixName": "string",
+        "firstName": "string",
+        "middleName": "string",
+        "lastName": "string",
+        "nickName": "string",
+        "gender": "string",
+        "dateOfBirth": "string"
+    },
+    "authentication": {
+        "id": "string: UUID",
+        "password": "string: PlainPassword",
+        "isTemporary": true
+    },
+    "referral": {
+        "id": "string: UUID",
+        "prefixName": "string",
+        "firstName": "string",
+        "middleName": "string",
+        "lastName": "string",
+        "nickName": "string",
+    },
+    "address": {
+        "state": "string",
+        "city": "string",
+        "district": "string",
+        "subDistrict": "string",
+        "postalCode": "string"
+    },
+    "contact": [
+        {
+            "channel": "MOBILE",
+            "contact": "string"
+        },
+        {
+            "channel": "EMAIL",
+            "contact": "string"
+        }
+    ]
+}

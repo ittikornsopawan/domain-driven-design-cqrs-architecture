@@ -12,7 +12,7 @@
 
 - **20-Oct-2025:** - Ittikorn Sopawan
   - Initial design of IAM Service. Created schemas and tables:
-    - **Public Schema:**- 
+    - **Public Schema:**-
       - `m_parameters`
       - `t_addresses`
       - `t_contacts`
@@ -1411,21 +1411,22 @@ Stores user accounts with unique codes and usernames, including status and audit
 
 #### Table Columns
 
-| Key | Column Name | Data Type    | Default           | Description                              |
-| --- | ----------- | ------------ | ----------------- | ---------------------------------------- |
-| PK  | id          | UUID         | GEN_RANDOM_UUID() | Primary key of the user record           |
-| FK  | created_by  | UUID         |                   | User who created this record             |
-|     | created_at  | TIMESTAMP    | CURRENT_TIMESTAMP | Timestamp when the record was created    |
-| FK  | updated_by  | UUID         |                   | User who last updated the record         |
-|     | updated_at  | TIMESTAMP    |                   | Timestamp of last update                 |
-|     | is_active   | BOOLEAN      | FALSE             | Indicates if the user account is active  |
-|     | inactive_at | TIMESTAMP    |                   | Timestamp when the user became inactive  |
-| FK  | inactive_by | UUID         |                   | User who marked inactive                 |
-|     | is_deleted  | BOOLEAN      | FALSE             | Indicates if the user account is deleted |
-|     | deleted_at  | TIMESTAMP    |                   | Timestamp when deleted                   |
-| FK  | deleted_by  | UUID         |                   | User who deleted the record              |
-|     | code        | VARCHAR(32)  |                   | Unique user code                         |
-|     | username    | VARCHAR(128) |                   | Unique username                          |
+| Key | Column Name         | Data Type    | Default           | Description                                                              |
+| --- | ------------------- | ------------ | ----------------- | ------------------------------------------------------------------------ |
+| PK  | id                  | UUID         | GEN_RANDOM_UUID() | Primary key for the user record                                          |
+| FK  | created_by          | UUID         |                   | User who created this user record (references authentication.t_users.id) |
+|     | created_at          | TIMESTAMP    | CURRENT_TIMESTAMP | Timestamp when the user record was created                               |
+| FK  | updated_by          | UUID         |                   | User who last updated this record (references authentication.t_users.id) |
+|     | updated_at          | TIMESTAMP    |                   | Timestamp when the user record was last updated                          |
+|     | is_active           | BOOLEAN      | FALSE             | Indicates if the user account is active                                  |
+|     | inactive_at         | TIMESTAMP    |                   | Timestamp when the user was marked inactive                              |
+| FK  | inactive_by         | UUID         |                   | User who deactivated this account (references authentication.t_users.id) |
+|     | is_deleted          | BOOLEAN      | FALSE             | Indicates if the user account has been soft-deleted                      |
+|     | deleted_at          | TIMESTAMP    |                   | Timestamp when the user was deleted                                      |
+| FK  | deleted_by          | UUID         |                   | User who deleted this record (references authentication.t_users.id)      |
+|     | code                | VARCHAR(32)  |                   | Unique code assigned to the user                                         |
+|     | username            | VARCHAR(128) |                   | Unique username for login                                                |
+|     | authentication_type | VARCHAR(16)  |                   | Type of authentication: PASSWORD, OAUTH, EMAIL_OTP, MOBILE_OTP           |
 
 #### Table Constraints
 
@@ -1459,25 +1460,27 @@ CREATE TABLE IF NOT EXISTS authentication.t_users
     deleted_by UUID REFERENCES authentication.t_users(id),
 
     code VARCHAR(32) NOT NULL UNIQUE,
-    username VARCHAR(128) NOT NULL UNIQUE
+    username VARCHAR(128) NOT NULL UNIQUE,
+    authentication_type VARCHAR(16) NOT NULL CHECK (authentication_type IN ('PASSWORD', 'OAUTH', 'EMAIL_OTP', 'MOBILE_OTP'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_t_users_code ON authentication.t_users(type_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_t_users_username ON authentication.t_users(username);
 
-COMMENT ON TABLE authentication.t_users IS 'Stores user accounts with unique codes and usernames, including status and audit metadata';
-COMMENT ON COLUMN authentication.t_users.id IS 'Primary key of the user record';
-COMMENT ON COLUMN authentication.t_users.created_by IS 'User who created this record';
-COMMENT ON COLUMN authentication.t_users.created_at IS 'Timestamp when the record was created';
-COMMENT ON COLUMN authentication.t_users.updated_by IS 'User who last updated the record';
-COMMENT ON COLUMN authentication.t_users.updated_at IS 'Timestamp of last update';
-COMMENT ON COLUMN authentication.t_users.is_active IS 'Indicates if the user account is active';
-COMMENT ON COLUMN authentication.t_users.inactive_at IS 'Timestamp when the user became inactive';
-COMMENT ON COLUMN authentication.t_users.inactive_by IS 'User who marked inactive';
-COMMENT ON COLUMN authentication.t_users.is_deleted IS 'Indicates if the user account is deleted';
-COMMENT ON COLUMN authentication.t_users.deleted_at IS 'Timestamp when deleted';
-COMMENT ON COLUMN authentication.t_users.deleted_by IS 'User who deleted the record';
-COMMENT ON COLUMN authentication.t_users.code IS 'Unique user code';
-COMMENT ON COLUMN authentication.t_users.username IS 'Unique username';
+COMMENT ON TABLE authentication.t_users IS 'Stores system users, their authentication type, and status.';
+COMMENT ON COLUMN authentication.t_users.id IS 'Primary key for the user record.';
+COMMENT ON COLUMN authentication.t_users.created_by IS 'User who created this user record (references authentication.t_users.id).';
+COMMENT ON COLUMN authentication.t_users.created_at IS 'Timestamp when the user record was created.';
+COMMENT ON COLUMN authentication.t_users.updated_by IS 'User who last updated this record (references authentication.t_users.id).';
+COMMENT ON COLUMN authentication.t_users.updated_at IS 'Timestamp when the user record was last updated.';
+COMMENT ON COLUMN authentication.t_users.is_active IS 'Indicates if the user account is active.';
+COMMENT ON COLUMN authentication.t_users.inactive_at IS 'Timestamp when the user was marked inactive.';
+COMMENT ON COLUMN authentication.t_users.inactive_by IS 'User who deactivated this account (references authentication.t_users.id).';
+COMMENT ON COLUMN authentication.t_users.is_deleted IS 'Indicates if the user account has been soft-deleted.';
+COMMENT ON COLUMN authentication.t_users.deleted_at IS 'Timestamp when the user was deleted.';
+COMMENT ON COLUMN authentication.t_users.deleted_by IS 'User who deleted this record (references authentication.t_users.id).';
+COMMENT ON COLUMN authentication.t_users.code IS 'Unique code assigned to the user.';
+COMMENT ON COLUMN authentication.t_users.username IS 'Unique username for login.';
+COMMENT ON COLUMN authentication.t_users.authentication_type IS 'Type of authentication: PASSWORD, OAUTH, EMAIL_OTP, MOBILE_OTP.';
 ```
 
 ### Table: authentication.t_user_authentications
@@ -1619,6 +1622,352 @@ COMMENT ON COLUMN authentication.t_user_referrer_mappings.referrer_id IS 'Refere
 COMMENT ON COLUMN authentication.t_user_referrer_mappings.user_id IS 'Reference to the user being referred';
 ```
 
+### Table: authentication.t_user_open_authentication
+
+Stores social login / OAuth accounts linked to system users.
+
+#### Table Columns
+
+| Key | Column Name         | Data Type    | Default           | Description                                                                            |
+| --- | ------------------- | ------------ | ----------------- | -------------------------------------------------------------------------------------- |
+| PK  | id                  | UUID         | GEN_RANDOM_UUID() | Primary key for the open authentication record                                         |
+| FK  | created_by          | UUID         |                   | User who created this record (references authentication.t_users.id)                    |
+|     | created_at          | TIMESTAMP    | CURRENT_TIMESTAMP | Timestamp when the record was created                                                  |
+| FK  | updated_by          | UUID         |                   | User who last updated the record (references authentication.t_users.id)                |
+|     | updated_at          | TIMESTAMP    |                   | Timestamp of last update                                                               |
+|     | is_active           | BOOLEAN      | FALSE             | Indicates whether the social login account is active                                   |
+|     | inactive_at         | TIMESTAMP    |                   | Timestamp when the social login account was deactivated                                |
+| FK  | inactive_by         | UUID         |                   | User who deactivated the account (references authentication.t_users.id)                |
+|     | is_deleted          | BOOLEAN      | FALSE             | Indicates whether the record has been soft-deleted                                     |
+|     | deleted_at          | TIMESTAMP    |                   | Timestamp when the record was deleted                                                  |
+| FK  | deleted_by          | UUID         |                   | User who deleted the record (references authentication.t_users.id)                     |
+|     | provider            | VARCHAR(32)  |                   | Name of the external provider: GOOGLE, MICROSOFT, APPLE, FACEBOOK, LINE, GITHUB, OTHER |
+|     | provider_name       | VARCHAR(64)  |                   | Custom name for the provider when provider = OTHER                                     |
+|     | provider_user_id    | VARCHAR(256) |                   | User identifier provided by the external provider                                      |
+| FK  | user_id             | UUID         |                   | Reference to the system user (authentication.t_users.id) linked to this account        |
+|     | email               | BYTEA        |                   | Encrypted email retrieved from the external provider (optional)                        |
+|     | display_name        | VARCHAR(256) |                   | Display name from the provider (optional)                                              |
+|     | profile_picture_url | TEXT         |                   | URL to profile picture from the provider (optional)                                    |
+|     | access_token        | TEXT         |                   | OAuth access token from the provider                                                   |
+|     | refresh_token       | TEXT         |                   | OAuth refresh token from the provider (if applicable)                                  |
+|     | token_expires_at    | TIMESTAMP    |                   | Expiration timestamp for the access token                                              |
+|     | raw_response        | JSONB        |                   | Raw JSON response received from the provider during authentication                     |
+
+#### Table Constraints
+
+| Constraint Type | Column Name                | Constraint Name                                          | Description                                         |
+| --------------- | -------------------------- | -------------------------------------------------------- | --------------------------------------------------- |
+| PRIMARY KEY     | id                         |                                                          | Defines `id` as the primary key                     |
+| FOREIGN KEY     | created_by                 |                                                          | References `authentication.t_users(id)`             |
+| FOREIGN KEY     | updated_by                 |                                                          | References `authentication.t_users(id)`             |
+| FOREIGN KEY     | inactive_by                |                                                          | References `authentication.t_users(id)`             |
+| FOREIGN KEY     | deleted_by                 |                                                          | References `authentication.t_users(id)`             |
+| FOREIGN KEY     | user_id                    |                                                          | References `authentication.t_users(id)`             |
+| UNIQUE          | provider, provider_user_id | idx_t_user_open_authentication_provider_provider_user_id | Ensures each provider-user_id combination is unique |
+
+#### Query
+
+```SQL
+CREATE TABLE IF NOT EXISTS authentication.t_user_open_authentication
+(
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
+    created_by UUID NOT NULL REFERENCES authentication.t_users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID REFERENCES authentication.t_users(id),
+    updated_at TIMESTAMP,
+
+    is_active BOOLEAN NOT NULL DEFAULT FALSE,
+    inactive_at TIMESTAMP,
+    inactive_by UUID REFERENCES authentication.t_users(id),
+
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
+    deleted_by UUID REFERENCES authentication.t_users(id),
+
+    provider VARCHAR(32) NOT NULL CHECK (provider IN ('GOOGLE', 'MICROSOFT', 'APPLE', 'FACEBOOK', 'LINE', 'GITHUB', 'OTHER')),
+    provider_name VARCHAR(64) CHECK (provider <> 'OTHER' or provider_name IS NOT NULL),
+    provider_user_id VARCHAR(256) NOT NULL,
+    user_id UUID NOT NULL REFERENCES authentication.t_users(id),
+    
+    email BYTEA,
+    display_name VARCHAR(256),
+    profile_picture_url TEXT,
+
+    access_token TEXT,
+    refresh_token TEXT,
+    token_expires_at TIMESTAMP,
+
+    raw_response JSONB,
+
+    UNIQUE (provider, provider_user_id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_t_user_open_authentication_provider_provider_user_id ON authentication.t_user_open_authentication(provider, provider_user_id);
+
+COMMENT ON TABLE authentication.t_user_open_authentication IS 'Stores social login / OAuth accounts linked to system users.';
+COMMENT ON COLUMN authentication.t_user_open_authentication.id IS 'Primary key for the open authentication record.';
+COMMENT ON COLUMN authentication.t_user_open_authentication.created_by IS 'User who created this record (references authentication.t_users.id).';
+COMMENT ON COLUMN authentication.t_user_open_authentication.created_at IS 'Timestamp when the record was created.';
+COMMENT ON COLUMN authentication.t_user_open_authentication.updated_by IS 'User who last updated the record (references authentication.t_users.id).';
+COMMENT ON COLUMN authentication.t_user_open_authentication.updated_at IS 'Timestamp when the record was last updated.';
+COMMENT ON COLUMN authentication.t_user_open_authentication.is_active IS 'Indicates whether the social login account is active.';
+COMMENT ON COLUMN authentication.t_user_open_authentication.inactive_at IS 'Timestamp when the social login account was deactivated.';
+COMMENT ON COLUMN authentication.t_user_open_authentication.inactive_by IS 'User who deactivated the account (references authentication.t_users.id).';
+COMMENT ON COLUMN authentication.t_user_open_authentication.is_deleted IS 'Indicates whether the record has been soft-deleted.';
+COMMENT ON COLUMN authentication.t_user_open_authentication.deleted_at IS 'Timestamp when the record was deleted.';
+COMMENT ON COLUMN authentication.t_user_open_authentication.deleted_by IS 'User who deleted the record (references authentication.t_users.id).';
+COMMENT ON COLUMN authentication.t_user_open_authentication.provider IS 'Name of the external provider: GOOGLE, MICROSOFT, APPLE, FACEBOOK, LINE, GITHUB, OTHER.';
+COMMENT ON COLUMN authentication.t_user_open_authentication.provider_name IS 'Custom name for the provider when provider = OTHER.';
+COMMENT ON COLUMN authentication.t_user_open_authentication.provider_user_id IS 'User identifier provided by the external provider.';
+COMMENT ON COLUMN authentication.t_user_open_authentication.user_id IS 'Reference to the system user (authentication.t_users.id) linked to this social account.';
+COMMENT ON COLUMN authentication.t_user_open_authentication.email IS 'Encrypted email retrieved from the external provider (optional, BYTEA).';
+COMMENT ON COLUMN authentication.t_user_open_authentication.display_name IS 'Display name from the provider (optional).';
+COMMENT ON COLUMN authentication.t_user_open_authentication.profile_picture_url IS 'URL to profile picture from the provider (optional).';
+COMMENT ON COLUMN authentication.t_user_open_authentication.access_token IS 'OAuth access token from the provider.';
+COMMENT ON COLUMN authentication.t_user_open_authentication.refresh_token IS 'OAuth refresh token from the provider (if applicable).';
+COMMENT ON COLUMN authentication.t_user_open_authentication.token_expires_at IS 'Expiration timestamp for the access token.';
+COMMENT ON COLUMN authentication.t_user_open_authentication.raw_response IS 'Raw JSON response received from the provider during authentication.';
+```
+
+## Schema: notification
+
+### Table: notification.t_push_notifications
+
+#### Table Columns
+
+| Key | Column Name     | Data Type   | Default           | Description                                                                              |
+| --- | --------------- | ----------- | ----------------- | ---------------------------------------------------------------------------------------- |
+| PK  | id              | UUID        | GEN_RANDOM_UUID() | Primary key for the notification record                                                  |
+| FK  | created_by      | UUID        |                   | User who created the notification (references authentication.t_users.id)                 |
+|     | created_at      | TIMESTAMP   | CURRENT_TIMESTAMP | Timestamp when the notification record was created                                       |
+| FK  | updated_by      | UUID        |                   | User who last updated the notification record (references authentication.t_users.id)     |
+|     | updated_at      | TIMESTAMP   |                   | Timestamp when the notification record was last updated                                  |
+|     | is_active       | BOOLEAN     | FALSE             | Indicates if the notification record is active                                           |
+|     | inactive_at     | TIMESTAMP   |                   | Timestamp when the notification record became inactive                                   |
+| FK  | inactive_by     | UUID        |                   | User who marked the notification as inactive                                             |
+|     | is_deleted      | BOOLEAN     | FALSE             | Indicates if the notification record has been deleted                                    |
+|     | deleted_at      | TIMESTAMP   |                   | Timestamp when the notification record was deleted                                       |
+| FK  | deleted_by      | UUID        |                   | User who deleted the notification record                                                 |
+|     | type            | VARCHAR(16) |                   | Type of notification: EMAIL, SMS, PUSH                                                   |
+|     | message         | TEXT        |                   | The content of the notification                                                          |
+| FK  | user_id         | UUID        |                   | Reference to the user who will receive the notification (authentication.t_users.id)      |
+| FK  | contact_id      | UUID        |                   | Reference to the contact (t_contacts.id) for SMS or email                                |
+|     | delivery_status | VARCHAR(32) | PENDING           | Status of the notification: PENDING, SENT, DELIVERED, FAILED                             |
+|     | metadata        | JSONB       |                   | Additional JSON metadata for the notification (e.g., platform info, push token, headers) |
+
+#### Table Constraints
+
+| Constraint Type | Column Name        | Constraint Name                             | Description                                            |
+| --------------- | ------------------ | ------------------------------------------- | ------------------------------------------------------ |
+| PRIMARY KEY     | id                 |                                             | Defines `id` as the primary key                        |
+| FOREIGN KEY     | created_by         |                                             | References `authentication.t_users(id)`                |
+| FOREIGN KEY     | updated_by         |                                             | References `authentication.t_users(id)`                |
+| FOREIGN KEY     | inactive_by        |                                             | References `authentication.t_users(id)`                |
+| FOREIGN KEY     | deleted_by         |                                             | References `authentication.t_users(id)`                |
+| FOREIGN KEY     | user_id            |                                             | References `authentication.t_users(id)`                |
+| FOREIGN KEY     | contact_id         |                                             | References `t_contacts(id)`                            |
+| INDEX           | user_id,contact_id | idx_t_push_notifications_user_id_contact_id | Index on `user_id` + `contact_id` for query efficiency |
+
+#### Query
+
+```SQL
+CREATE TABLE IF NOT EXISTS notification.t_push_notifications
+(
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
+    created_by UUID NOT NULL REFERENCES authentication.t_users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID REFERENCES authentication.t_users(id),
+    updated_at TIMESTAMP,
+
+    is_active BOOLEAN NOT NULL DEFAULT FALSE,
+    inactive_at TIMESTAMP,
+    inactive_by UUID REFERENCES authentication.t_users(id),
+
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
+    deleted_by UUID REFERENCES authentication.t_users(id),
+
+    type VARCHAR(16) NOT NULL CHECK (type IN ('EMAIL', 'SMS', 'PUSH')),
+    message TEXT NOT NULL,
+    user_id UUID REFERENCES authentication.t_users(id),
+    contact_id UUID REFERENCES t_contacts(id),
+    delivery_status VARCHAR(32) DEFAULT 'PENDING' CHECK (delivery_status IN ('PENDING','SENT','DELIVERED','FAILED')),
+    metadata JSONB
+);
+CREATE INDEX IF NOT EXISTS idx_t_push_notifications_user_id_contact_id ON notification.t_push_notifications(user_id, contact_id);
+
+COMMENT ON TABLE notification.t_push_notifications IS 'Stores push, email, and SMS notifications.';
+COMMENT ON COLUMN notification.t_push_notifications.id IS 'Primary key for the notification record.';
+COMMENT ON COLUMN notification.t_push_notifications.created_by IS 'User who created the notification (references authentication.t_users.id).';
+COMMENT ON COLUMN notification.t_push_notifications.created_at IS 'Timestamp when the notification record was created.';
+COMMENT ON COLUMN notification.t_push_notifications.updated_by IS 'User who last updated the notification record (references authentication.t_users.id).';
+COMMENT ON COLUMN notification.t_push_notifications.updated_at IS 'Timestamp when the notification record was last updated.';
+COMMENT ON COLUMN notification.t_push_notifications.is_active IS 'Indicates if the notification record is active.';
+COMMENT ON COLUMN notification.t_push_notifications.inactive_at IS 'Timestamp when the notification record became inactive.';
+COMMENT ON COLUMN notification.t_push_notifications.inactive_by IS 'User who marked the notification as inactive.';
+COMMENT ON COLUMN notification.t_push_notifications.is_deleted IS 'Indicates if the notification record has been deleted.';
+COMMENT ON COLUMN notification.t_push_notifications.deleted_at IS 'Timestamp when the notification record was deleted.';
+COMMENT ON COLUMN notification.t_push_notifications.deleted_by IS 'User who deleted the notification record.';
+COMMENT ON COLUMN notification.t_push_notifications.type IS 'Type of notification: EMAIL, SMS, PUSH.';
+COMMENT ON COLUMN notification.t_push_notifications.message IS 'The content of the notification.';
+COMMENT ON COLUMN notification.t_push_notifications.user_id IS 'Reference to the user who will receive the notification (authentication.t_users.id).';
+COMMENT ON COLUMN notification.t_push_notifications.contact_id IS 'Reference to the contact (t_contacts.id) for SMS or email.';
+COMMENT ON COLUMN notification.t_push_notifications.delivery_status IS 'Status of the notification: PENDING, SENT, DELIVERED, FAILED.';
+COMMENT ON COLUMN notification.t_push_notifications.metadata IS 'Additional JSON metadata for the notification (e.g., platform info, push token, headers).';
+```
+
+## Schema: otp
+
+### Table: otp.t_otp
+
+#### Table Columns
+
+| Key | Column Name | Data Type   | Default                                   | Description                                                                 |
+| --- | ----------- | ----------- | ----------------------------------------- | --------------------------------------------------------------------------- |
+| PK  | id          | UUID        | GEN_RANDOM_UUID()                         | Primary key for OTP record                                                  |
+| FK  | created_by  | UUID        |                                           | User who generated the OTP (references authentication.t_users.id)           |
+|     | created_at  | TIMESTAMP   | CURRENT_TIMESTAMP                         | Timestamp when OTP was created                                              |
+| FK  | updated_by  | UUID        |                                           | User who last updated the OTP record (references authentication.t_users.id) |
+|     | updated_at  | TIMESTAMP   |                                           | Timestamp when OTP was last updated                                         |
+|     | is_active   | BOOLEAN     | FALSE                                     | Indicates if the OTP is currently active                                    |
+|     | inactive_at | TIMESTAMP   |                                           | Timestamp when OTP became inactive                                          |
+| FK  | inactive_by | UUID        |                                           | User who marked OTP inactive                                                |
+|     | is_deleted  | BOOLEAN     | FALSE                                     | Indicates if the OTP record is deleted                                      |
+|     | deleted_at  | TIMESTAMP   |                                           | Timestamp when OTP record was deleted                                       |
+| FK  | deleted_by  | UUID        |                                           | User who deleted the OTP record                                             |
+|     | expires_at  | TIMESTAMP   | CURRENT_TIMESTAMP + INTERVAL '15 minutes' | Expiration timestamp of the OTP                                             |
+|     | ref_code    | VARCHAR(16) |                                           | Reference code for which the OTP was generated                              |
+|     | otp         | VARCHAR(8)  |                                           | The one-time password value                                                 |
+
+#### Table Constraints
+
+| Constraint Type | Column Name | Constraint Name | Description                             |
+| --------------- | ----------- | --------------- | --------------------------------------- |
+| PRIMARY KEY     | id          |                 | Defines `id` as the primary key         |
+| FOREIGN KEY     | created_by  |                 | References `authentication.t_users(id)` |
+| FOREIGN KEY     | updated_by  |                 | References `authentication.t_users(id)` |
+| FOREIGN KEY     | inactive_by |                 | References `authentication.t_users(id)` |
+| FOREIGN KEY     | deleted_by  |                 | References `authentication.t_users(id)` |
+| INDEX           | ref_code    | idx_t_otp_code  | Index on `ref_code` for faster lookup   |
+
+#### Query
+
+```SQL
+CREATE TABLE IF NOT EXISTS otp.t_otp
+(
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
+    created_by UUID NOT NULL REFERENCES authentication.t_users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID REFERENCES authentication.t_users(id),
+    updated_at TIMESTAMP,
+
+    is_active BOOLEAN NOT NULL DEFAULT FALSE,
+    inactive_at TIMESTAMP,
+    inactive_by UUID REFERENCES authentication.t_users(id),
+
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
+    deleted_by UUID REFERENCES authentication.t_users(id),
+
+    expires_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP + INTERVAL '15 minutes',
+
+    ref_code VARCHAR(16) NOT NULL,
+    otp VARCHAR(8) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_t_otp_code ON otp.t_otp(ref_code);
+
+COMMENT ON TABLE otp.t_otp IS 'Stores OTP records for verification with reference code.';
+COMMENT ON COLUMN otp.t_otp.id IS 'Primary key for OTP record.';
+COMMENT ON COLUMN otp.t_otp.created_by IS 'User who generated the OTP (references authentication.t_users.id).';
+COMMENT ON COLUMN otp.t_otp.created_at IS 'Timestamp when OTP was created.';
+COMMENT ON COLUMN otp.t_otp.updated_by IS 'User who last updated the OTP record (references authentication.t_users.id).';
+COMMENT ON COLUMN otp.t_otp.updated_at IS 'Timestamp when OTP was last updated.';
+COMMENT ON COLUMN otp.t_otp.is_active IS 'Indicates if the OTP is currently active.';
+COMMENT ON COLUMN otp.t_otp.inactive_at IS 'Timestamp when OTP became inactive.';
+COMMENT ON COLUMN otp.t_otp.inactive_by IS 'User who marked OTP inactive.';
+COMMENT ON COLUMN otp.t_otp.is_deleted IS 'Indicates if the OTP record is deleted.';
+COMMENT ON COLUMN otp.t_otp.deleted_at IS 'Timestamp when OTP record was deleted.';
+COMMENT ON COLUMN otp.t_otp.deleted_by IS 'User who deleted the OTP record.';
+COMMENT ON COLUMN otp.t_otp.expires_at IS 'Expiration timestamp of the OTP.';
+COMMENT ON COLUMN otp.t_otp.ref_code IS 'Reference code for which the OTP was generated.';
+COMMENT ON COLUMN otp.t_otp.otp IS 'The one-time password value.';
+```
+
+### Table: otp.t_otp
+
+#### Table Columns
+
+| Key | Column Name            | Data Type              | Default           | Description                                                        |
+| --- | ---------------------- | ---------------------- | ----------------- | ------------------------------------------------------------------ |
+| PK  | id                     | UUID                   | GEN_RANDOM_UUID() | Primary key for the OTP log record                                 |
+| FK  | created_by             | UUID                   |                   | User who performed the OTP verification attempt                    |
+|     | created_at             | TIMESTAMP              | CURRENT_TIMESTAMP | Timestamp when the OTP log record was created                      |
+| FK  | otp_id                 | UUID                   |                   | Reference to the OTP record being verified                         |
+|     | context                | VARCHAR(32)            |                   | Context for OTP check: LOGIN, CONFIRM, RESET_PASSWORD, OTHER       |
+|     | ip_address             | INET                   |                   | IP address from which the OTP verification was attempted           |
+|     | device_id              | TEXT                   |                   | Identifier of the device used for OTP verification                 |
+|     | device_os              | TEXT                   |                   | Operating system of the device used                                |
+|     | location_name          | TEXT                   |                   | Human-readable name of the location where OTP was verified         |
+|     | latitude               | TEXT                   |                   | Latitude of the OTP verification location                          |
+|     | longitude              | TEXT                   |                   | Longitude of the OTP verification location                         |
+|     | geofence_center        | GEOGRAPHY(POINT, 4326) |                   | Geographical point for geofence verification (optional)            |
+|     | geofence_radius_meters | INT                    |                   | Radius in meters used for geofence verification                    |
+|     | result                 | VARCHAR(16)            |                   | Result of the OTP verification: SUCCESS, FAILED, EXPIRED           |
+|     | remark                 | TEXT                   |                   | Additional remarks or notes regarding the OTP verification attempt |
+
+#### Table Constraints
+
+| Constraint Type | Column Name | Constraint Name | Description                                                       |
+| --------------- | ----------- | --------------- | ----------------------------------------------------------------- |
+| PRIMARY KEY     | id          |                 | Defines `id` as the primary key                                   |
+| FOREIGN KEY     | created_by  |                 | References `authentication.t_users(id)`                           |
+| FOREIGN KEY     | otp_id      |                 | References `otp.t_otp(id)`                                        |
+| CHECK           | context     |                 | Ensures `context` is one of LOGIN, CONFIRM, RESET_PASSWORD, OTHER |
+| CHECK           | result      |                 | Ensures `result` is one of SUCCESS, FAILED, EXPIRED               |
+
+#### Query
+
+```SQL
+CREATE TABLE IF NOT EXISTS otp.t_otp_logs
+(
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
+    created_by UUID NOT NULL REFERENCES authentication.t_users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    otp_id UUID NOT NULL REFERENCES otp.t_otp(id),
+
+    context VARCHAR(32) NOT NULL CHECK (context IN ('LOGIN', 'CONFIRM', 'RESET_PASSWORD', 'OTHER')),
+    ip_address INET,
+    device_id TEXT,
+    device_os TEXT,
+
+    location_name TEXT,
+    latitude TEXT,
+    longitude TEXT,
+
+    geofence_center GEOGRAPHY(POINT, 4326),
+    geofence_radius_meters INT,
+
+    result VARCHAR(16) NOT NULL CHECK (result IN ('SUCCESS','FAILED','EXPIRED')),
+    remark TEXT
+);
+COMMENT ON TABLE otp.t_otp_logs IS 'Logs for OTP verification attempts, including context, device, location, and result.';
+COMMENT ON COLUMN otp.t_otp_logs.id IS 'Primary key for the OTP log record.';
+COMMENT ON COLUMN otp.t_otp_logs.created_by IS 'User who performed the OTP verification attempt (references authentication.t_users.id).';
+COMMENT ON COLUMN otp.t_otp_logs.created_at IS 'Timestamp when the OTP log record was created.';
+COMMENT ON COLUMN otp.t_otp_logs.otp_id IS 'Reference to the OTP record (otp.t_otp.id) being verified.';
+COMMENT ON COLUMN otp.t_otp_logs.context IS 'Context for the OTP check: LOGIN, CONFIRM, RESET_PASSWORD, OTHER.';
+COMMENT ON COLUMN otp.t_otp_logs.ip_address IS 'IP address from which the OTP verification was attempted.';
+COMMENT ON COLUMN otp.t_otp_logs.device_id IS 'Identifier of the device used for OTP verification.';
+COMMENT ON COLUMN otp.t_otp_logs.device_os IS 'Operating system of the device used for OTP verification.';
+COMMENT ON COLUMN otp.t_otp_logs.location_name IS 'Human-readable name of the location where OTP was verified.';
+COMMENT ON COLUMN otp.t_otp_logs.latitude IS 'Latitude of the location where OTP was verified.';
+COMMENT ON COLUMN otp.t_otp_logs.longitude IS 'Longitude of the location where OTP was verified.';
+COMMENT ON COLUMN otp.t_otp_logs.geofence_center IS 'Geographical point (latitude, longitude) for geofence verification (optional).';
+COMMENT ON COLUMN otp.t_otp_logs.geofence_radius_meters IS 'Radius in meters used for geofence verification.';
+COMMENT ON COLUMN otp.t_otp_logs.result IS 'Result of the OTP verification: SUCCESS, FAILED, EXPIRED.';
+COMMENT ON COLUMN otp.t_otp_logs.remark IS 'Additional remarks or notes regarding the OTP verification attempt.';
+```
+
 ---
 
 ## Schema: authorization
@@ -1645,7 +1994,7 @@ Stores attribute definitions used for ABAC (Attribute-Based Access Control) poli
 |     | is_parameter | BOOLEAN      | FALSE             | Indicates if the attribute is a parameter for policy evaluation |
 |     | is_required  | BOOLEAN      | FALSE             | Indicates if the attribute is required                          |
 |     | is_display   | BOOLEAN      | FALSE             | Indicates if the attribute should be displayed in UI            |
-|     | category     | VARCHAR(32)  | 'USER'            | Attribute category: USER, RESOURCE, or ENVIRONMENT              |
+|     | category     | VARCHAR(32)  | 'USER'            | Attribute category: USER, RESOURCE, ATTRIBUTE,  or ENVIRONMENT  |
 |     | key          | VARCHAR(128) |                   | Attribute key; must be unique                                   |
 |     | data_type    | VARCHAR(64)  |                   | Data type of the attribute (e.g., STRING, BOOLEAN, DATE)        |
 |     | title        | VARCHAR(256) |                   | Human-readable title of the attribute                           |
@@ -1685,7 +2034,7 @@ CREATE TABLE IF NOT EXISTS authorization.m_attributes
     is_required BOOLEAN NOT NULL DEFAULT FALSE,
     is_display BOOLEAN NOT NULL DEFAULT FALSE,
 
-    category VARCHAR(32) DEFAULT 'USER' CHECK (category IN ('USER','RESOURCE','ENVIRONMENT')),
+    category VARCHAR(32) DEFAULT 'USER' CHECK (category IN ('USER','ATTRIBUTE', 'RESOURCE','ENVIRONMENT')),
     key VARCHAR(128) NOT NULL,
     data_type VARCHAR(64) NOT NULL,
     title VARCHAR(256),
@@ -1708,7 +2057,7 @@ COMMENT ON COLUMN authorization.m_attributes.deleted_by IS 'User who deleted the
 COMMENT ON COLUMN authorization.m_attributes.is_parameter IS 'Indicates if the attribute is a system parameter';
 COMMENT ON COLUMN authorization.m_attributes.is_required IS 'Indicates if the attribute is required';
 COMMENT ON COLUMN authorization.m_attributes.is_display IS 'Indicates if the attribute should be displayed in UI';
-COMMENT ON COLUMN authorization.m_attributes.category IS 'Category of the attribute: USER, RESOURCE, or ENVIRONMENT';
+COMMENT ON COLUMN authorization.m_attributes.category IS 'Category of the attribute: USER, ATTRIBUTE, RESOURCE, or ENVIRONMENT';
 COMMENT ON COLUMN authorization.m_attributes.key IS 'Unique key of the attribute';
 COMMENT ON COLUMN authorization.m_attributes.data_type IS 'Data type of the attribute';
 COMMENT ON COLUMN authorization.m_attributes.title IS 'Title or label of the attribute';
