@@ -1,76 +1,188 @@
 {
   "openapi": "3.1.1",
   "info": {
-    "title": "IAM Service API",
-    "description": "Identity & Access Management API for Ecosystem – handles Authentication, Authorization, User & Session Management.",
+    "title": "IAM Microservice API",
+    "description": "Identity & Access Management Microservice API - A comprehensive solution for authentication, authorization, user management, and session handling in a microservices ecosystem.\n\n## Features\n- **Multi-factor Authentication**: Password, OTP (SMS/Email), Social Login\n- **Role-Based Access Control (RBAC)**: User groups and permissions\n- **Attribute-Based Access Control (ABAC)**: Policy-based authorization\n- **Session Management**: JWT tokens with refresh capabilities\n- **User Management**: Registration, profile management, contact handling\n- **Security**: AES-256 encryption for sensitive data\n\n## API Versioning\nThis API follows semantic versioning. Current version: v1.0.0\n\n## Rate Limiting\n- Authentication endpoints: 10 requests/minute per IP\n- Authorization endpoints: 100 requests/minute per user\n- Health check: 1000 requests/minute per IP",
     "version": "1.0.0",
     "contact": {
-      "name": "Ittikorn Sopawan",
-      "email": "ittikorn.sopawan@gmail.com"
+      "name": "IAM Service Team",
+      "email": "iam-service@example.com",
+      "url": "https://docs.example.com/iam"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "x-service-info": {
+      "service-name": "iam-service",
+      "team": "Platform Engineering",
+      "repository": "https://github.com/example/iam-service",
+      "monitoring": "https://monitoring.example.com/iam",
+      "documentation": "https://docs.example.com/iam"
     }
   },
   "servers": [
     {
-      "url": "https://api.example.com/iam",
-      "description": "Production Server"
+      "url": "http://localhost:8080/v1/iam",
+      "description": "Local Development Server"
     },
     {
-      "url": "https://pre-prod-api.example.com/iam",
-      "description": "Pre-Production Server"
+      "url": "https://dev-api.example.com/v1/iam",
+      "description": "Development Environment"
     },
     {
-      "url": "https://staging-api.example.com/iam",
-      "description": "Staging Server"
+      "url": "https://qa-api.example.com/v1/iam",
+      "description": "Quality Assurance Environment"
     },
     {
-      "url": "https://uat-api.example.com/iam",
-      "description": "UAT Server"
+      "url": "https://uat-api.example.com/v1/iam",
+      "description": "User Acceptance Testing Environment"
     },
     {
-      "url": "https://qa-api.example.com/iam",
-      "description": "QA Server"
+      "url": "https://staging-api.example.com/v1/iam",
+      "description": "Staging Environment"
     },
     {
-      "url": "https://dev-api.example.com/iam",
-      "description": "DEV Server"
+      "url": "https://pre-prod-api.example.com/v1/iam",
+      "description": "Pre-Production Environment"
+    },
+    {
+      "url": "https://api.example.com/v1/iam",
+      "description": "Production Environment"
     }
   ],
   "tags": [
-    { "name": "Health", "description": "Service health and readiness checks" },
+    {
+      "name": "Health",
+      "description": "Service health, readiness, and liveness checks for monitoring and load balancing",
+      "x-tag-group": "monitoring"
+    },
     {
       "name": "Authentication",
-      "description": "User authentication and login operations"
+      "description": "User authentication operations including registration, login, and multi-factor authentication",
+      "x-tag-group": "auth"
     },
     {
       "name": "Authorization (RBAC)",
-      "description": "User Group-based access control endpoints"
+      "description": "Role-Based Access Control - User groups, roles, and permission management",
+      "x-tag-group": "authz"
     },
     {
       "name": "Authorization (ABAC)",
-      "description": "Attribute-based access control endpoints"
+      "description": "Attribute-Based Access Control - Policy management and access evaluation",
+      "x-tag-group": "authz"
     },
-    { "name": "User Management", "description": "Manage users and profiles" },
+    {
+      "name": "User Management",
+      "description": "User profile management, contact information, and account operations",
+      "x-tag-group": "user"
+    },
     {
       "name": "Session Management",
-      "description": "Manage user sessions and tokens"
+      "description": "Token management, refresh tokens, and session lifecycle operations",
+      "x-tag-group": "session"
     },
     {
       "name": "Attribute Management",
-      "description": "Manage attributes used in ABAC"
+      "description": "User and system attributes used in ABAC policy evaluation",
+      "x-tag-group": "policy"
     },
     {
       "name": "Infra & DevOps",
-      "description": "Logging, auditing, and security alert operations"
+      "description": "Logging, auditing, monitoring, and security alert operations",
+      "x-tag-group": "ops"
     }
   ],
   "paths": {
     "/api/health": {
       "get": {
         "tags": ["Health"],
-        "summary": "Check service health status",
+        "summary": "Health Check",
+        "description": "Check the health status of the IAM microservice. Returns service status, dependencies, and readiness information.",
         "operationId": "checkHealth",
         "responses": {
-          "200": { "description": "Service is healthy" }
+          "200": {
+            "description": "Service is healthy and ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["healthy", "degraded", "unhealthy"],
+                      "example": "healthy"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time",
+                      "example": "2024-01-15T10:30:00Z"
+                    },
+                    "version": {
+                      "type": "string",
+                      "example": "1.0.0"
+                    },
+                    "uptime": {
+                      "type": "string",
+                      "example": "72h15m30s"
+                    },
+                    "dependencies": {
+                      "type": "object",
+                      "properties": {
+                        "database": {
+                          "type": "string",
+                          "enum": ["healthy", "degraded", "unhealthy"],
+                          "example": "healthy"
+                        },
+                        "redis": {
+                          "type": "string",
+                          "enum": ["healthy", "degraded", "unhealthy"],
+                          "example": "healthy"
+                        },
+                        "external-auth": {
+                          "type": "string",
+                          "enum": ["healthy", "degraded", "unhealthy"],
+                          "example": "healthy"
+                        }
+                      }
+                    }
+                  },
+                  "required": ["status", "timestamp", "version"]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service is unhealthy or not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["unhealthy"],
+                      "example": "unhealthy"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": [
+                        "Database connection failed",
+                        "Redis unavailable"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -111,7 +223,7 @@
             "description": "Bad Request",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -119,7 +231,7 @@
             "description": "Duplicate username/contact",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -128,7 +240,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorPasswordMismatch"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -173,7 +285,7 @@
             "description": "Bad Request",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -181,7 +293,7 @@
             "description": "Duplicate mobile",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -189,7 +301,7 @@
             "description": "OTP invalid or expired",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorOtpInvalid" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -233,7 +345,7 @@
             "description": "Bad Request",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -241,7 +353,7 @@
             "description": "Duplicate email",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -249,7 +361,7 @@
             "description": "OTP invalid or expired",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorOtpInvalid" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -293,7 +405,7 @@
             "description": "Bad Request",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -301,7 +413,7 @@
             "description": "Duplicate social account",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -309,7 +421,7 @@
             "description": "OAuth token invalid or expired",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorSocialInvalid" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -344,7 +456,7 @@
                       "$ref": "#/components/schemas/ResponseStatusDTO"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/UserFullResponseDTO"
+                      "$ref": "#/components/schemas/UserFullWithTokenResponseDTO"
                     }
                   }
                 }
@@ -355,7 +467,7 @@
             "description": "Bad Request – Missing or invalid input (e.g., missing username, password, or malformed JSON payload).",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -363,7 +475,7 @@
             "description": "Duplicate – The username or contact information already exists in the system.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -372,7 +484,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorPasswordMismatch"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -384,7 +496,7 @@
       "post": {
         "tags": ["Authentication"],
         "summary": "Authenticate via mobile number and OTP",
-        "description": "Authenticate a user using mobile number and OTP.\n\n**Business Logic / Conditions:**\n- All personal and contact fields must be AES-256 encrypted before submission.\n- OTP must match the value sent to the user's mobile number.\n- `reference_id` and `code_ref` must be valid and correspond to a previously generated OTP.\n- The system validates the format of `username` and all required fields.\n- If required fields are missing or payload structure is invalid, returns **400 Bad Request**.\n- If OTP verification fails or has expired, returns **422 Unprocessable Entity**.\n- If the user already exists with the same mobile contact, returns **409 Duplicate**.",
+        "description": "Authenticate a user using mobile number and OTP.\n\n**Business Logic / Conditions:**\n- All personal and contact fields must be AES-256 encrypted before submission.\n- OTP must match the value sent to the user's mobile number.\n- `referenceId` and `codeRef` must be valid and correspond to a previously generated OTP.\n- The system validates the format of `username` and all required fields.\n- If required fields are missing or payload structure is invalid, returns **400 Bad Request**.\n- If OTP verification fails or has expired, returns **422 Unprocessable Entity**.\n- If the user already exists with the same mobile contact, returns **409 Duplicate**.",
         "operationId": "loginViaMobileOtp",
         "requestBody": {
           "required": true,
@@ -408,7 +520,7 @@
                       "$ref": "#/components/schemas/ResponseStatusDTO"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/UserFullResponseDTO"
+                      "$ref": "#/components/schemas/UserFullWithTokenResponseDTO"
                     }
                   }
                 }
@@ -419,7 +531,7 @@
             "description": "Bad Request – Missing or invalid input (e.g., missing OTP, username, or malformed payload).",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -427,7 +539,7 @@
             "description": "Duplicate – Mobile number already registered in the system.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -435,7 +547,7 @@
             "description": "Unprocessable Entity – OTP verification failed, expired, or invalid format.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorOtpInvalid" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -446,7 +558,7 @@
       "post": {
         "tags": ["Authentication"],
         "summary": "Authenticate via email OTP",
-        "description": "Authenticate a user using email and OTP.\n\n**Business Logic / Conditions:**\n- All personal and contact fields must be AES-256 encrypted before submission.\n- OTP must match the value sent to the user's email.\n- `reference_id` and `code_ref` must correspond to a previously generated OTP.\n- The system validates the format of `username` and required fields.\n- If required fields are missing or payload structure is invalid, returns **400 Bad Request**.\n- If OTP verification fails or is expired, returns **422 Unprocessable Entity**.\n- If the email is already associated with an existing user, returns **409 Duplicate**.",
+        "description": "Authenticate a user using email and OTP.\n\n**Business Logic / Conditions:**\n- All personal and contact fields must be AES-256 encrypted before submission.\n- OTP must match the value sent to the user's email.\n- `referenceId` and `codeRef` must correspond to a previously generated OTP.\n- The system validates the format of `username` and required fields.\n- If required fields are missing or payload structure is invalid, returns **400 Bad Request**.\n- If OTP verification fails or is expired, returns **422 Unprocessable Entity**.\n- If the email is already associated with an existing user, returns **409 Duplicate**.",
         "operationId": "loginViaEmailOtp",
         "requestBody": {
           "required": true,
@@ -470,7 +582,7 @@
                       "$ref": "#/components/schemas/ResponseStatusDTO"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/UserFullResponseDTO"
+                      "$ref": "#/components/schemas/UserFullWithTokenResponseDTO"
                     }
                   }
                 }
@@ -481,7 +593,7 @@
             "description": "Bad Request – Missing or invalid input (e.g., missing OTP, username, or malformed payload).",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -489,7 +601,7 @@
             "description": "Duplicate – Email already registered in the system.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -497,7 +609,7 @@
             "description": "Unprocessable Entity – OTP verification failed, expired, or invalid format.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorOtpInvalid" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -517,7 +629,7 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "user_id": {
+                  "userId": {
                     "type": "string",
                     "format": "uuid",
                     "description": "User ID pending 2FA verification"
@@ -527,7 +639,7 @@
                     "description": "6-digit code generated by authenticator app"
                   }
                 },
-                "required": ["user_id", "code"]
+                "required": ["userId", "code"]
               }
             }
           }
@@ -544,7 +656,7 @@
                       "$ref": "#/components/schemas/ResponseStatusDTO"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/UserFullResponseDTO"
+                      "$ref": "#/components/schemas/UserFullWithTokenResponseDTO"
                     }
                   }
                 }
@@ -555,7 +667,7 @@
             "description": "Bad Request – Missing user ID or code",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -563,7 +675,7 @@
             "description": "Unprocessable Entity – 2FA code invalid or expired",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorOtpInvalid" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -571,7 +683,7 @@
             "description": "Unauthorized – Access token invalid or session expired",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -606,7 +718,7 @@
                       "$ref": "#/components/schemas/ResponseStatusDTO"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/UserFullResponseDTO"
+                      "$ref": "#/components/schemas/UserFullWithTokenResponseDTO"
                     }
                   }
                 }
@@ -617,7 +729,7 @@
             "description": "Bad Request – Missing or invalid input (e.g., missing access token or malformed payload).",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -625,7 +737,7 @@
             "description": "Duplicate – Social account already linked with another user.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -633,7 +745,7 @@
             "description": "Unprocessable Entity – Access token invalid or expired.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorSocialInvalid" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -662,7 +774,7 @@
             "description": "Unauthorized – Access token is missing, expired, or invalid",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -673,12 +785,12 @@
       "get": {
         "tags": ["Authorization (RBAC)"],
         "summary": "Check if the authenticated user has a specific permission",
-        "description": "Evaluate whether the user associated with the provided access token has the specified permission code.\n\n**Business Logic / Conditions:**\n- Access token must be included in the Authorization header (Bearer).\n- `policy_code` query parameter is required.\n- Returns `has_permission = true` if the user has the permission; otherwise false.\n- Returns 401 if the token is missing, expired, or invalid.",
+        "description": "Evaluate whether the user associated with the provided access token has the specified permission code.\n\n**Business Logic / Conditions:**\n- Access token must be included in the Authorization header (Bearer).\n- `policyCode` query parameter is required.\n- Returns `has_permission = true` if the user has the permission; otherwise false.\n- Returns 401 if the token is missing, expired, or invalid.",
         "operationId": "checkRbacPermission",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
           {
-            "name": "policy_code",
+            "name": "policyCode",
             "in": "query",
             "description": "The code of the permission to check",
             "required": true,
@@ -700,7 +812,7 @@
             "description": "Bad Request – Missing or invalid policy code",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -708,7 +820,7 @@
             "description": "Unauthorized – Access token is missing or invalid",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -759,7 +871,7 @@
             "description": "Bad Request – Missing or invalid input.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -767,7 +879,7 @@
             "description": "Duplicate – User Group name already exists.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -775,7 +887,7 @@
             "description": "Unauthorized – Access token is missing or invalid.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -823,7 +935,7 @@
             "description": "Bad Request",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -831,7 +943,7 @@
             "description": "Not Found",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -839,7 +951,7 @@
             "description": "Unauthorized",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -890,7 +1002,7 @@
             "description": "Not Found",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -898,7 +1010,7 @@
             "description": "Unauthorized",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -909,7 +1021,7 @@
       "post": {
         "tags": ["Authorization (RBAC)"],
         "summary": "Assign one or more user group to a user",
-        "description": "Assign a role (identified by `id`) to a user within a user group.\n\n**Business Logic / Conditions:**\n- `id` is the role ID and must exist.\n- `user_id` and `user_group_id` must exist in the system.\n- If the role is already assigned to the user, returns **409 Duplicate**.\n- Requires valid access token in Authorization header (Bearer).",
+        "description": "Assign a role (identified by `id`) to a user within a user group.\n\n**Business Logic / Conditions:**\n- `id` is the role ID and must exist.\n- `userId` and `user_group_id` must exist in the system.\n- If the role is already assigned to the user, returns **409 Duplicate**.\n- Requires valid access token in Authorization header (Bearer).",
         "operationId": "assignUserRole",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
@@ -944,7 +1056,7 @@
             "description": "Bad Request – Missing or invalid input.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -952,7 +1064,7 @@
             "description": "Duplicate – User Group is already assigned to the user.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -960,7 +1072,7 @@
             "description": "Unauthorized – Access token is missing or invalid.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -971,7 +1083,7 @@
       "post": {
         "tags": ["Authorization (RBAC)"],
         "summary": "Revoke assigned user group from a user",
-        "description": "Revoke a User Group (identified by `id`) from a user in a user group.\n\n**Business Logic / Conditions:**\n- `id` is the role ID and must exist.\n- `user_id` and `user_group_id` must exist and have the role assigned.\n- If the assignment does not exist, returns **404 Not Found**.\n- Requires valid access token in Authorization header (Bearer).",
+        "description": "Revoke a User Group (identified by `id`) from a user in a user group.\n\n**Business Logic / Conditions:**\n- `id` is the role ID and must exist.\n- `userId` and `user_group_id` must exist and have the role assigned.\n- If the assignment does not exist, returns **404 Not Found**.\n- Requires valid access token in Authorization header (Bearer).",
         "operationId": "revokeUserRole",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
@@ -1006,7 +1118,7 @@
             "description": "Bad Request – Missing or invalid input.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -1014,7 +1126,7 @@
             "description": "Not Found – The role assignment does not exist.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -1022,7 +1134,7 @@
             "description": "Unauthorized – Access token is missing or invalid.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1059,7 +1171,7 @@
             "description": "Bad Request – Missing or invalid attributes",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -1067,7 +1179,7 @@
             "description": "Unauthorized – Access token missing or invalid",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1115,7 +1227,7 @@
             "description": "Bad Request – Missing or invalid attribute",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -1123,7 +1235,7 @@
             "description": "Unauthorized – Access token missing or invalid",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1174,7 +1286,7 @@
             "description": "Bad Request – Missing or invalid input.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -1182,7 +1294,7 @@
             "description": "Duplicate – Policy code or name already exists.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -1190,7 +1302,7 @@
             "description": "Unauthorized – Access token is missing or invalid.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1238,7 +1350,7 @@
             "description": "Bad Request",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -1246,7 +1358,7 @@
             "description": "Not Found",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -1254,7 +1366,7 @@
             "description": "Duplicate",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -1262,7 +1374,7 @@
             "description": "Unauthorized",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1298,7 +1410,7 @@
             "description": "Unauthorized",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -1306,7 +1418,7 @@
             "description": "Not Found",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1342,7 +1454,7 @@
             "description": "Bad Request – Invalid or missing fields",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1388,7 +1500,7 @@
             "description": "Bad Request – Invalid input data",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -1396,7 +1508,7 @@
             "description": "Not Found – User not found",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1446,7 +1558,7 @@
             "description": "Not Found – User not found",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1475,7 +1587,7 @@
             "description": "Unauthorized – Access token missing or invalid",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1504,7 +1616,7 @@
             "description": "Unauthorized – Access token missing or invalid",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1550,7 +1662,7 @@
             "description": "Bad Request – Missing or invalid refresh token",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -1558,7 +1670,7 @@
             "description": "Unauthorized – Refresh token invalid or expired",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1602,7 +1714,7 @@
             "description": "Unauthorized – Access token is missing or invalid",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1642,7 +1754,7 @@
             "description": "Unauthorized – Access token is missing or invalid",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1693,7 +1805,7 @@
             "description": "Bad Request – Missing or invalid fields",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -1701,7 +1813,7 @@
             "description": "Duplicate – Attribute key already exists",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorDuplicate" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1755,7 +1867,7 @@
             "description": "Bad Request – Invalid payload or missing field",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -1763,7 +1875,7 @@
             "description": "Not Found – Attribute not found",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -1771,7 +1883,7 @@
             "description": "Unauthorized – Invalid or missing token",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1822,7 +1934,7 @@
             "description": "Not Found – Attribute not found",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorNotFound" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -1830,7 +1942,7 @@
             "description": "Unauthorized – Invalid or missing token",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1868,7 +1980,7 @@
             "description": "Bad Request – Invalid or missing log data",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1927,7 +2039,7 @@
             "description": "Unauthorized – Missing or invalid access token",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1966,7 +2078,7 @@
             "description": "Bad Request – Invalid or missing alert information",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
@@ -1974,7 +2086,7 @@
             "description": "Unauthorized – Missing or invalid access token",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
@@ -1982,73 +2094,543 @@
       }
     }
   },
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "x-microservice-info": {
+    "service-name": "iam-service",
+    "version": "1.0.0",
+    "team": "Platform Engineering",
+    "repository": "https://github.com/example/iam-service",
+    "documentation": "https://docs.example.com/iam",
+    "monitoring": "https://monitoring.example.com/iam",
+    "health-check": "/api/health",
+    "metrics": "/api/metrics",
+    "dependencies": [
+      {
+        "name": "postgresql",
+        "type": "database",
+        "version": "14+"
+      },
+      {
+        "name": "redis",
+        "type": "cache",
+        "version": "6+"
+      },
+      {
+        "name": "notification-service",
+        "type": "microservice",
+        "version": "1.0.0"
+      }
+    ],
+    "deployment": {
+      "environment": "kubernetes",
+      "replicas": 3,
+      "resources": {
+        "cpu": "500m",
+        "memory": "1Gi"
+      }
+    }
+  },
   "components": {
     "schemas": {
+      "BaseUser": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 50,
+            "pattern": "^[a-zA-Z0-9._-]+$",
+            "description": "Unique username for the user. Must be 8-64 characters, alphanumeric with dots, underscores, or hyphens only."
+          }
+        },
+        "required": ["username"],
+        "additionalProperties": false
+      },
+      "BaseUserProfile": {
+        "type": "object",
+        "description": "Base user profile information containing personal details and identification data",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the user profile",
+            "example": "123e4567-e89b-12d3-a456-426614174000",
+            "x-data-dictionary": {
+              "field-type": "primary-key",
+              "business-meaning": "Unique user identifier across all systems",
+              "data-lineage": "Generated by IAM service during user creation",
+              "sensitivity": "internal",
+              "retention-policy": "permanent"
+            }
+          },
+          "code": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 20,
+            "pattern": "^[A-Z0-9_]+$",
+            "description": "Business code for the user (e.g., EMP001, CUST123)",
+            "example": "EMP001",
+            "x-data-dictionary": {
+              "field-type": "business-key",
+              "business-meaning": "Human-readable user identifier for business operations",
+              "data-lineage": "Assigned by business rules during user creation",
+              "sensitivity": "internal",
+              "retention-policy": "permanent"
+            }
+          },
+          "prefixName": {
+            "type": "string",
+            "maxLength": 10,
+            "description": "Name prefix (Mr., Mrs., Dr., etc.)",
+            "example": "Mr.",
+            "x-data-dictionary": {
+              "field-type": "personal-data",
+              "business-meaning": "Title or prefix for addressing the user",
+              "data-lineage": "Provided by user during registration",
+              "sensitivity": "personal",
+              "retention-policy": "7-years-after-deletion"
+            }
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "pattern": "^[a-zA-Z\\s\\-\\.']+$",
+            "description": "User's first name",
+            "example": "John",
+            "x-data-dictionary": {
+              "field-type": "personal-data",
+              "business-meaning": "Legal first name of the user",
+              "data-lineage": "Provided by user during registration",
+              "sensitivity": "personal",
+              "retention-policy": "7-years-after-deletion"
+            }
+          },
+          "middleName": {
+            "type": "string",
+            "maxLength": 50,
+            "pattern": "^[a-zA-Z\\s\\-\\.']*$",
+            "description": "User's middle name (optional)",
+            "example": "Michael",
+            "x-data-dictionary": {
+              "field-type": "personal-data",
+              "business-meaning": "Middle name or initial of the user",
+              "data-lineage": "Provided by user during registration",
+              "sensitivity": "personal",
+              "retention-policy": "7-years-after-deletion"
+            }
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "pattern": "^[a-zA-Z\\s\\-\\.']+$",
+            "description": "User's last name",
+            "example": "Doe",
+            "x-data-dictionary": {
+              "field-type": "personal-data",
+              "business-meaning": "Legal last name or surname of the user",
+              "data-lineage": "Provided by user during registration",
+              "sensitivity": "personal",
+              "retention-policy": "7-years-after-deletion"
+            }
+          },
+          "nickName": {
+            "type": "string",
+            "maxLength": 30,
+            "pattern": "^[a-zA-Z0-9\\s\\-\\.']*$",
+            "description": "User's preferred nickname (optional)",
+            "example": "Johnny",
+            "x-data-dictionary": {
+              "field-type": "personal-data",
+              "business-meaning": "Preferred name for informal addressing",
+              "data-lineage": "Provided by user during registration",
+              "sensitivity": "personal",
+              "retention-policy": "7-years-after-deletion"
+            }
+          },
+          "gender": {
+            "type": "string",
+            "enum": ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"],
+            "description": "User's gender identity",
+            "example": "MALE",
+            "x-data-dictionary": {
+              "field-type": "personal-data",
+              "business-meaning": "Gender identity for demographic and personalization purposes",
+              "data-lineage": "Provided by user during registration",
+              "sensitivity": "personal",
+              "retention-policy": "7-years-after-deletion"
+            }
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date",
+            "description": "User's date of birth in YYYY-MM-DD format",
+            "example": "1990-05-15",
+            "x-data-dictionary": {
+              "field-type": "personal-data",
+              "business-meaning": "Birth date for age verification and demographic analysis",
+              "data-lineage": "Provided by user during registration",
+              "sensitivity": "personal",
+              "retention-policy": "7-years-after-deletion"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "x-data-dictionary": {
+          "schema-purpose": "Core user profile data",
+          "business-domain": "Identity Management",
+          "data-classification": "Personal Information",
+          "compliance-requirements": ["GDPR", "CCPA", "SOX"],
+          "update-frequency": "Low",
+          "access-patterns": ["Read-heavy", "Occasional updates"]
+        }
+      },
+      "OtpAuthentication": {
+        "type": "object",
+        "description": "One-Time Password authentication data for secure user verification",
+        "properties": {
+          "otp": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 8,
+            "pattern": "^[0-9]+$",
+            "description": "One-time password code sent to user's device",
+            "example": "123456",
+            "x-data-dictionary": {
+              "field-type": "authentication-data",
+              "business-meaning": "Temporary verification code for user authentication",
+              "data-lineage": "Generated by OTP service and sent to user's device",
+              "sensitivity": "sensitive",
+              "retention-policy": "expires-after-5-minutes",
+              "encryption-required": true
+            }
+          },
+          "codeRef": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 32,
+            "pattern": "^[A-Z0-9_]+$",
+            "description": "Reference code linking OTP to the specific request",
+            "example": "OTP_REF_20240115_001",
+            "x-data-dictionary": {
+              "field-type": "reference-data",
+              "business-meaning": "Unique identifier for tracking OTP generation and validation",
+              "data-lineage": "Generated by OTP service during code generation",
+              "sensitivity": "internal",
+              "retention-policy": "expires-after-10-minutes"
+            }
+          },
+          "referenceId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique reference identifier for the OTP session",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "x-data-dictionary": {
+              "field-type": "session-identifier",
+              "business-meaning": "Session identifier for tracking OTP lifecycle",
+              "data-lineage": "Generated by IAM service during OTP request",
+              "sensitivity": "internal",
+              "retention-policy": "expires-after-session-end"
+            }
+          }
+        },
+        "required": ["otp", "codeRef", "referenceId"],
+        "additionalProperties": false,
+        "x-data-dictionary": {
+          "schema-purpose": "OTP-based authentication",
+          "business-domain": "Authentication & Security",
+          "data-classification": "Authentication Data",
+          "compliance-requirements": ["PCI-DSS", "SOX"],
+          "update-frequency": "High",
+          "access-patterns": ["Write-once", "Read-once", "Short-lived"]
+        }
+      },
+      "EncryptedPersonalInfo": {
+        "type": "object",
+        "properties": {
+          "prefixName": {
+            "type": "string",
+            "description": "AES256_ENCRYPTED"
+          },
+          "firstName": {
+            "type": "string",
+            "description": "AES256_ENCRYPTED"
+          },
+          "middleName": {
+            "type": "string",
+            "description": "AES256_ENCRYPTED"
+          },
+          "lastName": {
+            "type": "string",
+            "description": "AES256_ENCRYPTED"
+          },
+          "nickName": {
+            "type": "string",
+            "description": "AES256_ENCRYPTED"
+          },
+          "gender": {
+            "type": "string",
+            "description": "AES256_ENCRYPTED"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "description": "AES256_ENCRYPTED"
+          }
+        }
+      },
+      "EncryptedAddressDTO": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "AES256_ENCRYPTED"
+          },
+          "addressAdditional": {
+            "type": "string",
+            "description": "AES256_ENCRYPTED"
+          },
+          "state": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "district": {
+            "type": "string"
+          },
+          "subDistrict": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          }
+        }
+      },
+      "EncryptedContactDTO": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "string",
+            "enum": ["EMAIL", "MOBILE"]
+          },
+          "contact": {
+            "type": "string",
+            "description": "AES256_ENCRYPTED"
+          }
+        },
+        "required": ["channel", "contact"]
+      },
       "UserDTO": {
         "type": "object",
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "username": { "type": "string" }
         }
       },
       "UserAuthenticationDTO": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "code": { "type": "string" },
-          "prefixName": { "type": "string" },
-          "firstName": { "type": "string" },
-          "middleName": { "type": "string" },
-          "lastName": { "type": "string" },
-          "nickName": { "type": "string" },
-          "gender": { "type": "string" },
-          "dateOfBirth": { "type": "string", "format": "date" }
-        }
+        "allOf": [{ "$ref": "#/components/schemas/BaseUserProfile" }]
       },
       "UserProfileDTO": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "username": { "type": "string" },
-          "code": { "type": "string" },
-          "prefixName": { "type": "string" },
-          "firstName": { "type": "string" },
-          "middleName": { "type": "string" },
-          "lastName": { "type": "string" },
-          "nickName": { "type": "string" },
-          "gender": { "type": "string" },
-          "dateOfBirth": { "type": "string", "format": "date" }
-        }
+        "allOf": [
+          { "$ref": "#/components/schemas/BaseUserProfile" },
+          {
+            "type": "object",
+            "properties": {
+              "username": {
+                "type": "string"
+              }
+            }
+          }
+        ]
       },
       "AddressDTO": {
         "type": "object",
         "properties": {
-          "address": { "type": "string" },
-          "address_additional": { "type": "string" },
-          "state": { "type": "string" },
-          "city": { "type": "string" },
-          "district": { "type": "string" },
-          "subDistrict": { "type": "string" },
-          "postalCode": { "type": "string" }
+          "address": {
+            "type": "string"
+          },
+          "addressAdditional": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "district": {
+            "type": "string"
+          },
+          "subDistrict": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          }
         }
       },
       "ContactDTO": {
         "type": "object",
         "properties": {
-          "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
-          "contact": { "type": "string" }
+          "channel": {
+            "type": "string",
+            "enum": ["EMAIL", "MOBILE"],
+            "description": "Contact channel type"
+          },
+          "contact": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Contact information (email address or mobile number)"
+          }
         },
-        "required": ["channel", "contact"]
+        "required": ["channel", "contact"],
+        "additionalProperties": false
       },
       "TokenDTO": {
         "type": "object",
+        "description": "JWT token information for user authentication and authorization",
         "properties": {
-          "accessToken": { "type": "string" },
-          "expiresIn": { "type": "integer" },
-          "tokenType": { "type": "string" },
-          "refreshToken": { "type": "string", "format": "uuid" },
-          "roles": { "type": "array", "items": { "type": "string" } },
-          "permissions": { "type": "array", "items": { "type": "string" } }
+          "accessToken": {
+            "type": "string",
+            "minLength": 100,
+            "maxLength": 2000,
+            "pattern": "^[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$",
+            "description": "JWT access token for API authentication",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+            "x-data-dictionary": {
+              "field-type": "authentication-token",
+              "business-meaning": "Bearer token for API access authorization",
+              "data-lineage": "Generated by IAM service after successful authentication",
+              "sensitivity": "highly-sensitive",
+              "retention-policy": "expires-after-token-lifetime",
+              "encryption-required": true,
+              "token-claims": ["sub", "iat", "exp", "roles", "permissions"]
+            }
+          },
+          "expiresIn": {
+            "type": "integer",
+            "minimum": 60,
+            "maximum": 86400,
+            "description": "Token expiration time in seconds (1 minute to 24 hours)",
+            "example": 3600,
+            "x-data-dictionary": {
+              "field-type": "duration-data",
+              "business-meaning": "Token validity period for security control",
+              "data-lineage": "Calculated based on security policy and user preferences",
+              "sensitivity": "internal",
+              "retention-policy": "not-applicable",
+              "business-rules": [
+                "Default: 1 hour",
+                "Max: 24 hours",
+                "Min: 1 minute"
+              ]
+            }
+          },
+          "tokenType": {
+            "type": "string",
+            "enum": ["Bearer"],
+            "default": "Bearer",
+            "description": "Token type, always 'Bearer' for JWT tokens",
+            "example": "Bearer",
+            "x-data-dictionary": {
+              "field-type": "constant-value",
+              "business-meaning": "OAuth 2.0 token type specification",
+              "data-lineage": "Fixed value per OAuth 2.0 standard",
+              "sensitivity": "public",
+              "retention-policy": "not-applicable"
+            }
+          },
+          "refreshToken": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Refresh token UUID for obtaining new access tokens",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "x-data-dictionary": {
+              "field-type": "refresh-token",
+              "business-meaning": "Long-lived token for obtaining new access tokens",
+              "data-lineage": "Generated by IAM service during token issuance",
+              "sensitivity": "highly-sensitive",
+              "retention-policy": "expires-after-refresh-lifetime",
+              "encryption-required": true,
+              "business-rules": [
+                "Valid for 30 days",
+                "Single-use per access token"
+              ]
+            }
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 50,
+              "pattern": "^[A-Z_]+$"
+            },
+            "uniqueItems": true,
+            "maxItems": 20,
+            "description": "List of user roles",
+            "example": ["ADMIN", "USER", "MANAGER"],
+            "x-data-dictionary": {
+              "field-type": "role-list",
+              "business-meaning": "User roles for role-based access control",
+              "data-lineage": "Assigned by administrators or derived from user groups",
+              "sensitivity": "internal",
+              "retention-policy": "permanent",
+              "business-rules": [
+                "Must be predefined roles",
+                "Case-sensitive",
+                "Uppercase only"
+              ]
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 100,
+              "pattern": "^[A-Z_]+:[A-Z_]+$"
+            },
+            "uniqueItems": true,
+            "maxItems": 100,
+            "description": "List of user permissions in format 'RESOURCE:ACTION'",
+            "example": ["USER:READ", "PROFILE:WRITE", "ADMIN:DELETE"],
+            "x-data-dictionary": {
+              "field-type": "permission-list",
+              "business-meaning": "Granular permissions for fine-grained access control",
+              "data-lineage": "Derived from roles and policies",
+              "sensitivity": "internal",
+              "retention-policy": "permanent",
+              "business-rules": [
+                "Format: RESOURCE:ACTION",
+                "Must be predefined permissions"
+              ]
+            }
+          }
+        },
+        "required": ["accessToken", "expiresIn", "tokenType"],
+        "additionalProperties": false,
+        "x-data-dictionary": {
+          "schema-purpose": "Authentication token management",
+          "business-domain": "Authentication & Authorization",
+          "data-classification": "Authentication Data",
+          "compliance-requirements": ["OAuth 2.0", "JWT", "PCI-DSS"],
+          "update-frequency": "High",
+          "access-patterns": ["Read-heavy", "Frequent updates"],
+          "security-considerations": [
+            "Token rotation",
+            "Secure storage",
+            "Audit logging"
+          ]
         }
       },
       "ResponseStatusDTO": {
@@ -2076,13 +2658,50 @@
       "UserFullResponseDTO": {
         "type": "object",
         "properties": {
-          "user": { "$ref": "#/components/schemas/UserDTO" },
-          "personal": { "$ref": "#/components/schemas/UserProfileDTO" },
-          "referral": { "$ref": "#/components/schemas/UserProfileDTO" },
-          "address": { "$ref": "#/components/schemas/AddressDTO" },
+          "user": {
+            "$ref": "#/components/schemas/UserDTO"
+          },
+          "personal": {
+            "$ref": "#/components/schemas/UserProfileDTO"
+          },
+          "referral": {
+            "$ref": "#/components/schemas/UserProfileDTO"
+          },
+          "address": {
+            "$ref": "#/components/schemas/AddressDTO"
+          },
           "contact": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/ContactDTO" }
+            "items": {
+              "$ref": "#/components/schemas/ContactDTO"
+            }
+          }
+        },
+        "required": ["user", "personal", "referral", "address", "contact"]
+      },
+      "UserFullWithTokenResponseDTO": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserDTO"
+          },
+          "personal": {
+            "$ref": "#/components/schemas/UserProfileDTO"
+          },
+          "referral": {
+            "$ref": "#/components/schemas/UserProfileDTO"
+          },
+          "address": {
+            "$ref": "#/components/schemas/AddressDTO"
+          },
+          "contact": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContactDTO"
+            }
+          },
+          "token": {
+            "$ref": "#/components/schemas/TokenDTO"
           }
         },
         "required": ["user", "personal", "referral", "address", "contact"]
@@ -2091,11 +2710,7 @@
         "type": "object",
         "properties": {
           "user": {
-            "type": "object",
-            "properties": {
-              "username": { "type": "string" }
-            },
-            "required": ["username"]
+            "$ref": "#/components/schemas/BaseUser"
           },
           "authentication": {
             "type": "object",
@@ -2113,90 +2728,90 @@
       "LoginMobileRequest": {
         "type": "object",
         "properties": {
-          "user": {
-            "type": "object",
-            "properties": { "username": { "type": "string" } },
-            "required": ["username"]
-          },
+          "user": { "$ref": "#/components/schemas/BaseUser" },
           "authentication": {
-            "type": "object",
-            "properties": {
-              "otp": { "type": "string" },
-              "code_ref": { "type": "string" },
-              "reference_id": { "type": "string", "format": "uuid" }
-            },
-            "required": ["otp", "code_ref", "reference_id"]
+            "$ref": "#/components/schemas/OtpAuthentication"
           }
-        }
+        },
+        "required": ["user", "authentication"]
       },
       "LoginEmailRequest": {
         "type": "object",
         "properties": {
-          "user": {
-            "type": "object",
-            "properties": { "username": { "type": "string" } },
-            "required": ["username"]
-          },
+          "user": { "$ref": "#/components/schemas/BaseUser" },
           "authentication": {
-            "type": "object",
-            "properties": {
-              "otp": { "type": "string" },
-              "code_ref": { "type": "string" },
-              "reference_id": { "type": "string", "format": "uuid" }
-            },
-            "required": ["otp", "code_ref", "reference_id"]
+            "$ref": "#/components/schemas/OtpAuthentication"
           }
-        }
+        },
+        "required": ["user", "authentication"]
       },
       "LoginSocialRequest": {
         "type": "object",
         "properties": {
-          "user": {
-            "type": "object",
-            "properties": { "username": { "type": "string" } },
-            "required": ["username"]
-          },
+          "user": { "$ref": "#/components/schemas/BaseUser" },
           "authentication": {
             "type": "object",
             "properties": {
-              "provider": { "type": "string" },
-              "providerName": { "type": "string" },
-              "providerUserId": { "type": "string" },
-              "accessToken": { "type": "string" },
-              "refreshToken": { "type": "string" }
+              "provider": {
+                "type": "string"
+              },
+              "providerName": {
+                "type": "string"
+              },
+              "providerUserId": {
+                "type": "string"
+              },
+              "accessToken": {
+                "type": "string"
+              },
+              "refreshToken": {
+                "type": "string"
+              }
             },
             "required": ["provider", "providerUserId", "accessToken"]
           }
-        }
+        },
+        "required": ["user", "authentication"]
       },
       "CreateRoleRequest": {
         "type": "object",
         "properties": {
-          "user-group": {
+          "userGroup": {
             "type": "array",
             "items": {
               "type": "object",
               "properties": {
-                "name": { "type": "string" },
-                "description": { "type": "string" }
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
               },
               "required": ["name"]
             }
           }
         },
-        "required": ["user-group"]
+        "required": ["userGroup"]
       },
       "CreateRoleResponse": {
         "type": "object",
         "properties": {
-          "user-group": {
+          "userGroup": {
             "type": "array",
             "items": {
               "type": "object",
               "properties": {
-                "id": { "type": "string", "format": "uuid" },
-                "name": { "type": "string" },
-                "description": { "type": "string" }
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
               }
             }
           }
@@ -2205,13 +2820,28 @@
       "CreatePolicyRequest": {
         "type": "object",
         "properties": {
-          "code": { "type": "string" },
-          "name": { "type": "string" },
-          "description": { "type": "string" },
-          "effect": { "type": "string", "enum": ["allow", "deny"] },
-          "action": { "type": "string" },
-          "resource": { "type": "string" },
-          "condition_logic": { "type": "string" }
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "effect": {
+            "type": "string",
+            "enum": ["allow", "deny"]
+          },
+          "action": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          },
+          "conditionLogic": {
+            "type": "string"
+          }
         },
         "required": [
           "code",
@@ -2219,7 +2849,7 @@
           "effect",
           "action",
           "resource",
-          "condition_logic"
+          "conditionLogic"
         ]
       },
       "CreatePolicyResponse": {
@@ -2230,25 +2860,54 @@
             "format": "uuid",
             "description": "Unique identifier for the policy"
           },
-          "code": { "type": "string" },
-          "name": { "type": "string" },
-          "description": { "type": "string" },
-          "effect": { "type": "string" },
-          "action": { "type": "string" },
-          "resource": { "type": "string" },
-          "condition_logic": { "type": "string" }
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "effect": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          },
+          "conditionLogic": {
+            "type": "string"
+          }
         }
       },
       "UpdatePolicyRequest": {
         "type": "object",
         "properties": {
-          "code": { "type": "string" },
-          "name": { "type": "string" },
-          "description": { "type": "string" },
-          "effect": { "type": "string", "enum": ["allow", "deny"] },
-          "action": { "type": "string" },
-          "resource": { "type": "string" },
-          "condition_logic": { "type": "string" }
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "effect": {
+            "type": "string",
+            "enum": ["allow", "deny"]
+          },
+          "action": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          },
+          "conditionLogic": {
+            "type": "string"
+          }
         },
         "required": [
           "id",
@@ -2257,16 +2916,16 @@
           "effect",
           "action",
           "resource",
-          "condition_logic"
+          "conditionLogic"
         ]
       },
       "AssignUserRoleRequest": {
         "type": "object",
         "properties": {
-          "user_group_id": { "type": "string", "format": "uuid" },
-          "user_id": { "type": "string", "format": "uuid" }
+          "userGroupId": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" }
         },
-        "required": ["user_group_id", "user_id"]
+        "required": ["userGroupId", "userId"]
       },
       "AssignUserRoleResponse": {
         "type": "object",
@@ -2275,25 +2934,25 @@
           "data": {
             "type": "object",
             "properties": {
-              "user_group_mapping_id": {
+              "userGroupMappingId": {
                 "type": "string",
                 "format": "uuid",
                 "description": "Unique identifier for the user-role assignment"
               },
-              "user_group_id": { "type": "string", "format": "uuid" },
-              "user_id": { "type": "string", "format": "uuid" }
+              "userGroupId": { "type": "string", "format": "uuid" },
+              "userId": { "type": "string", "format": "uuid" }
             },
-            "required": ["user_group_mapping_id", "user_group_id", "user_id"]
+            "required": ["userGroupMappingId", "userGroupId", "userId"]
           }
         }
       },
       "RevokeUserRoleRequest": {
         "type": "object",
         "properties": {
-          "user_group_id": { "type": "string", "format": "uuid" },
-          "user_id": { "type": "string", "format": "uuid" }
+          "userGroupId": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" }
         },
-        "required": ["user_group_id", "user_id"]
+        "required": ["userGroupId", "userId"]
       },
       "RevokeUserRoleResponse": {
         "type": "object",
@@ -2302,15 +2961,15 @@
           "data": {
             "type": "object",
             "properties": {
-              "user_group_mapping_id": {
+              "userGroupMappingId": {
                 "type": "string",
                 "format": "uuid",
                 "description": "Unique identifier for the user-role assignment that was revoked"
               },
-              "user_group_id": { "type": "string", "format": "uuid" },
-              "user_id": { "type": "string", "format": "uuid" }
+              "userGroupId": { "type": "string", "format": "uuid" },
+              "userId": { "type": "string", "format": "uuid" }
             },
-            "required": ["user_group_mapping_id", "user_group_id", "user_id"]
+            "required": ["userGroupMappingId", "userGroupId", "userId"]
           }
         }
       },
@@ -2330,13 +2989,13 @@
             "items": {
               "type": "object",
               "properties": {
-                "policy_id": { "type": "string", "format": "uuid" },
+                "policyId": { "type": "string", "format": "uuid" },
                 "operator": {
                   "type": "string",
                   "enum": ["READ", "WRITE", "DELETE", "ALL"]
                 }
               },
-              "required": ["policy_id", "operator"]
+              "required": ["policyId", "operator"]
             }
           }
         },
@@ -2363,13 +3022,13 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "policy_id": { "type": "string", "format": "uuid" },
+                    "policyId": { "type": "string", "format": "uuid" },
                     "operator": {
                       "type": "string",
                       "enum": ["READ", "WRITE", "DELETE", "ALL"]
                     }
                   },
-                  "required": ["policy_id", "operator"]
+                  "required": ["policyId", "operator"]
                 }
               }
             },
@@ -2392,10 +3051,10 @@
               "permissions": {
                 "type": "array",
                 "items": { "type": "string" },
-                "description": "List of permissions in the format {policy_code:effect}"
+                "description": "List of permissions in the format {policyCode:effect}"
               }
             },
-            "required": ["user_id", "username", "roles"]
+            "required": ["userId", "username", "roles"]
           }
         }
       },
@@ -2406,12 +3065,12 @@
           "data": {
             "type": "object",
             "properties": {
-              "user_id": { "type": "string", "format": "uuid" },
+              "userId": { "type": "string", "format": "uuid" },
               "username": { "type": "string" },
-              "policy_code": { "type": "string" },
-              "has_permission": { "type": "boolean" }
+              "policyCode": { "type": "string" },
+              "hasPermission": { "type": "boolean" }
             },
-            "required": ["user_id", "username", "policy_code", "has_permission"]
+            "required": ["userId", "username", "policyCode", "hasPermission"]
           }
         }
       },
@@ -2443,7 +3102,7 @@
           "permissions": {
             "type": "array",
             "items": { "type": "string" },
-            "description": "List of permissions in the format {policy_code:effect}"
+            "description": "List of permissions in the format {policyCode:effect}"
           }
         },
         "required": [
@@ -2487,7 +3146,7 @@
               "permissions": {
                 "type": "array",
                 "items": { "type": "string" },
-                "description": "List of permissions in the format {policy_code:effect}"
+                "description": "List of permissions in the format {policyCode:effect}"
               }
             },
             "required": [
@@ -2504,7 +3163,7 @@
       "EvaluatePolicyRequest": {
         "type": "object",
         "properties": {
-          "user_id": {
+          "userId": {
             "type": "string",
             "format": "uuid",
             "description": "ID of the user for evaluation"
@@ -2515,7 +3174,7 @@
             "description": "Key-value pairs of user attributes and context for ABAC evaluation"
           }
         },
-        "required": ["user_id", "attributes"]
+        "required": ["userId", "attributes"]
       },
       "EvaluatePolicyResponse": {
         "type": "object",
@@ -2529,10 +3188,10 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "policy_code": { "type": "string" },
+                    "policyCode": { "type": "string" },
                     "effect": { "type": "string", "enum": ["allow", "deny"] }
                   },
-                  "required": ["policy_code", "effect"]
+                  "required": ["policyCode", "effect"]
                 }
               }
             },
@@ -2543,7 +3202,7 @@
       "EvaluateAccessRequest": {
         "type": "object",
         "properties": {
-          "user_id": {
+          "userId": {
             "type": "string",
             "format": "uuid",
             "description": "User ID for evaluation"
@@ -2554,7 +3213,7 @@
             "description": "Additional context key-value pairs for ABAC evaluation"
           }
         },
-        "required": ["user_id"]
+        "required": ["userId"]
       },
       "EvaluateAccessResponse": {
         "type": "object",
@@ -2571,7 +3230,7 @@
               "permissions": {
                 "type": "array",
                 "items": { "type": "string" },
-                "description": "List of permissions in the format {policy_code}:{effect}"
+                "description": "List of permissions in the format {policyCode}:{effect}"
               }
             },
             "required": ["userGroup", "permissions"]
@@ -2581,43 +3240,8 @@
       "RegisterRequest": {
         "type": "object",
         "properties": {
-          "user": {
-            "type": "object",
-            "properties": {
-              "username": { "type": "string" }
-            },
-            "required": ["username"]
-          },
-          "personal": {
-            "type": "object",
-            "properties": {
-              "prefixName": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "firstName": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "middleName": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "lastName": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "nickName": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "gender": { "type": "string", "description": "AES256_ENCRYPTED" },
-              "dateOfBirth": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              }
-            }
-          },
+          "user": { "$ref": "#/components/schemas/BaseUser" },
+          "personal": { "$ref": "#/components/schemas/EncryptedPersonalInfo" },
           "authentication": {
             "type": "object",
             "properties": {
@@ -2638,26 +3262,10 @@
               "code": { "type": "string" }
             }
           },
-          "address": {
-            "type": "object",
-            "properties": {
-              "state": { "type": "string" },
-              "city": { "type": "string" },
-              "district": { "type": "string" },
-              "subDistrict": { "type": "string" },
-              "postalCode": { "type": "string" }
-            }
-          },
+          "address": { "$ref": "#/components/schemas/AddressDTO" },
           "contact": {
             "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
-                "contact": { "type": "string" }
-              },
-              "required": ["channel", "contact"]
-            }
+            "items": { "$ref": "#/components/schemas/ContactDTO" }
           }
         },
         "required": ["user", "authentication", "personal", "contact"]
@@ -2665,85 +3273,19 @@
       "RegisterMobileRequest": {
         "type": "object",
         "properties": {
-          "user": {
-            "type": "object",
-            "properties": { "username": { "type": "string" } },
-            "required": ["username"]
-          },
+          "user": { "$ref": "#/components/schemas/BaseUser" },
           "authentication": {
-            "type": "object",
-            "properties": {
-              "otp": { "type": "string" },
-              "code_ref": { "type": "string" },
-              "reference_id": { "type": "string", "format": "uuid" }
-            },
-            "required": ["otp", "code_ref", "reference_id"]
+            "$ref": "#/components/schemas/OtpAuthentication"
           },
-          "personal": {
-            "type": "object",
-            "properties": {
-              "prefixName": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "firstName": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "middleName": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "lastName": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "nickName": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "gender": { "type": "string", "description": "AES256_ENCRYPTED" },
-              "dateOfBirth": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              }
-            }
-          },
+          "personal": { "$ref": "#/components/schemas/EncryptedPersonalInfo" },
           "referral": {
             "type": "object",
             "properties": { "code": { "type": "string" } }
           },
-          "address": {
-            "type": "object",
-            "properties": {
-              "address": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "address_additional": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "state": { "type": "string" },
-              "city": { "type": "string" },
-              "district": { "type": "string" },
-              "subDistrict": { "type": "string" },
-              "postalCode": { "type": "string" }
-            }
-          },
+          "address": { "$ref": "#/components/schemas/EncryptedAddressDTO" },
           "contact": {
             "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
-                "contact": {
-                  "type": "string",
-                  "description": "AES256_ENCRYPTED"
-                }
-              },
-              "required": ["channel", "contact"]
-            }
+            "items": { "$ref": "#/components/schemas/EncryptedContactDTO" }
           }
         },
         "required": ["user", "authentication", "personal", "contact"]
@@ -2751,85 +3293,19 @@
       "RegisterEmailRequest": {
         "type": "object",
         "properties": {
-          "user": {
-            "type": "object",
-            "properties": { "username": { "type": "string" } },
-            "required": ["username"]
-          },
+          "user": { "$ref": "#/components/schemas/BaseUser" },
           "authentication": {
-            "type": "object",
-            "properties": {
-              "otp": { "type": "string" },
-              "code_ref": { "type": "string" },
-              "reference_id": { "type": "string", "format": "uuid" }
-            },
-            "required": ["otp", "code_ref", "reference_id"]
+            "$ref": "#/components/schemas/OtpAuthentication"
           },
-          "personal": {
-            "type": "object",
-            "properties": {
-              "prefixName": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "firstName": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "middleName": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "lastName": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "nickName": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "gender": { "type": "string", "description": "AES256_ENCRYPTED" },
-              "dateOfBirth": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              }
-            }
-          },
+          "personal": { "$ref": "#/components/schemas/EncryptedPersonalInfo" },
           "referral": {
             "type": "object",
             "properties": { "code": { "type": "string" } }
           },
-          "address": {
-            "type": "object",
-            "properties": {
-              "address": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "address_additional": {
-                "type": "string",
-                "description": "AES256_ENCRYPTED"
-              },
-              "state": { "type": "string" },
-              "city": { "type": "string" },
-              "district": { "type": "string" },
-              "subDistrict": { "type": "string" },
-              "postalCode": { "type": "string" }
-            }
-          },
+          "address": { "$ref": "#/components/schemas/EncryptedAddressDTO" },
           "contact": {
             "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
-                "contact": {
-                  "type": "string",
-                  "description": "AES256_ENCRYPTED"
-                }
-              },
-              "required": ["channel", "contact"]
-            }
+            "items": { "$ref": "#/components/schemas/EncryptedContactDTO" }
           }
         },
         "required": ["user", "authentication", "personal", "contact"]
@@ -2837,11 +3313,7 @@
       "RegisterSocialRequest": {
         "type": "object",
         "properties": {
-          "user": {
-            "type": "object",
-            "properties": { "username": { "type": "string" } },
-            "required": ["username"]
-          },
+          "user": { "$ref": "#/components/schemas/BaseUser" },
           "authentication": {
             "type": "object",
             "properties": {
@@ -2903,7 +3375,7 @@
                 "type": "string",
                 "description": "AES256_ENCRYPTED"
               },
-              "address_additional": {
+              "addressAdditional": {
                 "type": "string",
                 "description": "AES256_ENCRYPTED"
               },
@@ -2984,7 +3456,7 @@
                 "type": "string",
                 "description": "AES256_ENCRYPTED"
               },
-              "address_additional": {
+              "addressAdditional": {
                 "type": "string",
                 "description": "AES256_ENCRYPTED"
               },
@@ -3341,115 +3813,61 @@
           }
         }
       },
-      "ErrorBadRequest": {
+      "ErrorResponse": {
         "type": "object",
         "properties": {
           "status": {
             "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
-            "example": {
-              "code": 400,
-              "message": "Bad Request",
-              "bizErrorCode": "IAM_400",
-              "bizErrorMessage": "Invalid or missing required field."
-            }
-          }
-        }
-      },
-      "ErrorDuplicate": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
-            "example": {
-              "code": 409,
-              "message": "Duplicate Entry",
-              "bizErrorCode": "IAM_409",
-              "bizErrorMessage": "Username or contact already exists."
-            }
-          }
-        }
-      },
-      "ErrorPasswordMismatch": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
-            "example": {
-              "code": 422,
-              "message": "Unprocessable Entity",
-              "bizErrorCode": "IAM_422_001",
-              "bizErrorMessage": "Password and confirm password do not match."
-            }
-          }
-        }
-      },
-      "ErrorPasswordFormat": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
-            "example": {
-              "code": 422,
-              "message": "Unprocessable Entity",
-              "bizErrorCode": "IAM_422_002",
-              "bizErrorMessage": "Password format does not meet security policy."
-            }
-          }
-        }
-      },
-      "ErrorSocialInvalid": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
-            "example": {
-              "code": 422,
-              "message": "Unprocessable Entity",
-              "bizErrorCode": "IAM_422_SOCIAL_INVALID",
-              "bizErrorMessage": "Social access token is invalid or expired."
-            }
-          }
-        }
-      },
-      "ErrorUnauthorized": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
-            "example": {
-              "code": 401,
-              "message": "Unauthorized",
-              "bizErrorCode": "IAM_401",
-              "bizErrorMessage": "Access token is missing, invalid, or expired."
-            }
-          }
-        }
-      },
-      "ErrorNotFound": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
-            "example": {
-              "code": 404,
-              "message": "Not Found",
-              "bizErrorCode": "IAM_404",
-              "bizErrorMessage": "Policy with the specified ID does not exist."
-            }
-          }
-        }
-      },
-      "ErrorOtpInvalid": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
-            "example": {
-              "code": 422,
-              "message": "Unprocessable Entity",
-              "bizErrorCode": "IAM_422_OTP_INVALID",
-              "bizErrorMessage": "OTP is invalid, expired, or does not match."
-            }
+            "examples": [
+              {
+                "code": 400,
+                "message": "Bad Request",
+                "bizErrorCode": "IAM_400",
+                "bizErrorMessage": "Invalid or missing required field."
+              },
+              {
+                "code": 409,
+                "message": "Duplicate Entry",
+                "bizErrorCode": "IAM_409",
+                "bizErrorMessage": "Username or contact already exists."
+              },
+              {
+                "code": 422,
+                "message": "Unprocessable Entity",
+                "bizErrorCode": "IAM_422_001",
+                "bizErrorMessage": "Password and confirm password do not match."
+              },
+              {
+                "code": 422,
+                "message": "Unprocessable Entity",
+                "bizErrorCode": "IAM_422_002",
+                "bizErrorMessage": "Password format does not meet security policy."
+              },
+              {
+                "code": 422,
+                "message": "Unprocessable Entity",
+                "bizErrorCode": "IAM_422_SOCIAL_INVALID",
+                "bizErrorMessage": "Social access token is invalid or expired."
+              },
+              {
+                "code": 401,
+                "message": "Unauthorized",
+                "bizErrorCode": "IAM_401",
+                "bizErrorMessage": "Access token is missing, invalid, or expired."
+              },
+              {
+                "code": 404,
+                "message": "Not Found",
+                "bizErrorCode": "IAM_404",
+                "bizErrorMessage": "Policy with the specified ID does not exist."
+              },
+              {
+                "code": 422,
+                "message": "Unprocessable Entity",
+                "bizErrorCode": "IAM_422_OTP_INVALID",
+                "bizErrorMessage": "OTP is invalid, expired, or does not match."
+              }
+            ]
           }
         }
       }
@@ -3458,7 +3876,168 @@
       "BearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT"
+        "bearerFormat": "JWT",
+        "description": "JWT Bearer token authentication. Include the token in the Authorization header as 'Bearer <token>'"
+      },
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API Key for service-to-service authentication"
+      },
+      "OAuth2": {
+        "type": "oauth2",
+        "description": "OAuth 2.0 authentication for third-party integrations",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://auth.example.com/oauth/authorize",
+            "tokenUrl": "https://auth.example.com/oauth/token",
+            "scopes": {
+              "read": "Read access to user data",
+              "write": "Write access to user data",
+              "admin": "Administrative access"
+            }
+          },
+          "clientCredentials": {
+            "tokenUrl": "https://auth.example.com/oauth/token",
+            "scopes": {
+              "service": "Service-to-service access"
+            }
+          }
+        }
+      },
+      "BasicAuth": {
+        "type": "http",
+        "scheme": "basic",
+        "description": "Basic authentication for internal services (not recommended for external APIs)"
+      }
+    },
+    "x-data-dictionary": {
+      "version": "1.0.0",
+      "last-updated": "2024-01-15T10:30:00Z",
+      "description": "Comprehensive data dictionary for IAM Microservice API",
+      "data-classifications": {
+        "public": "Data that can be freely shared",
+        "internal": "Data for internal use only",
+        "personal": "Personal information requiring GDPR compliance",
+        "sensitive": "Sensitive data requiring encryption",
+        "highly-sensitive": "Highly sensitive data requiring strong encryption and audit"
+      },
+      "field-types": {
+        "primary-key": "Unique identifier for database records",
+        "business-key": "Human-readable business identifier",
+        "personal-data": "Personal information about individuals",
+        "authentication-data": "Data used for user authentication",
+        "authentication-token": "JWT or similar authentication tokens",
+        "refresh-token": "Long-lived token for token refresh",
+        "reference-data": "Reference information linking related data",
+        "session-identifier": "Unique identifier for user sessions",
+        "duration-data": "Time-based data (durations, intervals)",
+        "constant-value": "Fixed values that don't change",
+        "role-list": "List of user roles",
+        "permission-list": "List of user permissions",
+        "audit-data": "Data for audit and compliance tracking"
+      },
+      "business-domains": {
+        "Identity Management": "Core user identity and profile management",
+        "Authentication & Security": "User authentication and security controls",
+        "Authorization": "Access control and permissions",
+        "Session Management": "User session lifecycle management",
+        "Audit & Compliance": "Audit trails and compliance tracking"
+      },
+      "compliance-frameworks": {
+        "GDPR": "General Data Protection Regulation",
+        "CCPA": "California Consumer Privacy Act",
+        "SOX": "Sarbanes-Oxley Act",
+        "PCI-DSS": "Payment Card Industry Data Security Standard",
+        "HIPAA": "Health Insurance Portability and Accountability Act",
+        "OAuth 2.0": "OAuth 2.0 Authorization Framework",
+        "JWT": "JSON Web Token standard"
+      },
+      "retention-policies": {
+        "permanent": "Data retained permanently",
+        "7-years-after-deletion": "Data retained for 7 years after user deletion",
+        "expires-after-5-minutes": "Data expires after 5 minutes",
+        "expires-after-10-minutes": "Data expires after 10 minutes",
+        "expires-after-session-end": "Data expires when session ends",
+        "expires-after-token-lifetime": "Data expires with token lifetime",
+        "expires-after-refresh-lifetime": "Data expires with refresh token lifetime",
+        "not-applicable": "Retention policy not applicable"
+      },
+      "data-lineage-patterns": {
+        "Generated by IAM service during user creation": "System-generated during user registration",
+        "Provided by user during registration": "User-provided during account creation",
+        "Assigned by business rules during user creation": "Business logic assigned identifiers",
+        "Generated by OTP service and sent to user's device": "OTP service generated codes",
+        "Generated by OTP service during code generation": "OTP service reference codes",
+        "Generated by IAM service during OTP request": "IAM service session tracking",
+        "Generated by IAM service after successful authentication": "Post-authentication token generation",
+        "Calculated based on security policy and user preferences": "Policy-based calculations",
+        "Fixed value per OAuth 2.0 standard": "Standards-compliant fixed values",
+        "Generated by IAM service during token issuance": "Token issuance process",
+        "Assigned by administrators or derived from user groups": "Administrative role assignment",
+        "Derived from roles and policies": "Policy-based permission derivation"
+      },
+      "access-patterns": {
+        "Read-heavy": "Frequent read operations, infrequent writes",
+        "Write-once": "Data written once, rarely updated",
+        "Read-once": "Data read once, then discarded",
+        "Short-lived": "Data with short lifecycle",
+        "Occasional updates": "Infrequent update operations",
+        "Frequent updates": "Regular update operations"
+      },
+      "security-considerations": {
+        "encryption-required": "Data must be encrypted at rest and in transit",
+        "token-rotation": "Tokens must be rotated regularly",
+        "secure-storage": "Data must be stored securely",
+        "audit-logging": "All access must be logged for audit",
+        "access-control": "Strict access control required",
+        "data-masking": "Sensitive data must be masked in logs"
+      },
+      "business-rules": {
+        "Default: 1 hour": "Default token expiration time",
+        "Max: 24 hours": "Maximum token expiration time",
+        "Min: 1 minute": "Minimum token expiration time",
+        "Valid for 30 days": "Refresh token validity period",
+        "Single-use per access token": "Refresh token usage rule",
+        "Must be predefined roles": "Role validation rule",
+        "Case-sensitive": "Case sensitivity requirement",
+        "Uppercase only": "Uppercase format requirement",
+        "Format: RESOURCE:ACTION": "Permission format specification",
+        "Must be predefined permissions": "Permission validation rule"
+      },
+      "schema-evolution": {
+        "versioning-strategy": "Semantic versioning with backward compatibility",
+        "deprecation-policy": "Fields deprecated for 2 major versions before removal",
+        "breaking-changes": "Require major version increment",
+        "non-breaking-changes": "Minor version increment allowed",
+        "field-lifecycle": {
+          "introduced": "Field added in version X.Y.Z",
+          "deprecated": "Field marked for removal in version X+2.Y.Z",
+          "removed": "Field removed in version X+2.Y.Z"
+        }
+      },
+      "extensibility-patterns": {
+        "additional-properties": "Use additionalProperties: false for strict schemas",
+        "custom-fields": "Use x-custom-* extensions for non-standard fields",
+        "polymorphism": "Use allOf/oneOf/anyOf for flexible object composition",
+        "conditional-fields": "Use if/then/else for conditional field requirements",
+        "dynamic-enums": "Use x-enum-values for dynamically populated enums"
+      },
+      "data-quality-rules": {
+        "required-fields": "All required fields must be present and non-null",
+        "format-validation": "All fields must match specified format patterns",
+        "length-constraints": "String fields must be within min/max length limits",
+        "enum-validation": "Enum fields must contain only predefined values",
+        "pattern-matching": "String fields must match specified regex patterns",
+        "range-validation": "Numeric fields must be within min/max value ranges"
+      },
+      "api-versioning": {
+        "current-version": "v1.0.0",
+        "supported-versions": ["v1.0.0"],
+        "version-strategy": "URL path versioning (/v1/iam/)",
+        "deprecation-notice": "Minimum 6 months notice for API version deprecation",
+        "migration-guide": "https://docs.example.com/iam/migration-guide"
       }
     }
   }
