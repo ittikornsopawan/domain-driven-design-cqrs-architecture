@@ -344,7 +344,7 @@
                       "$ref": "#/components/schemas/ResponseStatusDTO"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/LoginResponse"
+                      "$ref": "#/components/schemas/UserFullResponseDTO"
                     }
                   }
                 }
@@ -408,7 +408,7 @@
                       "$ref": "#/components/schemas/ResponseStatusDTO"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/LoginMobileResponse"
+                      "$ref": "#/components/schemas/UserFullResponseDTO"
                     }
                   }
                 }
@@ -470,7 +470,7 @@
                       "$ref": "#/components/schemas/ResponseStatusDTO"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/LoginEmailResponse"
+                      "$ref": "#/components/schemas/UserFullResponseDTO"
                     }
                   }
                 }
@@ -537,7 +537,17 @@
             "description": "2FA verified successfully",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/LoginResponse" }
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/ResponseStatusDTO"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/UserFullResponseDTO"
+                    }
+                  }
+                }
               }
             }
           },
@@ -596,7 +606,7 @@
                       "$ref": "#/components/schemas/ResponseStatusDTO"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/LoginSocialResponse"
+                      "$ref": "#/components/schemas/UserFullResponseDTO"
                     }
                   }
                 }
@@ -1974,6 +1984,73 @@
   },
   "components": {
     "schemas": {
+      "UserDTO": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "username": { "type": "string" }
+        }
+      },
+      "UserAuthenticationDTO": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "code": { "type": "string" },
+          "prefixName": { "type": "string" },
+          "firstName": { "type": "string" },
+          "middleName": { "type": "string" },
+          "lastName": { "type": "string" },
+          "nickName": { "type": "string" },
+          "gender": { "type": "string" },
+          "dateOfBirth": { "type": "string", "format": "date" }
+        }
+      },
+      "UserProfileDTO": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "username": { "type": "string" },
+          "code": { "type": "string" },
+          "prefixName": { "type": "string" },
+          "firstName": { "type": "string" },
+          "middleName": { "type": "string" },
+          "lastName": { "type": "string" },
+          "nickName": { "type": "string" },
+          "gender": { "type": "string" },
+          "dateOfBirth": { "type": "string", "format": "date" }
+        }
+      },
+      "AddressDTO": {
+        "type": "object",
+        "properties": {
+          "address": { "type": "string" },
+          "address_additional": { "type": "string" },
+          "state": { "type": "string" },
+          "city": { "type": "string" },
+          "district": { "type": "string" },
+          "subDistrict": { "type": "string" },
+          "postalCode": { "type": "string" }
+        }
+      },
+      "ContactDTO": {
+        "type": "object",
+        "properties": {
+          "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
+          "contact": { "type": "string" }
+        },
+        "required": ["channel", "contact"]
+      },
+      "TokenDTO": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string" },
+          "expiresIn": { "type": "integer" },
+          "tokenType": { "type": "string" },
+          "refreshToken": { "type": "string", "format": "uuid" },
+          "roles": { "type": "array", "items": { "type": "string" } },
+          "permissions": { "type": "array", "items": { "type": "string" } }
+        }
+      },
       "ResponseStatusDTO": {
         "type": "object",
         "properties": {
@@ -1995,6 +2072,20 @@
           }
         },
         "required": ["code", "message"]
+      },
+      "UserFullResponseDTO": {
+        "type": "object",
+        "properties": {
+          "user": { "$ref": "#/components/schemas/UserDTO" },
+          "personal": { "$ref": "#/components/schemas/UserProfileDTO" },
+          "referral": { "$ref": "#/components/schemas/UserProfileDTO" },
+          "address": { "$ref": "#/components/schemas/AddressDTO" },
+          "contact": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ContactDTO" }
+          }
+        },
+        "required": ["user", "personal", "referral", "address", "contact"]
       },
       "LoginRequest": {
         "type": "object",
@@ -2019,116 +2110,6 @@
         },
         "required": ["user", "authentication"]
       },
-      "LoginResponse": {
-        "type": "object",
-        "properties": {
-          "user": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string", "format": "uuid" },
-              "code": { "type": "string" },
-              "username": { "type": "string" }
-            }
-          },
-          "personal": {
-            "type": "object",
-            "properties": {
-              "prefixName": { "type": "string" },
-              "firstName": { "type": "string" },
-              "middleName": { "type": "string" },
-              "lastName": { "type": "string" },
-              "nickName": { "type": "string" },
-              "gender": { "type": "string" },
-              "dateOfBirth": { "type": "string" }
-            }
-          },
-          "referral": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string", "format": "uuid" },
-              "code": { "type": "string" },
-              "username": { "type": "string" }
-            }
-          },
-          "address": {
-            "type": "object",
-            "properties": {
-              "state": { "type": "string" },
-              "city": { "type": "string" },
-              "district": { "type": "string" },
-              "subDistrict": { "type": "string" },
-              "postalCode": { "type": "string" }
-            }
-          },
-          "contact": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
-                "contact": { "type": "string" }
-              }
-            }
-          },
-          "token": { "$ref": "#/components/schemas/LoginResponseToken" }
-        }
-      },
-      "ErrorBadRequest": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
-            "example": {
-              "code": 400,
-              "message": "Bad Request",
-              "bizErrorCode": "IAM_400",
-              "bizErrorMessage": "Invalid or missing required field."
-            }
-          }
-        }
-      },
-      "ErrorDuplicate": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
-            "example": {
-              "code": 409,
-              "message": "Duplicate Entry",
-              "bizErrorCode": "IAM_409",
-              "bizErrorMessage": "Username or contact already exists."
-            }
-          }
-        }
-      },
-      "ErrorPasswordMismatch": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
-            "example": {
-              "code": 422,
-              "message": "Unprocessable Entity",
-              "bizErrorCode": "IAM_422_001",
-              "bizErrorMessage": "Password and confirm password do not match."
-            }
-          }
-        }
-      },
-      "ErrorPasswordFormat": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
-            "example": {
-              "code": 422,
-              "message": "Unprocessable Entity",
-              "bizErrorCode": "IAM_422_002",
-              "bizErrorMessage": "Password format does not meet security policy."
-            }
-          }
-        }
-      },
       "LoginMobileRequest": {
         "type": "object",
         "properties": {
@@ -2145,76 +2126,6 @@
               "reference_id": { "type": "string", "format": "uuid" }
             },
             "required": ["otp", "code_ref", "reference_id"]
-          }
-        }
-      },
-      "LoginMobileResponse": {
-        "type": "object",
-        "properties": {
-          "user": {
-            "type": "object",
-            "properties": { "username": { "type": "string" } }
-          },
-          "authentication": {
-            "type": "object",
-            "properties": {
-              "otp": { "type": "string" },
-              "code_ref": { "type": "string" },
-              "reference_id": { "type": "string", "format": "uuid" }
-            }
-          },
-          "personal": {
-            "type": "object",
-            "properties": {
-              "prefixName": { "type": "string" },
-              "firstName": { "type": "string" },
-              "middleName": { "type": "string" },
-              "lastName": { "type": "string" },
-              "nickName": { "type": "string" },
-              "gender": { "type": "string" },
-              "dateOfBirth": { "type": "string" }
-            }
-          },
-          "referral": {
-            "type": "object",
-            "properties": { "code": { "type": "string" } }
-          },
-          "address": {
-            "type": "object",
-            "properties": {
-              "address": { "type": "string" },
-              "address_additional": { "type": "string" },
-              "state": { "type": "string" },
-              "city": { "type": "string" },
-              "district": { "type": "string" },
-              "subDistrict": { "type": "string" },
-              "postalCode": { "type": "string" }
-            }
-          },
-          "contact": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
-                "contact": { "type": "string" }
-              }
-            }
-          },
-          "token": { "$ref": "#/components/schemas/LoginResponseToken" }
-        }
-      },
-      "ErrorOtpInvalid": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
-            "example": {
-              "code": 422,
-              "message": "Unprocessable Entity",
-              "bizErrorCode": "IAM_422_OTP_INVALID",
-              "bizErrorMessage": "OTP is invalid, expired, or does not match."
-            }
           }
         }
       },
@@ -2237,54 +2148,6 @@
           }
         }
       },
-      "LoginEmailResponse": {
-        "type": "object",
-        "properties": {
-          "user": {
-            "type": "object",
-            "properties": { "username": { "type": "string" } }
-          },
-          "personal": {
-            "type": "object",
-            "properties": {
-              "prefixName": { "type": "string" },
-              "firstName": { "type": "string" },
-              "middleName": { "type": "string" },
-              "lastName": { "type": "string" },
-              "nickName": { "type": "string" },
-              "gender": { "type": "string" },
-              "dateOfBirth": { "type": "string" }
-            }
-          },
-          "referral": {
-            "type": "object",
-            "properties": { "code": { "type": "string" } }
-          },
-          "address": {
-            "type": "object",
-            "properties": {
-              "address": { "type": "string" },
-              "address_additional": { "type": "string" },
-              "state": { "type": "string" },
-              "city": { "type": "string" },
-              "district": { "type": "string" },
-              "subDistrict": { "type": "string" },
-              "postalCode": { "type": "string" }
-            }
-          },
-          "contact": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
-                "contact": { "type": "string" }
-              }
-            }
-          },
-          "token": { "$ref": "#/components/schemas/LoginResponseToken" }
-        }
-      },
       "LoginSocialRequest": {
         "type": "object",
         "properties": {
@@ -2303,82 +2166,6 @@
               "refreshToken": { "type": "string" }
             },
             "required": ["provider", "providerUserId", "accessToken"]
-          }
-        }
-      },
-      "LoginSocialResponse": {
-        "type": "object",
-        "properties": {
-          "user": {
-            "type": "object",
-            "properties": { "username": { "type": "string" } }
-          },
-          "authentication": {
-            "type": "object",
-            "properties": {
-              "provider": { "type": "string" },
-              "providerName": { "type": "string" },
-              "providerUserId": { "type": "string" },
-              "displayName": { "type": "string" },
-              "profilePictureUrl": { "type": "string" },
-              "accessToken": { "type": "string" },
-              "refreshToken": { "type": "string" },
-              "tokenExpiresAt": { "type": "string", "format": "date-time" },
-              "rawResponse": { "type": "string" }
-            }
-          },
-          "personal": {
-            "type": "object",
-            "properties": {
-              "prefixName": { "type": "string" },
-              "firstName": { "type": "string" },
-              "middleName": { "type": "string" },
-              "lastName": { "type": "string" },
-              "nickName": { "type": "string" },
-              "gender": { "type": "string" },
-              "dateOfBirth": { "type": "string" }
-            }
-          },
-          "referral": {
-            "type": "object",
-            "properties": { "code": { "type": "string" } }
-          },
-          "address": {
-            "type": "object",
-            "properties": {
-              "address": { "type": "string" },
-              "address_additional": { "type": "string" },
-              "state": { "type": "string" },
-              "city": { "type": "string" },
-              "district": { "type": "string" },
-              "subDistrict": { "type": "string" },
-              "postalCode": { "type": "string" }
-            }
-          },
-          "contact": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "channel": { "type": "string", "enum": ["EMAIL", "MOBILE"] },
-                "contact": { "type": "string" }
-              }
-            }
-          },
-          "token": { "$ref": "#/components/schemas/LoginResponseToken" }
-        }
-      },
-      "ErrorSocialInvalid": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
-            "example": {
-              "code": 422,
-              "message": "Unprocessable Entity",
-              "bizErrorCode": "IAM_422_SOCIAL_INVALID",
-              "bizErrorMessage": "Social access token is invalid or expired."
-            }
           }
         }
       },
@@ -2411,20 +2198,6 @@
                 "name": { "type": "string" },
                 "description": { "type": "string" }
               }
-            }
-          }
-        }
-      },
-      "ErrorUnauthorized": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
-            "example": {
-              "code": 401,
-              "message": "Unauthorized",
-              "bizErrorCode": "IAM_401",
-              "bizErrorMessage": "Access token is missing, invalid, or expired."
             }
           }
         }
@@ -2486,20 +2259,6 @@
           "resource",
           "condition_logic"
         ]
-      },
-      "ErrorNotFound": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
-            "example": {
-              "code": 404,
-              "message": "Not Found",
-              "bizErrorCode": "IAM_404",
-              "bizErrorMessage": "Policy with the specified ID does not exist."
-            }
-          }
-        }
       },
       "AssignUserRoleRequest": {
         "type": "object",
@@ -3578,6 +3337,118 @@
               "alertType": { "type": "string" },
               "severity": { "type": "string" },
               "createdAt": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      },
+      "ErrorBadRequest": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
+            "example": {
+              "code": 400,
+              "message": "Bad Request",
+              "bizErrorCode": "IAM_400",
+              "bizErrorMessage": "Invalid or missing required field."
+            }
+          }
+        }
+      },
+      "ErrorDuplicate": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
+            "example": {
+              "code": 409,
+              "message": "Duplicate Entry",
+              "bizErrorCode": "IAM_409",
+              "bizErrorMessage": "Username or contact already exists."
+            }
+          }
+        }
+      },
+      "ErrorPasswordMismatch": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
+            "example": {
+              "code": 422,
+              "message": "Unprocessable Entity",
+              "bizErrorCode": "IAM_422_001",
+              "bizErrorMessage": "Password and confirm password do not match."
+            }
+          }
+        }
+      },
+      "ErrorPasswordFormat": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
+            "example": {
+              "code": 422,
+              "message": "Unprocessable Entity",
+              "bizErrorCode": "IAM_422_002",
+              "bizErrorMessage": "Password format does not meet security policy."
+            }
+          }
+        }
+      },
+      "ErrorSocialInvalid": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
+            "example": {
+              "code": 422,
+              "message": "Unprocessable Entity",
+              "bizErrorCode": "IAM_422_SOCIAL_INVALID",
+              "bizErrorMessage": "Social access token is invalid or expired."
+            }
+          }
+        }
+      },
+      "ErrorUnauthorized": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
+            "example": {
+              "code": 401,
+              "message": "Unauthorized",
+              "bizErrorCode": "IAM_401",
+              "bizErrorMessage": "Access token is missing, invalid, or expired."
+            }
+          }
+        }
+      },
+      "ErrorNotFound": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
+            "example": {
+              "code": 404,
+              "message": "Not Found",
+              "bizErrorCode": "IAM_404",
+              "bizErrorMessage": "Policy with the specified ID does not exist."
+            }
+          }
+        }
+      },
+      "ErrorOtpInvalid": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/ResponseStatusDTO" }],
+            "example": {
+              "code": 422,
+              "message": "Unprocessable Entity",
+              "bizErrorCode": "IAM_422_OTP_INVALID",
+              "bizErrorMessage": "OTP is invalid, expired, or does not match."
             }
           }
         }
