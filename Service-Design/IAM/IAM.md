@@ -1369,7 +1369,7 @@ flowchart TD
 
     %% API Gateway (AWS API Gateway)
     subgraph APIGW["AWS API Gateway"]
-        GW1["iam-api-gateway-1<br/>AWS: API Gateway"]
+        GW1["privilege-api-gateway-1<br/>AWS: API Gateway"]
     end
 
     %% VPC Layer
@@ -1379,7 +1379,7 @@ flowchart TD
         %% Load Balancer (Public Subnet)
         subgraph PublicLayer["Public Subnet"]
             subgraph ALB["AWS Load Balancer"]
-                LB1["iam-alb-1<br/>AWS: ALB"]
+                LB1["privilege-alb-1<br/>AWS: ALB"]
             end
         end
 
@@ -1390,36 +1390,36 @@ flowchart TD
             %% Microservices (AWS ECS / Fargate)
             subgraph ECS["AWS ECS / Fargate"]
                 direction TB
-                MS1["iam-auth-service-1<br/>AWS: ECS / Fargate"]
-                MS2["iam-auth-service-2<br/>AWS: ECS / Fargate"]
+                MS1["privilege-service-1<br/>AWS: ECS / Fargate"]
+                MS2["privilege-service-2<br/>AWS: ECS / Fargate"]
             end
 
             %% Database Layer (AWS RDS)
             subgraph RDS["AWS RDS - PostgreSQL"]
-                DB_Primary1[(Primary iam-rds-1<br/>Users, Roles, Permissions, Sessions)]
-                DB_Replica1[(Read iam-rds-replica-1)]
+                DB_Primary1[(Primary privilege-rds-1<br/>Tiers, Benefits, Rules, Member Assignments)]
+                DB_Replica1[(Read privilege-rds-replica-1)]
             end
 
             %% Cache Layer (AWS ElastiCache)
             subgraph Redis["AWS ElastiCache Redis"]
-                C1["iam-redis-1<br/>AWS: ElastiCache Redis"]
+                C1["privilege-redis-1<br/>AWS: ElastiCache Redis"]
             end
 
             %% Secrets & Keys (AWS Secrets Manager + KMS + S3)
             subgraph Secrets["AWS Secrets & Key Management"]
-                S1["iam-secrets-1<br/>AWS: Secrets Manager"]
-                K1["iam-kms-1<br/>AWS: KMS"]
-                S3_INT1["iam-s3-internal-1<br/>AWS: S3 Internal Storage / Audit Logs"]
+                S1["privilege-secrets-1<br/>AWS: Secrets Manager"]
+                K1["privilege-kms-1<br/>AWS: KMS"]
+                S3_INT1["privilege-s3-internal-1<br/>AWS: S3 Internal Storage / Audit Logs"]
             end
 
             %% File Storage (AWS S3)
             subgraph S3["AWS S3"]
-                S3_FS1["iam-s3-files-1<br/>AWS: S3 File Storage"]
+                S3_FS1["privilege-s3-files-1<br/>AWS: S3 File Storage"]
             end
 
             %% Logging & Monitoring (AWS CloudWatch)
             subgraph CloudWatch["AWS CloudWatch"]
-                L1["iam-cloudwatch-1<br/>CloudWatch Logs & Metrics"]
+                L1["privilege-cloudwatch-1<br/>CloudWatch Logs & Metrics"]
             end
         end
     end
@@ -1440,7 +1440,7 @@ flowchart TD
 
     ECS -->|"Cache access"| C1
     ECS -->|"Read secrets"| S1
-    ECS -->|"Sign tokens"| K1
+    ECS -->|"Sign tokens / Encrypt keys"| K1
     ECS -->|"Store internal logs"| S3_INT1
     ECS -->|"Store / Read files"| S3_FS1
     ECS -->|"Metrics / Logs"| L1
