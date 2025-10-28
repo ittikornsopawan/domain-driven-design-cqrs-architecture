@@ -10,6 +10,8 @@
 
 ## Change History
 
+- **27-Oct-2025:** - Ittikorn Sopawan
+  - Update ERD to current version
 - **20-Oct-2025:** - Ittikorn Sopawan
   - Initial design of IAM Service. Created schemas and tables:
     - **Public Schema:**-
@@ -214,6 +216,7 @@ erDiagram
         UUID deleted_by FK
         VARCHAR code
         VARCHAR username
+        VARCHAR authentication_type
     }
 
     t_user_authentications {
@@ -1016,7 +1019,7 @@ COMMENT ON COLUMN t_personal_info.updated_by IS 'Reference to the user who last 
 COMMENT ON COLUMN t_personal_info.updated_at IS 'Timestamp when the record was last updated.';
 COMMENT ON COLUMN t_personal_info.is_active IS 'Indicates whether the record is currently active.';
 COMMENT ON COLUMN t_personal_info.inactive_at IS 'Timestamp when the record was marked as inactive.';
-COMMENT ON COLUMN t_personal_info.inactive_by IS 'Reference to the user who marked the record as inactive.';
+COMMENT ON COLUMN t_personal_info.inactive_by IS 'Reference to the user who marked the record inactive.';
 COMMENT ON COLUMN t_personal_info.is_deleted IS 'Indicates whether the record has been soft-deleted.';
 COMMENT ON COLUMN t_personal_info.deleted_at IS 'Timestamp when the record was marked as deleted.';
 COMMENT ON COLUMN t_personal_info.deleted_by IS 'Reference to the user who deleted the record.';
@@ -1044,10 +1047,10 @@ Links personal information records with contact details.
 |     | updated_at  | TIMESTAMP |                   | Timestamp when the record was last updated                        |
 |     | is_active   | BOOLEAN   | FALSE             | Indicates whether the contact record is currently active          |
 |     | inactive_at | TIMESTAMP |                   | Timestamp when the contact record was marked as inactive          |
-| FK  | inactive_by | UUID      |                   | Reference to the user who marked the record as inactive           |
+| FK  | inactive_by | UUID      |                   | Reference to the user who marked the record inactive              |
 |     | is_deleted  | BOOLEAN   | FALSE             | Indicates whether the contact record has been soft-deleted        |
 |     | deleted_at  | TIMESTAMP |                   | Timestamp when the contact record was marked as deleted           |
-| FK  | deleted_by  | UUID      |                   | Reference to the user who deleted the contact record              |
+| FK  | deleted_by  | UUID      |                   | Reference to the user who deleted the record                      |
 | FK  | personal_id | UUID      |                   | Reference to the personal information record (t_personal_info.id) |
 | FK  | contact_id  | UUID      |                   | Reference to the contact detail record (t_contacts.id)            |
 
@@ -1094,10 +1097,10 @@ COMMENT ON COLUMN t_personal_contacts.updated_by IS 'Reference to the user who l
 COMMENT ON COLUMN t_personal_contacts.updated_at IS 'Timestamp when the record was last updated.';
 COMMENT ON COLUMN t_personal_contacts.is_active IS 'Indicates whether the contact record is currently active.';
 COMMENT ON COLUMN t_personal_contacts.inactive_at IS 'Timestamp when the contact record was marked as inactive.';
-COMMENT ON COLUMN t_personal_contacts.inactive_by IS 'Reference to the user who marked the contact record as inactive.';
+COMMENT ON COLUMN t_personal_contacts.inactive_by IS 'Reference to the user who marked the record as inactive.';
 COMMENT ON COLUMN t_personal_contacts.is_deleted IS 'Indicates whether the contact record has been soft-deleted.';
-COMMENT ON COLUMN t_personal_contacts.deleted_at IS 'Timestamp when the contact record was marked as deleted.';
-COMMENT ON COLUMN t_personal_contacts.deleted_by IS 'Reference to the user who deleted the contact record.';
+COMMENT ON COLUMN t_personal_contacts.deleted_at IS 'Timestamp when the record was marked as deleted.';
+COMMENT ON COLUMN t_personal_contacts.deleted_by IS 'Reference to the user who deleted the record.';
 COMMENT ON COLUMN t_personal_contacts.personal_id IS 'Reference to the personal information record (t_personal_info.id).';
 COMMENT ON COLUMN t_personal_contacts.contact_id IS 'Reference to the contact detail record (t_contacts.id).';
 ```
@@ -1118,9 +1121,9 @@ Links a person record to one or multiple address records.
 |     | is_active   | BOOLEAN   | FALSE             | Indicates whether the address link is currently active        |
 |     | inactive_at | TIMESTAMP |                   | Timestamp when the address link was marked as inactive        |
 | FK  | inactive_by | UUID      |                   | Reference to the user who marked the record as inactive       |
-|     | is_deleted  | BOOLEAN   | FALSE             | Indicates whether the record has been soft-deleted            |
+|     | is_deleted  | BOOLEAN   | FALSE             | Indicates if the record has been soft-deleted                 |
 |     | deleted_at  | TIMESTAMP |                   | Timestamp when the record was marked as deleted               |
-| FK  | deleted_by  | UUID      |                   | Reference to the user who deleted the record                  |
+| FK  | deleted_by  | UUID      |                   | User who deleted the record                                   |
 | FK  | personal_id | UUID      |                   | Reference to the person record (t_personal_info.id)           |
 | FK  | address_id  | UUID      |                   | Reference to the address record (t_addresses.id)              |
 
@@ -1495,7 +1498,7 @@ Stores authentication credentials for users, including password hash, algorithm 
 | FK  | created_by     | UUID      |                   | User who created the record                       |
 |     | created_at     | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp when the record was created             |
 | FK  | updated_by     | UUID      |                   | User who last updated the record                  |
-|     | updated_at     | TIMESTAMP |                   | Timestamp of last update                          |
+|     | updated_at     | TIMESTAMP |                   | Timestamp when the record was last updated        |
 |     | is_active      | BOOLEAN   | FALSE             | Indicates if the record is active                 |
 |     | inactive_at    | TIMESTAMP |                   | Timestamp when record became inactive             |
 | FK  | inactive_by    | UUID      |                   | User who marked inactive                          |
@@ -1560,13 +1563,11 @@ COMMENT ON COLUMN authentication.t_user_authentications.id IS 'Primary key of th
 COMMENT ON COLUMN authentication.t_user_authentications.created_by IS 'User who created the record';
 COMMENT ON COLUMN authentication.t_user_authentications.created_at IS 'Timestamp when the record was created';
 COMMENT ON COLUMN authentication.t_user_authentications.updated_by IS 'User who last updated the record';
-COMMENT ON COLUMN authentication.t_user_authentications.updated_at IS 'Timestamp of last update';
+COMMENT ON COLUMN authentication.t_user_authentications.updated_at IS 'Timestamp when the record was last updated';
 COMMENT ON COLUMN authentication.t_user_authentications.is_active IS 'Indicates if the record is active';
 COMMENT ON COLUMN authentication.t_user_authentications.inactive_at IS 'Timestamp when record became inactive';
 COMMENT ON COLUMN authentication.t_user_authentications.inactive_by IS 'User who marked inactive';
 COMMENT ON COLUMN authentication.t_user_authentications.is_deleted IS 'Indicates if the record has been deleted';
-COMMENT ON COLUMN authentication.t_user_authentications.deleted_at IS 'Timestamp when the record was deleted';
-COMMENT ON COLUMN authentication.t_user_authentications.deleted_by IS 'User who deleted the record';
 COMMENT ON COLUMN authentication.t_user_authentications.effective_at IS 'Effective start timestamp';
 COMMENT ON COLUMN authentication.t_user_authentications.expires_at IS 'Expiration timestamp (must be after effective_at)';
 COMMENT ON COLUMN authentication.t_user_authentications.user_id IS 'Reference to the user';
@@ -1582,13 +1583,13 @@ Stores mappings between users and their referrers.
 
 #### Table Columns
 
-| Key | Column Name | Data Type | Default           | Description                           |
-| --- | ----------- | --------- | ----------------- | ------------------------------------- |
-| PK  | id          | UUID      | GEN_RANDOM_UUID() | Primary key of the mapping record     |
-| FK  | created_by  | UUID      |                   | User who created the record           |
-|     | created_at  | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp when the record was created |
-| FK  | referrer_id | UUID      |                   | Reference to the referrer user        |
-| FK  | user_id     | UUID      |                   | Reference to the user being referred  |
+| Key | Column Name | Data Type | Default           | Description                            |
+| --- | ----------- | --------- | ----------------- | -------------------------------------- |
+| PK  | id          | UUID      | GEN_RANDOM_UUID() | Primary key of the mapping record      |
+| FK  | created_by  | UUID      |                   | User who created the mapping           |
+|     | created_at  | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp when the mapping was created |
+| FK  | referrer_id | UUID      |                   | Reference to the referrer user         |
+| FK  | user_id     | UUID      |                   | Reference to the user being referred   |
 
 #### Table Constraints
 
@@ -1634,11 +1635,11 @@ Stores social login / OAuth accounts linked to system users.
 | FK  | created_by          | UUID         |                   | User who created this record (references authentication.t_users.id)                    |
 |     | created_at          | TIMESTAMP    | CURRENT_TIMESTAMP | Timestamp when the record was created                                                  |
 | FK  | updated_by          | UUID         |                   | User who last updated the record (references authentication.t_users.id)                |
-|     | updated_at          | TIMESTAMP    |                   | Timestamp of last update                                                               |
+|     | updated_at          | TIMESTAMP    |                   | Timestamp when the record was last updated                                             |
 |     | is_active           | BOOLEAN      | FALSE             | Indicates whether the social login account is active                                   |
 |     | inactive_at         | TIMESTAMP    |                   | Timestamp when the social login account was deactivated                                |
 | FK  | inactive_by         | UUID         |                   | User who deactivated the account (references authentication.t_users.id)                |
-|     | is_deleted          | BOOLEAN      | FALSE             | Indicates whether the record has been soft-deleted                                     |
+|     | is_deleted          | BOOLEAN      | FALSE             | Indicates if the record has been soft-deleted                                          |
 |     | deleted_at          | TIMESTAMP    |                   | Timestamp when the record was deleted                                                  |
 | FK  | deleted_by          | UUID         |                   | User who deleted the record (references authentication.t_users.id)                     |
 |     | provider            | VARCHAR(32)  |                   | Name of the external provider: GOOGLE, MICROSOFT, APPLE, FACEBOOK, LINE, GITHUB, OTHER |
@@ -1825,11 +1826,11 @@ COMMENT ON COLUMN notification.t_push_notifications.metadata IS 'Additional JSON
 | --- | ----------- | ----------- | ----------------------------------------- | --------------------------------------------------------------------------- |
 | PK  | id          | UUID        | GEN_RANDOM_UUID()                         | Primary key for OTP record                                                  |
 | FK  | created_by  | UUID        |                                           | User who generated the OTP (references authentication.t_users.id)           |
-|     | created_at  | TIMESTAMP   | CURRENT_TIMESTAMP                         | Timestamp when OTP was created                                              |
+|     | created_at  | TIMESTAMP   | CURRENT_TIMESTAMP                         | Timestamp when the OTP record was created                                   |
 | FK  | updated_by  | UUID        |                                           | User who last updated the OTP record (references authentication.t_users.id) |
-|     | updated_at  | TIMESTAMP   |                                           | Timestamp when OTP was last updated                                         |
+|     | updated_at  | TIMESTAMP   |                                           | Timestamp when the OTP record was last updated                              |
 |     | is_active   | BOOLEAN     | FALSE                                     | Indicates if the OTP is currently active                                    |
-|     | inactive_at | TIMESTAMP   |                                           | Timestamp when OTP became inactive                                          |
+|     | inactive_at | TIMESTAMP   |                                           | Timestamp when the OTP became inactive                                      |
 | FK  | inactive_by | UUID        |                                           | User who marked OTP inactive                                                |
 |     | is_deleted  | BOOLEAN     | FALSE                                     | Indicates if the OTP record is deleted                                      |
 |     | deleted_at  | TIMESTAMP   |                                           | Timestamp when OTP record was deleted                                       |
@@ -1878,41 +1879,41 @@ CREATE INDEX IF NOT EXISTS idx_t_otp_code ON otp.t_otp(ref_code);
 COMMENT ON TABLE otp.t_otp IS 'Stores OTP records for verification with reference code.';
 COMMENT ON COLUMN otp.t_otp.id IS 'Primary key for OTP record.';
 COMMENT ON COLUMN otp.t_otp.created_by IS 'User who generated the OTP (references authentication.t_users.id).';
-COMMENT ON COLUMN otp.t_otp.created_at IS 'Timestamp when OTP was created.';
+COMMENT ON COLUMN otp.t_otp.created_at IS 'Timestamp when the OTP was created.';
 COMMENT ON COLUMN otp.t_otp.updated_by IS 'User who last updated the OTP record (references authentication.t_users.id).';
-COMMENT ON COLUMN otp.t_otp.updated_at IS 'Timestamp when OTP was last updated.';
+COMMENT ON COLUMN otp.t_otp.updated_at IS 'Timestamp when the OTP was last updated.';
 COMMENT ON COLUMN otp.t_otp.is_active IS 'Indicates if the OTP is currently active.';
-COMMENT ON COLUMN otp.t_otp.inactive_at IS 'Timestamp when OTP became inactive.';
-COMMENT ON COLUMN otp.t_otp.inactive_by IS 'User who marked OTP inactive.';
+COMMENT ON COLUMN otp.t_otp.inactive_at IS 'Timestamp when the OTP became inactive.';
+COMMENT ON COLUMN otp.t_otp.inactive_by IS 'User who marked the OTP inactive.';
 COMMENT ON COLUMN otp.t_otp.is_deleted IS 'Indicates if the OTP record is deleted.';
-COMMENT ON COLUMN otp.t_otp.deleted_at IS 'Timestamp when OTP record was deleted.';
+COMMENT ON COLUMN otp.t_otp.deleted_at IS 'Timestamp when the OTP record was deleted.';
 COMMENT ON COLUMN otp.t_otp.deleted_by IS 'User who deleted the OTP record.';
 COMMENT ON COLUMN otp.t_otp.expires_at IS 'Expiration timestamp of the OTP.';
 COMMENT ON COLUMN otp.t_otp.ref_code IS 'Reference code for which the OTP was generated.';
 COMMENT ON COLUMN otp.t_otp.otp IS 'The one-time password value.';
 ```
 
-### Table: otp.t_otp
+### Table: otp.t_otp_logs
 
 #### Table Columns
 
-| Key | Column Name            | Data Type              | Default           | Description                                                        |
-| --- | ---------------------- | ---------------------- | ----------------- | ------------------------------------------------------------------ |
-| PK  | id                     | UUID                   | GEN_RANDOM_UUID() | Primary key for the OTP log record                                 |
-| FK  | created_by             | UUID                   |                   | User who performed the OTP verification attempt                    |
-|     | created_at             | TIMESTAMP              | CURRENT_TIMESTAMP | Timestamp when the OTP log record was created                      |
-| FK  | otp_id                 | UUID                   |                   | Reference to the OTP record being verified                         |
-|     | context                | VARCHAR(32)            |                   | Context for OTP check: LOGIN, CONFIRM, RESET_PASSWORD, OTHER       |
-|     | ip_address             | INET                   |                   | IP address from which the OTP verification was attempted           |
-|     | device_id              | TEXT                   |                   | Identifier of the device used for OTP verification                 |
-|     | device_os              | TEXT                   |                   | Operating system of the device used                                |
-|     | location_name          | TEXT                   |                   | Human-readable name of the location where OTP was verified         |
-|     | latitude               | TEXT                   |                   | Latitude of the OTP verification location                          |
-|     | longitude              | TEXT                   |                   | Longitude of the OTP verification location                         |
-|     | geofence_center        | GEOGRAPHY(POINT, 4326) |                   | Geographical point for geofence verification (optional)            |
-|     | geofence_radius_meters | INT                    |                   | Radius in meters used for geofence verification                    |
-|     | result                 | VARCHAR(16)            |                   | Result of the OTP verification: SUCCESS, FAILED, EXPIRED           |
-|     | remark                 | TEXT                   |                   | Additional remarks or notes regarding the OTP verification attempt |
+| Key | Column Name            | Data Type              | Default           | Description                                                  |
+| --- | ---------------------- | ---------------------- | ----------------- | ------------------------------------------------------------ |
+| PK  | id                     | UUID                   | GEN_RANDOM_UUID() | Primary key; unique identifier for each decision log         |
+| FK  | created_by             | UUID                   |                   | User who performed the OTP verification attempt              |
+|     | created_at             | TIMESTAMP              | CURRENT_TIMESTAMP | Timestamp when the OTP log record was created                |
+| FK  | otp_id                 | UUID                   |                   | Reference to the OTP record being verified                   |
+|     | context                | VARCHAR(32)            |                   | Context for OTP check: LOGIN, CONFIRM, RESET_PASSWORD, OTHER |
+|     | ip_address             | INET                   |                   | IP address from which the OTP verification was attempted     |
+|     | device_id              | TEXT                   |                   | Identifier of the device used for OTP verification           |
+|     | device_os              | TEXT                   |                   | Operating system of the device used                          |
+|     | location_name          | TEXT                   |                   | Human-readable name of the location where OTP was verified   |
+|     | latitude               | TEXT                   |                   | Latitude of the OTP verification location                    |
+|     | longitude              | TEXT                   |                   | Longitude of the OTP verification location                   |
+|     | geofence_center        | GEOGRAPHY(POINT, 4326) |                   | Geographical point for geofence verification (optional)      |
+|     | geofence_radius_meters | INT                    |                   | Radius in meters used for geofence verification              |
+|     | result                 | VARCHAR(16)            |                   | Result of the OTP verification: SUCCESS, FAILED, EXPIRED     |
+|     | remark                 | TEXT                   |                   | Optional reason or explanation for the decision              |
 
 #### Table Constraints
 
@@ -1986,7 +1987,7 @@ Stores attribute definitions used for ABAC (Attribute-Based Access Control) poli
 | FK  | updated_by   | UUID         |                   | Reference to the user who last updated the attribute            |
 |     | updated_at   | TIMESTAMP    |                   | Timestamp of last update                                        |
 |     | is_active    | BOOLEAN      | FALSE             | Indicates if the attribute is active                            |
-|     | inactive_at  | TIMESTAMP    |                   | Timestamp when attribute became inactive                        |
+|     | inactive_at  | TIMESTAMP    |                   | Timestamp when the attribute became inactive                    |
 | FK  | inactive_by  | UUID         |                   | Reference to the user who set the attribute inactive            |
 |     | is_deleted   | BOOLEAN      | FALSE             | Indicates if the attribute is deleted                           |
 |     | deleted_at   | TIMESTAMP    |                   | Timestamp when the attribute was deleted                        |
@@ -2050,8 +2051,8 @@ COMMENT ON COLUMN authorization.m_attributes.updated_by IS 'User who last update
 COMMENT ON COLUMN authorization.m_attributes.updated_at IS 'Timestamp of last update';
 COMMENT ON COLUMN authorization.m_attributes.is_active IS 'Indicates whether the attribute is active';
 COMMENT ON COLUMN authorization.m_attributes.inactive_at IS 'Timestamp when the attribute became inactive';
-COMMENT ON COLUMN authorization.m_attributes.inactive_by IS 'User who marked the attribute as inactive';
-COMMENT ON COLUMN authorization.m_attributes.is_deleted IS 'Indicates whether the attribute is deleted';
+COMMENT ON COLUMN authorization.m_attributes.inactive_by IS 'User who set inactive';
+COMMENT ON COLUMN authorization.m_attributes.is_deleted IS 'Indicates if the attribute is deleted';
 COMMENT ON COLUMN authorization.m_attributes.deleted_at IS 'Timestamp when the attribute was deleted';
 COMMENT ON COLUMN authorization.m_attributes.deleted_by IS 'User who deleted the attribute';
 COMMENT ON COLUMN authorization.m_attributes.is_parameter IS 'Indicates if the attribute is a system parameter';
@@ -2076,7 +2077,7 @@ Stores ABAC (Attribute-Based Access Control) policy definitions for user access 
 | FK  | created_by      | UUID         |                   | Reference to the user who created the policy        |
 |     | created_at      | TIMESTAMP    | CURRENT_TIMESTAMP | Timestamp when the policy was created               |
 | FK  | updated_by      | UUID         |                   | Reference to the user who last updated the policy   |
-|     | updated_at      | TIMESTAMP    |                   | Timestamp of last update                            |
+|     | updated_at      | TIMESTAMP    |                   | Timestamp when the policy was last updated          |
 |     | is_active       | BOOLEAN      | FALSE             | Indicates if the policy is active                   |
 |     | inactive_at     | TIMESTAMP    |                   | Timestamp when the policy became inactive           |
 | FK  | inactive_by     | UUID         |                   | Reference to the user who set the policy inactive   |
@@ -2137,7 +2138,7 @@ COMMENT ON COLUMN authorization.t_policies.id IS 'Primary key of the policy';
 COMMENT ON COLUMN authorization.t_policies.created_by IS 'User who created the policy';
 COMMENT ON COLUMN authorization.t_policies.created_at IS 'Timestamp when the policy was created';
 COMMENT ON COLUMN authorization.t_policies.updated_by IS 'User who last updated the policy';
-COMMENT ON COLUMN authorization.t_policies.updated_at IS 'Timestamp of last update';
+COMMENT ON COLUMN authorization.t_policies.updated_at IS 'Timestamp when the policy was last updated';
 COMMENT ON COLUMN authorization.t_policies.is_active IS 'Indicates whether the policy is active';
 COMMENT ON COLUMN authorization.t_policies.inactive_at IS 'Timestamp when the policy became inactive';
 COMMENT ON COLUMN authorization.t_policies.inactive_by IS 'User who marked the policy as inactive';
@@ -2164,12 +2165,12 @@ Maps ABAC policy attributes to policies with operators and expected values.
 | PK  | id             | UUID        | GEN_RANDOM_UUID() | Primary key; unique identifier for each mapping             |
 | FK  | created_by     | UUID        |                   | Reference to the user who created the mapping               |
 |     | created_at     | TIMESTAMP   | CURRENT_TIMESTAMP | Timestamp when the mapping was created                      |
-|     | updated_by     | UUID        |                   | Reference to the user who last updated the mapping          |
+| FK  | updated_by     | UUID        |                   | Reference to the user who last updated the mapping          |
 |     | updated_at     | TIMESTAMP   |                   | Timestamp when the mapping was last updated                 |
 |     | is_active      | BOOLEAN     | FALSE             | Indicates if the mapping is active                          |
 |     | inactive_at    | TIMESTAMP   |                   | Timestamp when mapping became inactive                      |
 | FK  | inactive_by    | UUID        |                   | User who set mapping as inactive                            |
-|     | is_deleted     | BOOLEAN     | FALSE             | Indicates if the mapping is deleted (soft delete)           |
+|     | is_deleted     | BOOLEAN     | FALSE             | Indicates if the mapping record has been logically deleted. |
 |     | deleted_at     | TIMESTAMP   |                   | Timestamp when mapping was deleted                          |
 | FK  | deleted_by     | UUID        |                   | User who deleted the mapping                                |
 | FK  | policy_id      | UUID        |                   | Reference to the ABAC policy (t_policies.id)                |
@@ -2220,10 +2221,10 @@ COMMENT ON COLUMN authorization.t_policy_attribute_mappings.id IS 'Primary key o
 COMMENT ON COLUMN authorization.t_policy_attribute_mappings.created_by IS 'User who created the mapping';
 COMMENT ON COLUMN authorization.t_policy_attribute_mappings.created_at IS 'Timestamp when the mapping was created';
 COMMENT ON COLUMN authorization.t_policy_attribute_mappings.updated_by IS 'User who last updated the mapping';
-COMMENT ON COLUMN authorization.t_policy_attribute_mappings.updated_at IS 'Timestamp of last update';
+COMMENT ON COLUMN authorization.t_policy_attribute_mappings.updated_at IS 'Timestamp when the mapping was last updated';
 COMMENT ON COLUMN authorization.t_policy_attribute_mappings.is_active IS 'Indicates whether the mapping is active';
 COMMENT ON COLUMN authorization.t_policy_attribute_mappings.inactive_at IS 'Timestamp when the mapping became inactive';
-COMMENT ON COLUMN authorization.t_policy_attribute_mappings.inactive_by IS 'User who marked the mapping as inactive';
+COMMENT ON COLUMN authorization.t_policy_attribute_mappings.inactive_by IS 'User who set the mapping as inactive';
 COMMENT ON COLUMN authorization.t_policy_attribute_mappings.is_deleted IS 'Indicates whether the mapping is deleted';
 COMMENT ON COLUMN authorization.t_policy_attribute_mappings.deleted_at IS 'Timestamp when the mapping was deleted';
 COMMENT ON COLUMN authorization.t_policy_attribute_mappings.deleted_by IS 'User who deleted the mapping';
@@ -2301,22 +2302,22 @@ Stores user-specific attribute values for ABAC evaluation.
 
 #### Table Columns
 
-| Key | Column Name  | Data Type | Default           | Description                                                    |
-| --- | ------------ | --------- | ----------------- | -------------------------------------------------------------- |
-| PK  | id           | UUID      | GEN_RANDOM_UUID() | Primary key; unique identifier for each user-attribute mapping |
-| FK  | created_by   | UUID      |                   | Reference to the user who created the record                   |
-|     | created_at   | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp when the record was created                          |
-| FK  | updated_by   | UUID      |                   | Reference to the user who last updated the record              |
-|     | updated_at   | TIMESTAMP |                   | Timestamp of last update                                       |
-|     | is_active    | BOOLEAN   | FALSE             | Indicates whether the mapping is active                        |
-|     | inactive_at  | TIMESTAMP |                   | Timestamp when mapping became inactive                         |
-| FK  | inactive_by  | UUID      |                   | Reference to user who set mapping inactive                     |
-|     | is_deleted   | BOOLEAN   | FALSE             | Indicates whether the mapping is deleted                       |
-|     | deleted_at   | TIMESTAMP |                   | Timestamp when mapping was deleted                             |
-| FK  | deleted_by   | UUID      |                   | Reference to user who deleted the mapping                      |
-| FK  | user_id      | UUID      |                   | Reference to the user owning the attribute                     |
-| FK  | attribute_id | UUID      |                   | Reference to the attribute (m_attributes.id)                   |
-|     | value        | TEXT      |                   | Value assigned to the attribute for the user                   |
+| Key | Column Name  | Data Type | Default           | Description                                                      |
+| --- | ------------ | --------- | ----------------- | ---------------------------------------------------------------- |
+| PK  | id           | UUID      | GEN_RANDOM_UUID() | Primary key; unique identifier for each user-attribute mapping   |
+| FK  | created_by   | UUID      |                   | Reference to the user who created the record                     |
+|     | created_at   | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp when the record was created                            |
+| FK  | updated_by   | UUID      |                   | Reference to the user who last updated the record                |
+|     | updated_at   | TIMESTAMP |                   | Timestamp when the record was last updated                       |
+|     | is_active    | BOOLEAN   | FALSE             | Indicates whether the mapping is active                          |
+|     | inactive_at  | TIMESTAMP |                   | Timestamp when mapping became inactive                           |
+| FK  | inactive_by  | UUID      |                   | User who set mapping as inactive                                 |
+|     | is_deleted   | BOOLEAN   | FALSE             | Indicates whether the mapping record has been logically deleted. |
+|     | deleted_at   | TIMESTAMP |                   | Timestamp when mapping was deleted                               |
+| FK  | deleted_by   | UUID      |                   | User who deleted the mapping                                     |
+| FK  | user_id      | UUID      |                   | Reference to the user owning the attribute                       |
+| FK  | attribute_id | UUID      |                   | Reference to the attribute (m_attributes.id)                     |
+|     | value        | TEXT      |                   | Value assigned to the attribute for the user                     |
 
 #### Table Constraints
 
@@ -2360,12 +2361,12 @@ COMMENT ON COLUMN authorization.t_user_attribute_mappings.id IS 'Primary key of 
 COMMENT ON COLUMN authorization.t_user_attribute_mappings.created_by IS 'User who created the mapping';
 COMMENT ON COLUMN authorization.t_user_attribute_mappings.created_at IS 'Timestamp when the mapping was created';
 COMMENT ON COLUMN authorization.t_user_attribute_mappings.updated_by IS 'User who last updated the mapping';
-COMMENT ON COLUMN authorization.t_user_attribute_mappings.updated_at IS 'Timestamp of last update';
+COMMENT ON COLUMN authorization.t_user_attribute_mappings.updated_at IS 'Timestamp when the mapping was last updated';
 COMMENT ON COLUMN authorization.t_user_attribute_mappings.is_active IS 'Indicates whether the mapping is active';
 COMMENT ON COLUMN authorization.t_user_attribute_mappings.inactive_at IS 'Timestamp when mapping became inactive';
 COMMENT ON COLUMN authorization.t_user_attribute_mappings.inactive_by IS 'User who set the mapping as inactive';
 COMMENT ON COLUMN authorization.t_user_attribute_mappings.is_deleted IS 'Indicates whether the mapping is deleted';
-COMMENT ON COLUMN authorization.t_user_attribute_mappings.deleted_at IS 'Timestamp when mapping was deleted';
+COMMENT ON COLUMN authorization.t_user_attribute_mappings.deleted_at IS 'Timestamp when the mapping was deleted';
 COMMENT ON COLUMN authorization.t_user_attribute_mappings.deleted_by IS 'User who deleted the mapping';
 COMMENT ON COLUMN authorization.t_user_attribute_mappings.user_id IS 'Reference to the user';
 COMMENT ON COLUMN authorization.t_user_attribute_mappings.attribute_id IS 'Reference to the attribute';
@@ -2378,32 +2379,32 @@ Master table for defining user groups within the authorization system.
 
 #### Table Columns
 
-| Key | Column Name | Data Type    | Default           | Description                                                         |
-| --- | ----------- | ------------ | ----------------- | ------------------------------------------------------------------- |
-| PK  | id          | UUID         | GEN_RANDOM_UUID() | Primary key of the user group record.                               |
-| FK  | created_by  | UUID         |                   | User who created the user group.                                    |
-|     | created_at  | TIMESTAMP    | CURRENT_TIMESTAMP | Timestamp when the user group record was created.                   |
-| FK  | updated_by  | UUID         |                   | User who last updated the user group.                               |
-|     | updated_at  | TIMESTAMP    |                   | Timestamp of the last update of the user group record.              |
-|     | is_active   | BOOLEAN      | FALSE             | Indicates whether the user group is currently active.               |
-|     | inactive_at | TIMESTAMP    |                   | Timestamp when the user group was set as inactive.                  |
-| FK  | inactive_by | UUID         |                   | User who marked the user group as inactive.                         |
-|     | is_deleted  | BOOLEAN      | FALSE             | Indicates whether the user group record has been logically deleted. |
-|     | deleted_at  | TIMESTAMP    |                   | Timestamp when the user group record was deleted.                   |
-| FK  | deleted_by  | UUID         |                   | User who deleted the user group record.                             |
-|     | name        | VARCHAR(128) |                   | Name of the user group.                                             |
-|     | description | TEXT         |                   | Detailed description or purpose of the user group.                  |
+| Key | Column Name | Data Type    | Default           | Description                                                    |
+| --- | ----------- | ------------ | ----------------- | -------------------------------------------------------------- |
+| PK  | id          | UUID         | GEN_RANDOM_UUID() | Primary key of the user group record.                          |
+| FK  | created_by  | UUID         |                   | User who created the user group.                               |
+|     | created_at  | TIMESTAMP    | CURRENT_TIMESTAMP | Timestamp when the user group record was created.              |
+| FK  | updated_by  | UUID         |                   | User who last updated the user group.                          |
+|     | updated_at  | TIMESTAMP    |                   | Timestamp of the last update of the user group record.         |
+|     | is_active   | BOOLEAN      | FALSE             | Indicates whether the user group is currently active.          |
+|     | inactive_at | TIMESTAMP    |                   | Timestamp when the user group was set as inactive.             |
+| FK  | inactive_by | UUID         |                   | User who marked the user group as inactive.                    |
+|     | is_deleted  | BOOLEAN      | FALSE             | Indicates if the user group record has been logically deleted. |
+|     | deleted_at  | TIMESTAMP    |                   | Timestamp when the user group record was deleted.              |
+| FK  | deleted_by  | UUID         |                   | User who deleted the user group record.                        |
+|     | name        | VARCHAR(128) |                   | Key type name                                                  |
+|     | description | TEXT         |                   | Detailed description or purpose of the user group              |
 
 #### Table Constraints
 
-| Constraint Type | Column Name | Constraint Name        | Description                              |
-| --------------- | ----------- | ---------------------- | ---------------------------------------- |
-| PRIMARY KEY     | id          |                        | Defines `id` as the primary key.         |
-| FOREIGN KEY     | created_by  |                        | References `authentication.t_users(id)`. |
-| FOREIGN KEY     | updated_by  |                        | References `authentication.t_users(id)`. |
-| FOREIGN KEY     | inactive_by |                        | References `authentication.t_users(id)`. |
-| FOREIGN KEY     | deleted_by  |                        | References `authentication.t_users(id)`. |
-| UNIQUE INDEX    | name        | idx_m_user_groups_name | Ensures user group names are unique.     |
+| Constraint Type | Column Name | Constraint Name        | Description                             |
+| --------------- | ----------- | ---------------------- | --------------------------------------- |
+| PRIMARY KEY     | id          |                        | Defines `id` as the primary key         |
+| FOREIGN KEY     | created_by  |                        | References `authentication.t_users(id)` |
+| FOREIGN KEY     | updated_by  |                        | References `authentication.t_users(id)` |
+| FOREIGN KEY     | inactive_by |                        | References `authentication.t_users(id)` |
+| FOREIGN KEY     | deleted_by  |                        | References `authentication.t_users(id)` |
+| UNIQUE INDEX    | name        | idx_m_user_groups_name | Ensures user group names are unique     |
 
 #### Query
 
@@ -2451,35 +2452,35 @@ Transaction table mapping users to user groups, including activation and expirat
 
 #### Table Columns
 
-| Key | Column Name   | Data Type | Default           | Description                                                       |
-| --- | ------------- | --------- | ----------------- | ----------------------------------------------------------------- |
-| PK  | id            | UUID      | GEN_RANDOM_UUID() | Primary key of the user-group mapping record.                     |
-| FK  | created_by    | UUID      |                   | User who created the mapping record.                              |
-|     | created_at    | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp when the mapping record was created.                    |
-| FK  | updated_by    | UUID      |                   | User who last updated the mapping record.                         |
-|     | updated_at    | TIMESTAMP |                   | Timestamp of the last update.                                     |
-|     | is_active     | BOOLEAN   | FALSE             | Indicates whether this mapping is currently active.               |
-|     | inactive_at   | TIMESTAMP |                   | Timestamp when the mapping was set to inactive.                   |
-| FK  | inactive_by   | UUID      |                   | User who marked the mapping as inactive.                          |
-|     | is_deleted    | BOOLEAN   | FALSE             | Indicates whether this mapping record has been logically deleted. |
-|     | deleted_at    | TIMESTAMP |                   | Timestamp when the mapping record was deleted.                    |
-| FK  | deleted_by    | UUID      |                   | User who deleted the mapping record.                              |
-|     | effective_at  | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp when this user-group mapping becomes effective.         |
-|     | expires_at    | TIMESTAMP |                   | Timestamp when this user-group mapping expires.                   |
-| FK  | user_group_id | UUID      |                   | Reference to the user group that the user belongs to.             |
-| FK  | user_id       | UUID      |                   | Reference to the user who is assigned to the group.               |
+| Key | Column Name   | Data Type | Default           | Description                                                 |
+| --- | ------------- | --------- | ----------------- | ----------------------------------------------------------- |
+| PK  | id            | UUID      | GEN_RANDOM_UUID() | Primary key of the user-group mapping record.               |
+| FK  | created_by    | UUID      |                   | User who created the mapping record.                        |
+|     | created_at    | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp when the mapping record was created.              |
+| FK  | updated_by    | UUID      |                   | User who last updated the mapping record.                   |
+|     | updated_at    | TIMESTAMP |                   | Timestamp when the mapping was last updated                 |
+|     | is_active     | BOOLEAN   | FALSE             | Indicates if the mapping is currently active.               |
+|     | inactive_at   | TIMESTAMP |                   | Timestamp when the mapping was set to inactive.             |
+| FK  | inactive_by   | UUID      |                   | User who marked the mapping as inactive.                    |
+|     | is_deleted    | BOOLEAN   | FALSE             | Indicates if the mapping record has been logically deleted. |
+|     | deleted_at    | TIMESTAMP |                   | Timestamp when the mapping record was deleted.              |
+| FK  | deleted_by    | UUID      |                   | User who deleted the mapping record.                        |
+|     | effective_at  | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp when this user-group mapping becomes effective.   |
+|     | expires_at    | TIMESTAMP |                   | Timestamp when this user-group mapping expires.             |
+| FK  | user_group_id | UUID      |                   | Reference to the user group that the user belongs to.       |
+| FK  | user_id       | UUID      |                   | Reference to the user who is assigned to the group.         |
 
 #### Table Constraints
 
 | Constraint Type | Column Name   | Constraint Name                         | Description                                         |
 | --------------- | ------------- | --------------------------------------- | --------------------------------------------------- |
-| PRIMARY KEY     | id            |                                         | Defines `id` as the primary key.                    |
-| FOREIGN KEY     | created_by    |                                         | References `authentication.t_users(id)`.            |
-| FOREIGN KEY     | updated_by    |                                         | References `authentication.t_users(id)`.            |
-| FOREIGN KEY     | inactive_by   |                                         | References `authentication.t_users(id)`.            |
-| FOREIGN KEY     | deleted_by    |                                         | References `authentication.t_users(id)`.            |
-| FOREIGN KEY     | user_group_id |                                         | References `authorization.m_user_groups(id)`.       |
-| FOREIGN KEY     | user_id       |                                         | References `authentication.t_users(id)`.            |
+| PRIMARY KEY     | id            |                                         | Defines `id` as the primary key                     |
+| FOREIGN KEY     | created_by    |                                         | References `authentication.t_users(id)`             |
+| FOREIGN KEY     | updated_by    |                                         | References `authentication.t_users(id)`             |
+| FOREIGN KEY     | inactive_by   |                                         | References `authentication.t_users(id)`             |
+| FOREIGN KEY     | deleted_by    |                                         | References `authentication.t_users(id)`             |
+| FOREIGN KEY     | user_group_id |                                         | References `authorization.m_user_groups(id)`        |
+| FOREIGN KEY     | user_id       |                                         | References `authentication.t_users(id)`             |
 | CHECK           | expires_at    |                                         | Ensures `expires_at` > `effective_at` and not null. |
 | UNIQUE INDEX    | user_group_id | idx_t_user_group_mappings_user_group_id | Ensures unique mapping by user_group_id.            |
 | UNIQUE INDEX    | user_id       | idx_t_user_group_mappings_user_id       | Ensures unique mapping by user_id.                  |
@@ -2517,13 +2518,13 @@ COMMENT ON COLUMN authorization.t_user_group_mappings.id IS 'Primary key of the 
 COMMENT ON COLUMN authorization.t_user_group_mappings.created_by IS 'User who created the mapping record.';
 COMMENT ON COLUMN authorization.t_user_group_mappings.created_at IS 'Timestamp when the mapping record was created.';
 COMMENT ON COLUMN authorization.t_user_group_mappings.updated_by IS 'User who last updated the mapping record.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.updated_at IS 'Timestamp of the last update.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.is_active IS 'Indicates whether this mapping is currently active.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.inactive_at IS 'Timestamp when the mapping was set to inactive.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.inactive_by IS 'User who marked the mapping as inactive.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.is_deleted IS 'Indicates whether this mapping record has been logically deleted.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.deleted_at IS 'Timestamp when the mapping record was deleted.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.deleted_by IS 'User who deleted the mapping record.';
+COMMENT ON COLUMN authorization.t_user_group_mappings.updated_at IS 'Timestamp when the mapping record was last updated.';
+COMMENT ON COLUMN authorization.t_user_group_mappings.is_active IS 'Indicates whether the mapping is currently active.';
+COMMENT ON COLUMN authorization.t_user_group_mappings.inactive_at IS 'Timestamp when the mapping was deactivated.';
+COMMENT ON COLUMN authorization.t_user_group_mappings.inactive_by IS 'User who deactivated the mapping.';
+COMMENT ON COLUMN authorization.t_user_group_mappings.is_deleted IS 'Indicates if the record has been logically deleted.';
+COMMENT ON COLUMN authorization.t_user_group_mappings.deleted_at IS 'Timestamp when the record was deleted.';
+COMMENT ON COLUMN authorization.t_user_group_mappings.deleted_by IS 'User who deleted the record.';
 COMMENT ON COLUMN authorization.t_user_group_mappings.effective_at IS 'Timestamp when this user-group mapping becomes effective.';
 COMMENT ON COLUMN authorization.t_user_group_mappings.expires_at IS 'Timestamp when this user-group mapping expires.';
 COMMENT ON COLUMN authorization.t_user_group_mappings.user_group_id IS 'Reference to the user group that the user belongs to.';
@@ -2542,13 +2543,13 @@ Mapping table linking authorization policies with user groups and defining logic
 | FK  | created_by    | UUID        |                   | User who created the mapping record.                                               |
 |     | created_at    | TIMESTAMP   | CURRENT_TIMESTAMP | Timestamp when the record was created.                                             |
 | FK  | updated_by    | UUID        |                   | User who last updated the mapping.                                                 |
-|     | updated_at    | TIMESTAMP   |                   | Timestamp of the last update.                                                      |
-|     | is_active     | BOOLEAN     | FALSE             | Indicates whether the mapping is currently active.                                 |
-|     | inactive_at   | TIMESTAMP   |                   | Timestamp when the mapping was deactivated.                                        |
+|     | updated_at    | TIMESTAMP   |                   | Timestamp when the mapping was last updated                                        |
+|     | is_active     | BOOLEAN     | FALSE             | Indicates if the mapping is currently active.                                      |
+|     | inactive_at   | TIMESTAMP   |                   | Timestamp when the mapping was deactivated                                         |
 | FK  | inactive_by   | UUID        |                   | User who deactivated the mapping.                                                  |
 |     | is_deleted    | BOOLEAN     | FALSE             | Indicates if the record has been logically deleted.                                |
-|     | deleted_at    | TIMESTAMP   |                   | Timestamp when the record was deleted.                                             |
-| FK  | deleted_by    | UUID        |                   | User who deleted the record.                                                       |
+|     | deleted_at    | TIMESTAMP   |                   | Timestamp when the record was deleted                                              |
+| FK  | deleted_by    | UUID        |                   | User who deleted the mapping record                                                |
 | FK  | policy_id     | UUID        |                   | Reference to the authorization policy associated with the mapping.                 |
 | FK  | user_group_id | UUID        |                   | Reference to the user group affected by this policy.                               |
 |     | operator      | VARCHAR(32) |                   | Logical operator used for evaluating the condition (e.g., EQUALS, NOT_EQUALS, IN). |
@@ -2557,13 +2558,13 @@ Mapping table linking authorization policies with user groups and defining logic
 
 | Constraint Type | Column Name                        | Constraint Name                                      | Description                                                |
 | --------------- | ---------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------- |
-| PRIMARY KEY     | id                                 |                                                      | Defines `id` as the primary key.                           |
-| FOREIGN KEY     | created_by                         |                                                      | References `authentication.t_users(id)`.                   |
-| FOREIGN KEY     | updated_by                         |                                                      | References `authentication.t_users(id)`.                   |
-| FOREIGN KEY     | inactive_by                        |                                                      | References `authentication.t_users(id)`.                   |
-| FOREIGN KEY     | deleted_by                         |                                                      | References `authentication.t_users(id)`.                   |
-| FOREIGN KEY     | policy_id                          |                                                      | References `authorization.t_policies(id)`.                 |
-| FOREIGN KEY     | user_group_id                      |                                                      | References `authorization.m_user_groups(id)`.              |
+| PRIMARY KEY     | id                                 |                                                      | Defines `id` as the primary key                            |
+| FOREIGN KEY     | created_by                         |                                                      | References `authentication.t_users(id)`                    |
+| FOREIGN KEY     | updated_by                         |                                                      | References `authentication.t_users(id)`                    |
+| FOREIGN KEY     | inactive_by                        |                                                      | References `authentication.t_users(id)`                    |
+| FOREIGN KEY     | deleted_by                         |                                                      | References `authentication.t_users(id)`                    |
+| FOREIGN KEY     | policy_id                          |                                                      | References `authorization.t_policies(id)`                  |
+| FOREIGN KEY     | user_group_id                      |                                                      | References `authorization.m_user_groups(id)`               |
 | INDEX           | policy_id                          | idx_t_policy_user_group_mappings_policy_id           | Improves lookup performance by policy_id.                  |
 | INDEX           | user_group_id                      | idx_t_policy_user_group_mappings_user_group_id       | Improves lookup performance by user_group_id.              |
 | UNIQUE INDEX    | policy_id, user_group_id, operator | idx_t_policy_user_group_mappings_policy_group_unique | Ensures unique combination of policy, group, and operator. |
@@ -2600,7 +2601,7 @@ COMMENT ON COLUMN authorization.t_policy_user_group_mappings.id IS 'Primary key 
 COMMENT ON COLUMN authorization.t_policy_user_group_mappings.created_by IS 'User who created the mapping record.';
 COMMENT ON COLUMN authorization.t_policy_user_group_mappings.created_at IS 'Timestamp when the record was created.';
 COMMENT ON COLUMN authorization.t_policy_user_group_mappings.updated_by IS 'User who last updated the mapping.';
-COMMENT ON COLUMN authorization.t_policy_user_group_mappings.updated_at IS 'Timestamp of the last update.';
+COMMENT ON COLUMN authorization.t_policy_user_group_mappings.updated_at IS 'Timestamp when the record was last updated.';
 COMMENT ON COLUMN authorization.t_policy_user_group_mappings.is_active IS 'Indicates whether the mapping is currently active.';
 COMMENT ON COLUMN authorization.t_policy_user_group_mappings.inactive_at IS 'Timestamp when the mapping was deactivated.';
 COMMENT ON COLUMN authorization.t_policy_user_group_mappings.inactive_by IS 'User who deactivated the mapping.';
@@ -2636,7 +2637,7 @@ Stores algorithm binaries and metadata for use in the system.
 |     | deleted_at   | TIMESTAMP    |                   | Timestamp when the algorithm was deleted          |
 | FK  | deleted_by   | UUID         |                   | Reference to user who deleted the record          |
 |     | effective_at | TIMESTAMP    | CURRENT_TIMESTAMP | Effective start timestamp                         |
-|     | expires_at   | TIMESTAMP    |                   | Expiration timestamp; must be after effective_at  |
+|     | expires_at   | TIMESTAMP    |                   | Expiration timestamp                              |
 |     | name         | VARCHAR(128) |                   | Name of the algorithm                             |
 |     | algorithm    | BYTEA        |                   | Algorithm binary data                             |
 |     | key_required | JSONB        |                   | JSON object defining required keys or parameters  |
@@ -2717,11 +2718,11 @@ Stores metadata about different types of keys used in the system.
 |     | is_active    | BOOLEAN      | FALSE             | Indicates whether the key type is active          |
 |     | inactive_at  | TIMESTAMP    |                   | Timestamp when the key type became inactive       |
 | FK  | inactive_by  | UUID         |                   | Reference to user who set key type inactive       |
-|     | is_deleted   | BOOLEAN      | FALSE             | Indicates whether the key type is deleted         |
+|     | is_deleted   | BOOLEAN      | FALSE             | Indicates whether the key type record is deleted  |
 |     | deleted_at   | TIMESTAMP    |                   | Timestamp when the key type was deleted           |
 | FK  | deleted_by   | UUID         |                   | Reference to user who deleted the record          |
 |     | effective_at | TIMESTAMP    | CURRENT_TIMESTAMP | Effective start timestamp                         |
-|     | expires_at   | TIMESTAMP    |                   | Expiration timestamp; must be after effective_at  |
+|     | expires_at   | TIMESTAMP    |                   | Expiration timestamp                              |
 |     | name         | VARCHAR(128) |                   | Key type name                                     |
 |     | title        | VARCHAR(512) |                   | Human-readable title for the key type             |
 |     | description  | TEXT         |                   | Description of the key type                       |
@@ -2740,7 +2741,7 @@ Stores metadata about different types of keys used in the system.
 #### Query
 
 ```SQL
-CREATE SCHEMA IF NOT EXISTS key.m_key_types
+CREATE TABLE IF NOT EXISTS key.m_key_types
 (
     id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
     created_by UUID NOT NULL REFERENCES authentication.t_users(id),
@@ -2799,7 +2800,7 @@ Stores cryptographic keys along with metadata and type reference.
 |     | updated_at   | TIMESTAMP |                   | Timestamp of last update                     |
 |     | is_active    | BOOLEAN   | FALSE             | Indicates if the record is active            |
 |     | inactive_at  | TIMESTAMP |                   | Timestamp when record became inactive        |
-| FK  | inactive_by  | UUID      |                   | User who set inactive                        |
+| FK  | inactive_by  | UUID      |                   | Reference to user who set inactive           |
 |     | is_deleted   | BOOLEAN   | FALSE             | Indicates if the record is deleted           |
 |     | deleted_at   | TIMESTAMP |                   | Timestamp when record was deleted            |
 | FK  | deleted_by   | UUID      |                   | User who deleted the record                  |
@@ -2937,10 +2938,10 @@ COMMENT ON COLUMN profile.m_user_profiles.created_at IS 'Timestamp when the prof
 COMMENT ON COLUMN profile.m_user_profiles.updated_by IS 'User who last updated the profile';
 COMMENT ON COLUMN profile.m_user_profiles.updated_at IS 'Timestamp of last update';
 COMMENT ON COLUMN profile.m_user_profiles.is_active IS 'Indicates if the profile is active';
-COMMENT ON COLUMN profile.m_user_profiles.inactive_at IS 'Timestamp when profile became inactive';
+COMMENT ON COLUMN profile.m_user_profiles.inactive_at IS 'Timestamp when the profile became inactive';
 COMMENT ON COLUMN profile.m_user_profiles.inactive_by IS 'User who marked the profile inactive';
 COMMENT ON COLUMN profile.m_user_profiles.is_deleted IS 'Indicates if the profile is deleted';
-COMMENT ON COLUMN profile.m_user_profiles.deleted_at IS 'Timestamp when profile was deleted';
+COMMENT ON COLUMN profile.m_user_profiles.deleted_at IS 'Timestamp when the profile was deleted';
 COMMENT ON COLUMN profile.m_user_profiles.deleted_by IS 'User who deleted the profile';
 COMMENT ON COLUMN profile.m_user_profiles.user_id IS 'Reference to the user account';
 COMMENT ON COLUMN profile.m_user_profiles.personal_id IS 'Reference to the personal information record';
