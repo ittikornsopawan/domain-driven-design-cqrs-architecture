@@ -10,6 +10,10 @@
 
 ## 0. Change History
 
+- **31-Oct-2025:** - Ittikorn Sopawan  
+  - **Version:** 1.0.0  
+  - **Change / Notes:**  
+    - Update topic 3 with workflow.
 - **28-Oct-2025:** - Ittikorn Sopawan  
   - **Version:** 1.0.0  
   - **Change / Notes:**  
@@ -29,7 +33,8 @@ It acts as the decision and rules engine that determines how a member’s action
 The **Privilege Service** enables businesses to design and operate dynamic loyalty programs without redeploying code.  
 It defines how members earn, maintain, and upgrade their status based on transactional and behavioral data from multiple integrated services.
 
-### Key Objectives:
+### Key Objectives
+
 - Allow flexible **Tier configurations** (automatic progression, manual assignment, invitation-based, or immutable tiers).  
 - Support **Benefit catalog management** for mapping privileges such as discounts, point multipliers, vouchers, or access rights.  
 - Manage **Point conversion rules**, including time-based or campaign-based modifiers.  
@@ -41,168 +46,624 @@ It defines how members earn, maintain, and upgrade their status based on transac
 
 ## 3. Conceptual Workflow
 
-The Privilege Service operates as an **event-driven rules engine**.  
-It listens to events from transactions, mission completions, campaign redemptions, invitations, and event codes to determine member tier upgrades/downgrades, benefit allocations, and point calculations.  
+Overview of the conceptual workflow of the Privilege Service, covering member onboarding, event reception, rule evaluation, point calculation, benefit application, and auditing/error handling.
 
-It then propagates updates to connected microservices (IAM, Point, Notification) and logs all actions for auditing purposes.
-
-## 3. Conceptual Workflow
-
-The **Privilege Service** operates as a **centralized, event-driven engine** for managing **member tiers, benefits, and point calculations**.  
-It evaluates events from multiple sources, applies configurable rules, updates member states, and triggers notifications or point assignments.  
-
-This workflow explains **how tiers behave**, **how benefits are applied**, **how points are calculated**, and **how the system ensures consistency**.
+**Summary:**  
+The Privilege Service acts as a centralized, event-driven engine for managing member tiers, benefits, and points. It evaluates events from multiple sources, applies configurable rules, updates member states, and triggers notifications or point assignments, ensuring consistency and scalability across the system.
 
 ---
 
-### 3.1 Member Event Flow
+### 3.1 Member Onboarding Flow
 
-This flow handles **user-triggered events** that may affect tiers, benefits, or points.
+The process for new members to create a profile, assign default tiers/privileges, and receive initial points or benefits.
 
-#### 3.1.1. **Event Reception**
-
-- Listens to events: `transaction.completed`, `mission.completed`, `campaign.redeemed`, `event_code.redeemed`.
-- Each event includes metadata: `user_id`, `amount`, `timestamp`, `campaign_id`, `payment_method`, etc.
-- Events are **queued** for asynchronous processing to ensure scalability.
-
-#### 3.1.2. **Fetch Member Profile**
-
-- Queries IAM Service for:  
-  - Current Tier (`tier_id`)  
-  - Current points and benefit eligibility  
-  - Historical activity (for accumulative rules)
-
-#### 3.1.3. **Evaluate Tier Rules**
-
-- Check **Promotion Rules**:
-  - Accumulative spend thresholds
-  - Points earned
-  - Transaction count
-  - Mission or campaign completions
-- Check **Demotion Rules**:
-  - Inactivity period
-  - Rule violation (optional)
-- Check **Invitation / Event Code Rules**:
-  - Admin-invited tier upgrade
-  - Event-code triggered promotion
-- **Immutable tiers** cannot be upgraded/demoted.
-
-#### 3.1.4. **Evaluate Benefit Rules**
-
-- Determine benefits eligible for the current tier:
-  - Discount percentages
-  - Free shipping
-  - Cashback
-  - Priority support
-  - Event or campaign access
-  - Point multipliers
-- Check **time-bound modifiers** or **campaign-specific benefits**.
-
-#### 3.1.5. **Evaluate Point Conversion**
-
-- Apply base point conversion (e.g., 100 THB → 1 point).
-- Apply **tier multiplier** (e.g., Gold = 1.2x).
-- Apply **time/campaign modifiers** (e.g., X2 points during promotion period).
-- Validate against any **daily/monthly caps**.
-
-#### 3.1.6. **Apply Changes**
-
-- Update **Member Tier** in IAM Service (if promoted/demoted).  
-- Send **points** to Point Service.  
-- Assign **benefits** internally or trigger external notifications.  
-- Emit **events** for downstream microservices (`tier.changed`, `benefit.applied`, `points.applied`).  
-
-#### 3.1.7. **Audit & Logging**
-
-- Store complete audit log: `who`, `what`, `when`, `why`, `source_event_id`.
-- Enables rollback if a transaction is reversed.
+- 3.1.1 Registration & Initialization – Create a new member account and initialize basic profile data.  
+- 3.1.2 Profile Linking with IAM – Link the member profile with the IAM system for authentication and access control.  
+- 3.1.3 Privilege Assignment – Assign default tier, tier onboarding, and tier benefits via Privilege Microservice.  
+- 3.1.4 Welcome Bonus / Initial Points – Grant initial points or welcome benefits to the member.  
+- 3.1.5 Event Emission (`member.created`) – Emit an event to notify other systems (Campaign-Coupon, Point, Campaign-Product) about the new member.  
 
 ```mermaid
 flowchart TD
-    TX["Transaction Service / Mission / Campaign"] -->|Event| PR["Privilege Service"]
-    PR --> IAM["IAM Service: Update Tier"]
-    PR --> PT["Point Service: Apply Points"]
-    PR --> Benefit["Privilege Service: Assign Benefits"]
-    PR --> EventBus["Event Bus: tier/benefit events"]
-    PR --> Audit["Audit DB"]
+    %% Member Onboarding Flow
+    subgraph MemberService["Member Service"]
+        A["3.1.1 Registration & Initialization"]
+        D["3.1.4 Welcome Bonus / Initial Points"]
+    end
+
+    subgraph IAMService["IAM Service"]
+        B["3.1.2 Profile Linking with IAM"]
+    end
+
+    subgraph PrivilegeMS["Privilege (MS)"]
+        C["3.1.3 Privilege Assignment (Tier, Tier Onboarding, Tier Benefit)"]
+    end
+
+    subgraph EventSystem["Event System"]
+        E["3.1.5 Emit member.created Event"]
+    end
+
+    %% Downstream MS triggered by event
+    subgraph CampaignCouponMS["Campaign"]
+        F["Assign Coupon to Member"]
+        H["Assign Product/Benefit"]
+    end
+
+    subgraph PointMS["Point (MS)"]
+        G["Grant Initial Points"]
+    end
+
+    %% Flow
+    A --> B --> C --> D --> E
+    E --> F
+    E --> G
+    E --> H
 ```
 
-### 3.2 Tier Behavior & Lifecycle
+### 3.2 Member Event Flow
 
-- Dynamic Tier Creation
-- Admin can create new tiers on the fly.
-  - Define:
-    - tier_name, rank, climbable, immutable, default_benefits
-    - Accumulative spend thresholds, point thresholds
-    - Allowed promotion/demotion rules
-- Tier Progression
-  - Automatic: Users accumulate points or complete tasks → system evaluates rules → upgrade/downgrade tier.
-  - Manual / Invitation: Admin can assign tier directly or via invitation code.
-  - Event Code Triggered: Specific promotions can push a member to a higher tier.
-- Tier Restrictions
-  - Immutable Tiers: Certain tiers cannot be changed.
-  - Climbable Flag: Defines if tier can be promoted/demoted.
-  - Promotion Window: Only valid during certain dates (campaign-specific).
-- Benefit Mapping
-  - Each tier maps to multiple benefits.
-  - Benefits can have:
-    - Quantity limits
-    - Time-bound validity
-    - Conditional logic (e.g., only apply if transaction > 1000 THB)
+Handling events triggered by members such as transactions, missions, campaigns, or promo code usage.
 
-### 3.3 Admin Configuration Flow
+- 3.2.1 Event Reception & Queueing – Receive events from multiple sources and enqueue them for asynchronous processing.
+- 3.2.2 Event Validation – Validate the event payload, including user_id, timestamp, and event type.
+- 3.2.3 Event Categorization – Classify events into types such as transaction, mission, campaign, etc.
+- 3.2.4 Event Routing to Evaluation Engine – Route events to the evaluation engine for processing.
 
-- Admin accesses Portal / API.
-- Can Create / Edit / Delete:
-  - Tiers
-  - Benefits
-  - Promotion / Demotion Rules
-- Simulation Engine:
-  - Admin can simulate:
-    - What tier a member would achieve given a set of transactions
-    - Benefits eligibility
-    - Points calculation
-- Rule Validation:
-  - Prevent conflicts (e.g., tier promotion loop, overlapping time modifiers)
-  - Auto-check thresholds
+```mermaid
+flowchart LR
+    %% Microservices / Subgraphs
+    subgraph EventReceptionMS["Event Reception"]
+        A1["Receive event from multiple sources"]
+        A2["Enqueue event for async processing"]
+    end
+
+    subgraph ValidationMS["Event Validation"]
+        B1["Validate user_id"]
+        B2["Validate timestamp"]
+        B3["Validate event type"]
+        B4["Reject invalid events"]
+    end
+
+    subgraph CategorizationMS["Event Categorization"]
+        C1["Classify event as transaction / mission / campaign / promo"]
+        C2["Mark event metadata for evaluation"]
+    end
+
+    subgraph EvaluationEngineMS["Evaluation Engine"]
+        D1["Process transaction events"]
+        D2["Process mission events"]
+        D3["Process campaign events"]
+        D4["Process promo code events"]
+        D5["Trigger downstream effects (points, coupons, products)"]
+    end
+
+    %% Flow connections with labels
+    A1 -->|Event received| A2
+    A2 -->|Event enqueued| B1
+    B1 -->|user_id valid| B2
+    B2 -->|timestamp valid| B3
+    B3 -->|event type valid| B4
+    B4 -->|valid| C1
+    B4 -->|invalid -> discard| B4
+    C1 -->|classified| C2
+
+    %% Parallel processing for each event type
+    C2 -->|transaction| D1
+    C2 -->|mission| D2
+    C2 -->|campaign| D3
+    C2 -->|promo code| D4
+
+    %% All processed events trigger downstream effects
+    D1 -->|processed| D5
+    D2 -->|processed| D5
+    D3 -->|processed| D5
+    D4 -->|processed| D5
+```
+
+### 3.3 Event Evaluation & Processing
+
+Evaluate events against configured rules to determine tier changes, benefits, and points.
+
+- 3.3.1 Rule Matching – Identify which rules apply to the incoming event.  
+- 3.3.2 Tier Evaluation – Evaluate potential tier promotions or demotions.  
+- 3.3.3 Benefit Evaluation – Determine benefits the member is eligible to receive.  
+- 3.3.4 Point Conversion – Calculate points earned based on the event and tier multipliers.  
+- 3.3.5 Event Output & Updates – Record results and trigger updates to downstream services.  
 
 ```mermaid
 flowchart TD
-    Admin["Admin Portal / Config UI"] -->|Create/Edit Rules| API["Privilege Admin API"]
-    API --> DB["Privilege DB (tiers, rules, benefits)"]
-    API --> Sim["Rule Simulation Engine"]
-    Sim --> API
-    API --> EventBus["Event Bus: promotion/benefit events"]
+    %% Microservices / Subgraphs
+    subgraph EvaluationEngineMS["Evaluation Engine"]
+        A1["3.3.1 Rule Matching"]
+        A2["3.3.2 Tier Evaluation"]
+        A3["3.3.3 Benefit Evaluation"]
+        A4["3.3.4 Point Conversion"]
+        A5["3.3.5 Event Output & Updates"]
+    end
+
+    subgraph PrivilegeMS["Privilege (MS)"]
+        P1["Apply tier changes"]
+        P2["Assign benefits"]
+    end
+
+    subgraph PointMS["Point (MS)"]
+        Pt1["Update points balance"]
+    end
+
+    subgraph CampaignMS["Campaign (MS)"]
+        C1["Trigger campaign / product benefits"]
+    end
+
+    %% Flow connections with labels
+    A1 -->|Match rules for event| A2
+    A2 -->|Evaluate tier| A3
+    A3 -->|Determine eligible benefits| A4
+    A4 -->|Calculate points earned| A5
+
+    %% Downstream service updates
+    A5 -->|tier update| P1
+    A5 -->|benefit assignment| P2
+    A5 -->|points update| Pt1
+    A5 -->|campaign/product trigger| C1
 ```
 
-### 3.4 Point Conversion & Benefit Application Flow
+### 3.4 Tier Behavior & Lifecycle
 
-1. Receive transaction/milestone event
-2. Determine base points
-3. Apply tier multiplier
-4. Apply time/campaign modifier
-5. Update Point Service
-6. Evaluate benefit eligibility
-7. Assign benefits or trigger notifications
-8. Record audit
+Define the structure and lifecycle of member tiers including promotions, demotions, and restrictions.
 
-### 3.5 Event Propagation & Notification
+- 3.4.1 Tier Definition & Attributes – Define tier properties such as rank, climbable, immutable, and default benefits.  
+- 3.4.2 Promotion / Demotion Rules – Rules for upgrading or downgrading tiers based on activity or thresholds.  
+- 3.4.3 Immutable & Climbable Flags – Indicate tiers that cannot be changed or cannot be promoted/demoted.  
+- 3.4.4 Time-Bound Tiers – Tiers valid only during specific campaigns or time periods.  
+- 3.4.5 Admin-Triggered Upgrades – Manual tier changes initiated by administrators or invitation codes.  
 
-- Event Bus publishes:
-  - tier.changed
-  - points.applied
-  - benefit.assigned
-- Subscribers (Notification Service, CRM, Frontend) update UI or send messages.
-- Supports async retries and dead-letter queue for failed events.
+```mermaid
+flowchart TD
+    %% Services / Subgraphs
+    subgraph PrivilegeMS["Privilege (MS)"]
+        T1["Define Tier Attributes\n(rank, benefits, climbable, immutable)"]
+        T2["Check Promotion/Demotion Rules\n(activity, thresholds)"]
+        T3["Check Immutable & Climbable Flags"]
+        T4["Check Time-Bound Validity"]
+        T5["Apply Tier Changes"]
+    end
 
-### 3.6 Audit & Reconciliation
+    subgraph EvaluationEngineMS["Evaluation Engine MS"]
+        E1["Evaluate member activity & thresholds"]
+        E2["Determine potential tier promotion/demotion"]
+        E3["Re-evaluate benefits & points based on new tier"]
+    end
 
-- Every tier change, benefit assignment, and point transaction is logged.
-- Provides reconciliation jobs to verify:
-  - Tier assignments
-  - Points consistency
-  - Benefit allocation
-- Supports rollback for refunded/canceled transactions.
+    subgraph AdminMS["Admin / Manual Service"]
+        A1["Admin-Triggered Tier Upgrade/Downgrade"]
+        A2["Validate admin permissions"]
+        A3["Apply manual tier change"]
+    end
+
+    subgraph IAMService["IAM Service"]
+        M1["Update Member Profile with new tier"]
+    end
+
+    %% Normal automated tier evaluation
+    T1 --> T2
+    T2 --> E1
+    E1 --> E2
+    E2 --> T3
+    T3 -->|Tier mutable & climbable| T4
+    T3 -->|Tier immutable| T5
+    T4 -->|Valid period| T5
+    T4 -->|Expired/invalid| T5
+
+    %% Admin triggered path (manual override)
+    A1 --> A2 -->|Permission valid| A3
+    A3 --> T5
+
+    %% Downstream effect after tier changes
+    T5 -->|Update profile| M1
+    T5 -->|Trigger evaluation| E3
+```
+
+### 3.5 Benefit Determination & Application
+
+Determine and apply benefits based on tier, events, or campaigns.
+
+- 3.5.1 Benefit Eligibility Rules – Check if members meet the conditions to receive benefits.
+- 3.5.2 Tier-Based Benefits – Assign benefits associated with the member’s current tier.
+- 3.5.3 Campaign-Specific Benefits – Apply benefits that are part of a campaign or promotion.
+- 3.5.4 Time-Limited or Conditional Benefits – Handle benefits with validity periods or conditional logic.
+- 3.5.5 Benefit Assignment & Notification – Update internal state and notify members or external systems.
+
+```mermaid
+flowchart TD
+    %% Admin Service
+    subgraph AdminMS["Admin / Manual Service"]
+        A1["Admin Setup / Update Benefit Rules"]
+        A2["Validate Admin Permissions"]
+        A3["Save Rules to Privilege MS"]
+    end
+
+    %% Privilege MS
+    subgraph PrivilegeMS["Privilege (MS)"]
+        P1["Check Benefit Eligibility Rules<br/>(event, tier, membership)"]
+        P2["Assign Tier-Based Benefits"]
+        P3["Assign Campaign-Specific Benefits"]
+        P4["Check Time-Limited / Conditional Benefits"]
+        P5["Apply Benefits & Update Internal State"]
+    end
+
+    %% Evaluation Engine MS
+    subgraph EvaluationEngineMS["Evaluation Engine MS"]
+        E1["Evaluate Points / Multipliers if benefit affects points"]
+        E2["Determine final benefit eligibility"]
+    end
+
+    %% Point MS
+    subgraph PointMS["Point (MS)"]
+        Pt1["Update Points Balance"]
+    end
+
+    %% Campaign MS
+    subgraph CampaignMS["Campaign (MS)"]
+        C1["Trigger Campaign / Product Benefits"]
+    end
+
+    %% IAM Service
+    subgraph IAMService["IAM Service"]
+        M1["Notify Member Profile / External Systems"]
+    end
+
+    %% Admin setup path
+    A1 --> A2 -->|Permission valid| A3
+    A3 -->|Update rules| P1
+
+    %% Benefit evaluation workflow
+    P1 -->|Eligible| P2
+    P2 --> P3
+    P3 --> P4
+    P4 -->|Valid / Condition met| P5
+    P4 -->|Invalid / Condition failed| P5
+
+    %% Connect to Evaluation Engine if points affected
+    P5 --> E1
+    E1 --> E2
+    E2 --> Pt1
+
+    %% Campaign / Product triggers
+    P5 --> C1
+
+    %% Notify IAM
+    P5 --> M1
+    Pt1 --> M1
+    C1 --> M1
+```
+
+### 3.6 Point Conversion & Calculation
+
+Mechanism to convert member actions into points and apply multipliers.
+
+- 3.6.1 Base Conversion Formula – Standard formula for calculating points from activity or spend.
+- 3.6.2 Tier Multipliers – Apply multipliers based on the member’s tier.
+- 3.6.3 Time/Campaign Modifiers – Apply temporary multipliers during campaigns or promotions.
+- 3.6.4 Point Caps & Validation – Ensure points do not exceed daily/monthly caps.
+- 3.6.5 Point Service Integration – Send calculated points to the Point Service.
+
+```mermaid
+flowchart TD
+    %% Admin Service
+    subgraph AdminMS["Admin / Manual Service"]
+        A1["Admin Setup / Update Point Conversion Rules"]
+        A2["Validate Admin Permissions"]
+        A3["Save Rules to Evaluation Engine / Point MS"]
+    end
+
+    %% Evaluation Engine MS
+    subgraph EvaluationEngineMS["Evaluation Engine MS"]
+        E1["Receive Event / Activity Data"]
+        E2["Apply Base Conversion Formula"]
+        E3["Apply Tier Multipliers"]
+        E4["Apply Time / Campaign Modifiers"]
+        E5["Check Point Caps & Validation"]
+        E6["Determine Final Points to Credit"]
+    end
+
+    %% Point MS
+    subgraph PointMS["Point (MS)"]
+        Pt1["Update Points Balance"]
+        Pt2["Emit Event / Notify Systems if needed"]
+    end
+
+    %% Workflow Connections
+
+    %% Admin setup path
+    A1 --> A2 -->|Permission valid| A3
+    A3 -->|Update rules| E2
+
+    %% Point calculation workflow
+    E1 -->|New Event / Activity| E2
+    E2 -->|Base points calculated| E3
+    E3 -->|Tier multiplier applied| E4
+    E4 -->|Campaign/time modifier applied| E5
+
+    %% Decision: Check caps
+    E5 -->|Under daily/monthly cap| E6
+    E5 -->|Exceeds cap| E6
+
+    %% Downstream
+    E6 --> Pt1
+    Pt1 --> Pt2
+
+    %% Optional: feedback loop for logging/monitoring
+    Pt2 -->|Log / Metrics| E1
+```
+
+### 3.7 Tier & Benefit Synchronization
+
+Ensure consistency between tiers and benefits across services.
+
+- 3.7.1 Update IAM with New Tier – Sync tier updates to IAM Service.
+- 3.7.2 Sync Benefit States – Synchronize benefit allocation status.
+- 3.7.3 Event Emission (`tier.changed`, `benefit.applied`) – Emit events for downstream subscribers.
+- 3.7.4 Retry & Recovery Handling – Handle failed updates and retries for eventual consistency.
+
+```mermaid
+flowchart TD
+    %% Admin / Manual Trigger
+    subgraph AdminMS["Admin / Manual Service"]
+        A1["Trigger Tier/Benefit Sync Manually"]
+    end
+
+    %% Privilege MS (Master of Tier & Benefit)
+    subgraph PrivilegeMS["Privilege (MS)"]
+        P1T["Evaluate Pending Tier Changes from Evaluation Engine"]
+        P1B["Evaluate Pending Benefit Changes from Evaluation Engine"]
+        P2T["Update Master Tier Data"]
+        P2B["Update Master Benefit Data"]
+        P3T["Prepare Tier Payload for IAM Sync"]
+        P3B["Prepare Benefit Payload for IAM Sync"]
+        P4T["Prepare Tier Event for Event Bus"]
+        P4B["Prepare Benefit Event for Event Bus"]
+    end
+
+    %% IAM Service
+    subgraph IAMService["IAM Service"]
+        M1T["Update Member Profile with Latest Tier"]
+        M1B["Update Member Benefit Status"]
+        M2["Confirm Updates Completed"]
+    end
+
+    %% Event Bus / Subscribers
+    subgraph EventBus["Event Bus / Subscribers"]
+        E1T["Emit `tier.changed` Event"]
+        E1B["Emit `benefit.applied` Event"]
+        E2["Downstream Subscribers Handle Events"]
+    end
+
+    %% Workflow Connections
+    %% Admin trigger
+    A1 --> P1T
+    A1 --> P1B
+
+    %% Privilege MS updates
+    P1T --> P2T
+    P1B --> P2B
+
+    %% Prepare payload for sync
+    P2T --> P3T
+    P2B --> P3B
+
+    %% Prepare payload for events
+    P2T --> P4T
+    P2B --> P4B
+
+    %% IAM sync
+    P3T --> M1T
+    P3B --> M1B
+    M1T --> M2
+    M1B --> M2
+
+    %% Event emission
+    P4T --> E1T
+    P4B --> E1B
+    E1T --> E2
+    E1B --> E2
+```
+
+### 3.8 Admin Configuration Flow
+
+Flow for administrators to manage tiers, benefits, and rules through API or portal.
+
+- 3.8.1 Tier Management – Create, edit, or delete tiers.
+- 3.8.2 Benefit Management – Manage benefits and their mapping to tiers.
+- 3.8.3 Rule Configuration – Configure promotion, demotion, and benefit rules.
+- 3.8.4 Version Control & Audit Trail – Track changes and allow rollback of configurations.
+
+```mermaid
+flowchart TD
+    %% Admin Portal / API
+    subgraph AdminPortal["Admin Portal / API"]
+        A1["Administrator Login / Authenticate"]
+        A2["Select Configuration Type: Tier / Benefit / Rule"]
+        A3["Submit Configuration Change"]
+    end
+
+    %% Admin Service / Config MS
+    subgraph AdminMS["Admin Configuration MS"]
+        M1["Validate Admin Permissions"]
+        M2["Validate Input Data"]
+        M3T["Create/Edit/Delete Tier"]
+        M3B["Create/Edit/Delete Benefit"]
+        M3R["Configure Promotion/Demotion/Benefit Rules"]
+        M4["Save Configuration Version & Audit Trail"]
+    end
+
+    %% Privilege MS
+    subgraph PrivilegeMS["Privilege (MS)"]
+        P1["Receive Updated Tier Data"]
+        P2["Receive Updated Benefit Data"]
+        P3["Receive Updated Rules"]
+        P4["Apply Updates to Master Data"]
+    end
+
+    %% Workflow Connections
+    A1 --> A2
+    A2 --> A3
+    A3 --> M1
+    M1 -->|Permission Valid| M2
+    M2 --> M3T
+    M2 --> M3B
+    M2 --> M3R
+    M3T --> M4
+    M3B --> M4
+    M3R --> M4
+
+    %% Apply to Privilege MS
+    M4 --> P1
+    M4 --> P2
+    M4 --> P3
+    P1 --> P4
+    P2 --> P4
+    P3 --> P4
+```
+
+### 3.9 Rule Simulation & Validation
+
+Tools to simulate and validate rule outcomes before applying them to members.
+
+- 3.9.1 Simulation Input & Parameters – Input test data and parameters for simulation.
+- 3.9.2 Threshold & Conflict Checking – Validate rule thresholds and detect conflicts.
+- 3.9.3 Predictive Tier Outcome – Predict which tier a member would reach.
+- 3.9.4 Result Visualization – Present simulation results for analysis.
+
+```mermaid
+flowchart TD
+    %% Admin / Simulation Portal
+    subgraph AdminPortal["Admin / Simulation Portal"]
+        A1["Input Test Data & Parameters"]
+        A2["Select Rules to Simulate"]
+        A3["Submit Simulation Request"]
+    end
+
+    %% Simulation / Evaluation MS
+    subgraph SimulationMS["Simulation & Evaluation MS"]
+        S1["Receive Simulation Request"]
+        S2["Validate Input Parameters"]
+        S3["Check Rule Thresholds"]
+        S4["Detect Conflicting Rules"]
+        S5["Run Simulation Engine"]
+        S6["Predict Tier Outcome"]
+    end
+
+    %% Visualization / Reporting
+    subgraph VisualizationMS["Visualization / Reporting"]
+        V1["Format Simulation Results"]
+        V2["Present Results to Admin"]
+    end
+
+    %% Workflow Connections
+    A1 --> A2
+    A2 --> A3
+    A3 --> S1
+    S1 --> S2
+    S2 --> S3
+    S3 --> S4
+    S4 --> S5
+    S5 --> S6
+    S6 --> V1
+    V1 --> V2
+```
+
+### 3.10 Event Propagation & Notification
+
+Mechanism to notify external systems and users about events.
+
+- 3.10.1 Event Bus Integration – Publish events to an asynchronous event bus.
+- 3.10.2 Event Types (`points.applied`, `benefit.assigned`, etc.) – Define event types for subscribers.
+- 3.10.3 Notification Service Integration – Send messages to Notification/CRM systems.
+- 3.10.4 Dead-Letter Queue & Retry Logic – Handle failed events and retries.
+
+```mermaid
+flowchart TD
+    %% Event Source (Privilege / Point / Campaign MS)
+    subgraph EventSourceMS["Event Source MS (Privilege / Point / Campaign)"]
+        S1["Generate Event (e.g., points.applied, benefit.assigned)"]
+        S2["Send Event to Event Bus"]
+    end
+
+    %% Event Bus
+    subgraph EventBus["Event Bus / Messaging"]
+        E1["Receive Event"]
+        E2["Publish Event to Subscribers"]
+        E3["Dead-Letter Queue for Failed Delivery"]
+    end
+
+    %% Notification / CRM Service
+    subgraph NotificationMS["Notification / CRM Service"]
+        N1["Receive Event from Event Bus"]
+        N2["Send Notification to Users / Systems"]
+        N3["Confirm Delivery / Logging"]
+    end
+
+    %% Workflow Connections
+    S1 --> S2
+    S2 --> E1
+    E1 --> E2
+    E2 --> N1
+    N1 --> N2
+    N2 --> N3
+
+    %% Retry / Dead-Letter handling
+    E2 -->|Failed Delivery| E3
+    E3 -->|Retry Logic| E2
+```
+
+### 3.11 Audit, Logging & Reconciliation
+
+Track and verify all changes for accountability and consistency.
+
+- 3.11.1 Audit Record Structure – Define fields for audit logs (who, what, when, why).
+- 3.11.2 Traceability – Enable tracing of actions across the system.
+- 3.11.3 Reconciliation Jobs – Periodically verify points, tiers, and benefits.
+- 3.11.4 Rollback Support – Support rollback in case of errors or transaction reversal.
+
+```mermaid
+flowchart TD
+    %% Source Services (Privilege, Point, Campaign, IAM)
+    subgraph SourceMS["Source Services"]
+        S1["Privilege MS: Tier/Benefit Updates"]
+        S2["Point MS: Points Transactions"]
+        S3["Campaign MS: Campaign Events"]
+        S4["IAM Service: Member Profile Updates"]
+    end
+
+    %% Audit / Logging Service
+    subgraph AuditMS["Audit & Logging Service"]
+        A1["Receive Audit Logs from Source Services"]
+        A2["Store Logs with Fields: Who, What, When, Why"]
+        A3["Enable Traceability Across System"]
+    end
+
+    %% Reconciliation Service
+    subgraph ReconciliationMS["Reconciliation Service"]
+        R1["Schedule Periodic Reconciliation Jobs"]
+        R2["Verify Points, Tiers, Benefits Consistency"]
+        R3["Detect Discrepancies / Errors"]
+        R4["Trigger Rollback or Correction if Needed"]
+    end
+
+    %% Workflow Connections
+    S1 --> A1
+    S2 --> A1
+    S3 --> A1
+    S4 --> A1
+
+    A1 --> A2
+    A2 --> A3
+
+    A3 --> R1
+    R1 --> R2
+    R2 --> R3
+    R3 --> R4
+```
 
 ---
 
@@ -223,36 +684,92 @@ flowchart TD
 
 ## 5. Service Scope
 
-**In-Scope:**
+### In-Scope
 
-- Tier lifecycle management (create/update/delete tiers)
-- Benefit catalog management and assignment
-- Promotion/demotion rule evaluation
-- Point conversion calculation
-- Event-driven integration with IAM, Point, Campaign, Mission
-- Admin API and simulation capabilities
-- Audit logging and reconciliation jobs
+#### 5.1. Tier & Privilege Management
 
-**Out-of-Scope:**
+- Tier lifecycle management (create / update / delete tiers)
+- Tier evaluation: promotion, demotion, immutable / climbable flags
+- Time-bound or campaign-specific tiers
+- Admin-triggered tier changes
 
-- Actual storage of points ledger (managed by Point Service)
-- Payment processing (handled by Transaction Service)
-- Direct front-end UI (API only)
-- User authentication (managed by IAM Service)
+#### 5.2. Benefit Management
+
+- Benefit catalog management (create / update / delete benefits)
+- Tier-based benefit assignment
+- Campaign-specific benefit application
+- Time-limited or conditional benefits
+- Re-evaluation of benefits when tier changes
+
+#### 5.3. Rule Engine & Evaluation
+
+- Rule evaluation for tier changes, benefits, points
+- Simulation & validation of rules before applying
+- Threshold & conflict checking
+- Predictive tier outcomes for test scenarios
+
+#### 5.4. Points Conversion & Calculation
+
+- Base conversion formula for points
+- Tier multipliers and campaign/time modifiers
+- Validation of point caps
+- Integration with Point Service to record calculated points
+
+#### 5.5. Event-Driven Integration
+
+- Event emission for `member.created`, `tier.changed`, `benefit.applied`, `points.applied`, etc.
+- Event bus integration with downstream systems (IAM, Point, Campaign, Mission)
+- Notification integration for external systems / users
+- Dead-letter queue and retry logic for failed events
+
+#### 5.6. Admin & Configuration Capabilities
+
+- Admin API / portal for tier, benefit, and rule configuration
+- Version control & audit trail for configuration changes
+- Simulation tools for rule validation and analysis
+
+#### 5.7. Audit, Logging & Reconciliation
+
+- Capture audit logs for all tier, benefit, point, and rule changes
+- Traceability of actions across services
+- Reconciliation jobs to verify consistency of points, tiers, and benefits
+- Rollback support in case of errors or discrepancies
+
+### Out-of-Scope
+
+- Storage of points ledger (managed by Point Service)
+- Payment or financial transaction processing (handled by Transaction Service)
+- Direct front-end UI for users (API-only service)
+- User authentication / identity management (handled by IAM Service)
+- Execution of campaigns / missions logic (handled by respective MS)
 
 ---
 
 ## 6. Non-Goals
 
-- Not responsible for processing or storing raw financial transactions.  
-- Does not manage loyalty point ledger persistence.  
-- Not responsible for authentication or user identity management (delegated to IAM).  
-- Will not provide front-end UI components (focus on API and event-driven backend).  
-- Does not enforce business logic outside of tier, benefit, and point rules.  
+- Not responsible for processing or storing raw financial transactions.
+- Does not manage loyalty point ledger persistence.
+- Not responsible for authentication or user identity management (delegated to IAM).
+- Will not provide front-end UI components (focus on API and event-driven backend).
+- Does not enforce business logic outside of tier, benefit, and point rules.
 
 ---
 
-## 7. Technology Stack (Initial Proposal)
+## 7. Data-Driven Decision Making
+
+The system collects and structures detailed data on member activities, tier changes, benefits, and points. This data can be leveraged for:
+
+- **Performance Analytics:** Track engagement, retention, and redemption rates across different tiers and campaigns.
+- **Behavioral Insights:** Analyze member behavior patterns to identify high-value segments or predict churn.
+- **Campaign Effectiveness:** Measure the impact of campaigns, promotions, and benefit programs on member activity.
+- **Rule Optimization:** Refine promotion/demotion rules or benefit allocation strategies based on historical outcomes.
+- **Forecasting & Predictive Modeling:** Use trends in points accrual, tier progression, and event participation to forecast future behavior.
+- **Personalized Recommendations:** Support targeted offers or benefits for members based on their activity and tier.
+- **Reporting & Dashboards:** Provide actionable insights to management for strategy and operational decision-making.
+
+---
+
+## 8. Technology Stack (Initial Proposal)
 
 | Component                | Technology / Recommendation           | Notes                                                                                |
 | ------------------------ | ------------------------------------- | ------------------------------------------------------------------------------------ |
@@ -338,7 +855,7 @@ flowchart TD
 
 ---
 
-## 8. Success Metrics
+## 9. Success Metrics
 
 | Metric                         | Target / Description                                                                    |
 | ------------------------------ | --------------------------------------------------------------------------------------- |
@@ -353,7 +870,7 @@ flowchart TD
 
 ---
 
-## 9. Ubiquitous Language
+## 12. Ubiquitous Language
 
 This section defines all key terms used in the **Privilege Service**.  
 It provides a shared vocabulary for **BA, SA, DEV, and Business Stakeholders**.
@@ -397,9 +914,9 @@ It provides a shared vocabulary for **BA, SA, DEV, and Business Stakeholders**.
 | **Tier Effective Dates**     | Dates when tier or rules become active                                       | Supports campaign-specific or seasonal tiers                                                                    |
 | **Notification Event**       | Message sent to users or systems regarding tier, benefit, or points changes  | Can be email, push, or internal system                                                                          |
 
-## 10. Domain
+## 12. Domain
 
-### 10.1. Setup / Admin CRUD Use Cases
+### 12.1. Setup / Admin CRUD Use Cases
 
 - **Entities:**
   - Tier
@@ -437,7 +954,7 @@ It provides a shared vocabulary for **BA, SA, DEV, and Business Stakeholders**.
 
 ---
 
-### 10.2. Member Event Handling
+### 12.2. Member Event Handling
 
 - **Entities:**
   - MemberTierAssignment
@@ -463,7 +980,7 @@ It provides a shared vocabulary for **BA, SA, DEV, and Business Stakeholders**.
 
 ---
 
-### 10.3. Tier Evaluation
+### 12.3. Tier Evaluation
 
 - **Entities:**
   - Tier
@@ -484,7 +1001,7 @@ It provides a shared vocabulary for **BA, SA, DEV, and Business Stakeholders**.
 
 ---
 
-### 10.4. Points & Benefit Management
+### 12.4. Points & Benefit Management
 
 - **Entities:**
   - PointConversionRule
@@ -506,7 +1023,7 @@ It provides a shared vocabulary for **BA, SA, DEV, and Business Stakeholders**.
 
 ---
 
-### 10.5. Event & Notification
+### 12.5. Event & Notification
 
 - **Entities:**
   - EventBusMessage
@@ -526,7 +1043,7 @@ It provides a shared vocabulary for **BA, SA, DEV, and Business Stakeholders**.
 
 ---
 
-### 10.6. Simulation & Audit
+### 12.6. Simulation & Audit
 
 - **Entities:**
   - SimulationResult
@@ -545,7 +1062,7 @@ It provides a shared vocabulary for **BA, SA, DEV, and Business Stakeholders**.
 
 ---
 
-### 10.7. Rollback / Reversal
+### 12.7. Rollback / Reversal
 
 - **Entities:**
   - MemberTierAssignment
@@ -561,9 +1078,9 @@ It provides a shared vocabulary for **BA, SA, DEV, and Business Stakeholders**.
 
 ---
 
-## 11. API Endpoints
+## 12. API Endpoints
 
-### 11.1. Tier Management (CRUD)
+### 12.1. Tier Management (CRUD)
 
 | Endpoint                     | Method | Command / Query         | Description                         |
 | ---------------------------- | ------ | ----------------------- | ----------------------------------- |
@@ -764,7 +1281,7 @@ sequenceDiagram
     API-->>Admin: 200 OK
 ```
 
-### 11.2. Benefit Management (CRUD & Mapping)
+### 12.2. Benefit Management (CRUD & Mapping)
 
 | Endpoint                          | Method | Command / Query             | Description                          |
 | --------------------------------- | ------ | --------------------------- | ------------------------------------ |
@@ -941,7 +1458,7 @@ sequenceDiagram
     API-->>Member: 200 OK
 ```
 
-### 11.3. Promotion Rule Management (CRUD)
+### 12.3. Promotion Rule Management (CRUD)
 
 | Endpoint                      | Method | Command / Query            | Description                          |
 | ----------------------------- | ------ | -------------------------- | ------------------------------------ |
@@ -1056,7 +1573,7 @@ sequenceDiagram
     API-->>Admin: 200 OK
 ```
 
-### 11.4. Point Conversion Rule Management (CRUD)
+### 12.4. Point Conversion Rule Management (CRUD)
 
 | Endpoint                             | Method | Command / Query                  | Description                        |
 | ------------------------------------ | ------ | -------------------------------- | ---------------------------------- |
@@ -1171,7 +1688,7 @@ sequenceDiagram
     API-->>Admin: 200 OK
 ```
 
-### 11.5. Event Code Management (CRUD)
+### 12.5. Event Code Management (CRUD)
 
 | Endpoint                            | Method | Command / Query        | Description                   |
 | ----------------------------------- | ------ | ---------------------- | ----------------------------- |
@@ -1311,7 +1828,7 @@ sequenceDiagram
     API-->>Member: 200 OK
 ```
 
-### 11.6. Member Event & Tier Evaluation
+### 12.6. Member Event & Tier Evaluation
 
 | Endpoint                              | Method | Command / Query            | Description                                |
 | ------------------------------------- | ------ | -------------------------- | ------------------------------------------ |
@@ -1399,7 +1916,7 @@ sequenceDiagram
     API-->>Admin: 200 OK
 ```
 
-### 11.7. Points & Benefit Application
+### 12.7. Points & Benefit Application
 
 | Endpoint                                 | Method | Command / Query        | Description                         |
 | ---------------------------------------- | ------ | ---------------------- | ----------------------------------- |
@@ -1460,7 +1977,7 @@ sequenceDiagram
     API-->>Member: 200 OK
 ```
 
-### 11.8. Event & Notification
+### 12.8. Event & Notification
 
 | Endpoint                             | Method | Command / Query            | Description                        |
 | ------------------------------------ | ------ | -------------------------- | ---------------------------------- |
@@ -1526,7 +2043,7 @@ sequenceDiagram
     API-->>Member: 200 OK
 ```
 
-### 11.9. Simulation & Audit
+### 12.9. Simulation & Audit
 
 | Endpoint                           | Method | Command / Query             | Description                                      |
 | ---------------------------------- | ------ | --------------------------- | ------------------------------------------------ |
@@ -1607,7 +2124,7 @@ sequenceDiagram
     API-->>Admin: 200 OK
 ```
 
-### 11.10. Rollback / Reversal
+### 12.10. Rollback / Reversal
 
 | Endpoint                                  | Method | Command / Query         | Description               |
 | ----------------------------------------- | ------ | ----------------------- | ------------------------- |
@@ -1700,13 +2217,7 @@ sequenceDiagram
 
 ---
 
-## 12. Infrastructure
-
-| Component / Responsibility | AWS Service | Instance Name / Identifier | Purpose / Notes |
-| -------------------------- | ----------- | -------------------------- | --------------- |
-|                            |             |                            |                 |
-
-## 12. Infrastructure
+## 13. Infrastructure
 
 | Component / Responsibility     | AWS Service / Tech Stack   | Instance Name / Identifier | Purpose / Notes                                                                |
 | ------------------------------ | -------------------------- | -------------------------- | ------------------------------------------------------------------------------ |
@@ -1725,7 +2236,7 @@ sequenceDiagram
 | Monitoring / Metrics           | CloudWatch / Prometheus    | privilege-metrics          | Monitor API latency, DB performance, cache hit/miss rate                       |
 | Alerts / Notifications         | CloudWatch Alarms / SNS    | privilege-alerts           | Notify devops/admins on service failures or anomalies                          |
 
-### 12.1. Infrastructure Diagram
+### 13.1. Infrastructure Diagram
 
 ```mermaid
 graph LR
@@ -1744,4 +2255,4 @@ graph LR
     Reconciliation --> Cache
     PrivMS --> Monitoring[CloudWatch / Prometheus]
     Monitoring --> Alerts[Cloud Alerts / SNS]
-```
+``
