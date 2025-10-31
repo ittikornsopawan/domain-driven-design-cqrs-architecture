@@ -916,171 +916,284 @@ It provides a shared vocabulary for **BA, SA, DEV, and Business Stakeholders**.
 
 ## 12. Domain
 
-### 12.1. Setup / Admin CRUD Use Cases
-
-- **Entities:**
-  - Tier
-  - Benefit
-  - PromotionRule
-  - PointConversionRule
-  - EventCode
-
-- **Use Cases:**
-  - **Tier CRUD**
-    - **Command:** CreateTierCommand / UpdateTierCommand / DeleteTierCommand
-    - **CommandHandler:** Validates attributes, persists changes, updates simulation engine, emits tier.created/updated/deleted events
-    - **Query:** GetTierQuery / ListTiersQuery
-    - **QueryHandler:** Returns tier details
-  - **Benefit CRUD**
-    - **Command:** CreateBenefitCommand / UpdateBenefitCommand / DeleteBenefitCommand
-    - **CommandHandler:** Persist benefit definition, validate constraints, emit events
-    - **Query:** GetBenefitQuery / ListBenefitsQuery
-    - **QueryHandler:** Return benefit info
-  - **PromotionRule CRUD**
-    - **Command:** CreatePromotionRuleCommand / UpdatePromotionRuleCommand / DeletePromotionRuleCommand
-    - **CommandHandler:** Persist rule, validate logic, emit events
-    - **Query:** GetPromotionRuleQuery / ListPromotionRulesQuery
-    - **QueryHandler:** Return rules
-  - **PointConversionRule CRUD**
-    - **Command:** CreatePointConversionRuleCommand / UpdatePointConversionRuleCommand / DeletePointConversionRuleCommand
-    - **CommandHandler:** Persist conversion rules, emit events
-    - **Query:** GetPointConversionRuleQuery / ListPointConversionRulesQuery
-    - **QueryHandler:** Return rules
-  - **EventCode CRUD**
-    - **Command:** CreateEventCodeCommand / UpdateEventCodeCommand / DeleteEventCodeCommand
-    - **CommandHandler:** Validate, persist, emit events
-    - **Query:** GetEventCodeQuery / ListEventCodesQuery
-    - **QueryHandler:** Return event code info
+This section maps the **Conceptual Workflow (Topic 3)** into domains with entities, commands, handlers, and queries similar to Domain 12.
 
 ---
 
-### 12.2. Member Event Handling
+### 12.1 Member Onboarding Domain
 
-- **Entities:**
-  - MemberTierAssignment
-  - PointTransaction
-  - EventBusMessage
+**Entities:**
 
-- **Use Cases:**
-  - **Transaction / Mission / Campaign Event**
-    - Command: EvaluateMemberEventCommand
-    - CommandHandler: Fetch member profile, evaluate promotion/demotion rules, calculate points, assign benefits, emit events, log audit
-    - Query: GetMemberTierQuery, GetMemberPointsQuery, GetMemberBenefitsQuery
-    - QueryHandler: Return current member state
-  - **Event Code Redemption**
-    - Command: RedeemEventCodeCommand
-    - CommandHandler: Apply tier/benefit, emit events, log audit
-    - Query: GetRedeemedEventCodeQuery
-    - QueryHandler: Return code redemption status
-  - **Admin Invitation**
-    - Command: InviteToTierCommand
-    - CommandHandler: Assign tier via invitation, emit events, log audit
-    - Query: GetPendingInvitationsQuery
-    - QueryHandler: Return pending invitations
+- MemberProfile  
+- MemberTierAssignment  
+- InitialPoints  
+- EventBusMessage  
 
----
+**Use Cases & Commands / Queries:**
 
-### 12.3. Tier Evaluation
+- **Member Registration & Initialization**
+  - **Command:** `RegisterMemberCommand` – Create new member profile  
+  - **Handler:** `RegisterMemberCommandHandler` – Persist profile, validate input  
+  - **Query:** `GetMemberProfileQuery`  
+  - **Query Handler:** Returns member profile  
 
-- **Entities:**
-  - Tier
-  - PromotionRule
-  - MemberTierAssignment
+- **Profile Linking with IAM**  
+  - **Command:** `LinkMemberToIAMCommand` – Link profile to IAM  
+  - **Handler:** `LinkMemberToIAMCommandHandler` – Call IAM API, persist link  
 
-- **Use Cases:**
-  - **Automatic Tier Promotion**
-    - Command: EvaluatePromotionCommand
-    - CommandHandler: Apply thresholds, climbable logic, campaign window, assign tier, emit tier.changed, log audit
-    - Query: GetMemberTierQuery
-    - QueryHandler: Return tier info
-  - **Automatic Tier Demotion**
-    - Command: EvaluateDemotionCommand
-    - CommandHandler: Check inactivity/rule violations, assign lower tier, emit events, log audit
-    - Query: GetDemotionEligibilityQuery
-    - QueryHandler: Return demotion eligibility
+- **Privilege Assignment**  
+  - **Command:** `AssignDefaultTierCommand` – Assign tier, onboarding, benefits  
+  - **Handler:** `AssignDefaultTierCommandHandler` – Apply default tier & benefits  
+  - **Query:** `GetMemberTierQuery`  
+  - **Query Handler:** Returns assigned tier  
+
+- **Initial Points / Welcome Bonus**  
+  - **Command:** `GrantInitialPointsCommand`  
+  - **Handler:** `GrantInitialPointsCommandHandler` – Send points to Point MS, emit events  
+
+- **Event Emission**  
+  - **Command:** `EmitMemberCreatedEventCommand`  
+  - **Handler:** `EmitMemberCreatedEventCommandHandler` – Notify Campaign, Point, Product MS  
 
 ---
 
-### 12.4. Points & Benefit Management
+### 12.2 Member Event Handling Domain
 
-- **Entities:**
-  - PointConversionRule
-  - PointTransaction
-  - Benefit
-  - TierBenefitMapping
+**Entities:**
 
-- **Use Cases:**
-  - **Calculate Points**
-    - Command: CalculatePointsCommand
-    - CommandHandler: Apply base rate, tier multiplier, time/campaign modifiers, update Point Service, emit points.applied, log audit
-    - Query: GetMemberPointsQuery
-    - QueryHandler: Return total points
-  - **Assign Benefits**
-    - Command: ApplyBenefitCommand
-    - CommandHandler: Evaluate tier & rules, assign benefits, emit benefit.assigned, log audit
-    - Query: GetMemberBenefitsQuery
-    - QueryHandler: Return active benefits
+- MemberEvent  
+- EventBusMessage  
+- MemberProfile  
+- MemberTierAssignment  
 
----
+**Use Cases & Commands / Queries:**
 
-### 12.5. Event & Notification
+- **Event Reception & Queueing**  
+  - **Command:** `ReceiveMemberEventCommand`  
+  - **Handler:** `ReceiveMemberEventCommandHandler` – Enqueue event for processing  
 
-- **Entities:**
-  - EventBusMessage
-  - Notification
+- **Event Validation**  
+  - **Command:** `ValidateEventCommand`  
+  - **Handler:** `ValidateEventCommandHandler` – Check user_id, timestamp, event type  
 
-- **Use Cases:**
-  - **Publish Events**
-    - Command: PublishEventCommand
-    - CommandHandler: Format and send event messages to Event Bus
-    - Query: GetPublishedEventsQuery
-    - QueryHandler: Return event history
-  - **Send Notifications**
-    - Command: SendNotificationCommand
-    - CommandHandler: Format and send notifications via email, push, in-app
-    - Query: GetNotificationStatusQuery
-    - QueryHandler: Return delivery status
+- **Event Categorization**  
+  - **Command:** `CategorizeEventCommand`  
+  - **Handler:** `CategorizeEventCommandHandler` – Classify as transaction, mission, campaign, promo  
+
+- **Routing to Evaluation Engine**  
+  - **Command:** `RouteEventToEvaluationEngineCommand`  
+  - **Handler:** `RouteEventToEvaluationEngineCommandHandler` – Forward to evaluation engine  
 
 ---
 
-### 12.6. Simulation & Audit
+### 12.3 Event Evaluation & Processing Domain
 
-- **Entities:**
-  - SimulationResult
-  - PromotionAudit
+**Entities:**
 
-- **Use Cases:**
-  - **Simulate Member Impact**
-    - Query: SimulateMemberImpactQuery
-    - QueryHandler: Return predicted tier, points, and benefits
-  - **Record Audit**
-    - Command: CreateAuditEntryCommand
-    - CommandHandler: Persist audit logs for all changes
-  - **Reconciliation Job**
-    - Command: RunReconciliationJobCommand
-    - CommandHandler: Verify consistency of tier, points, benefits, support rollback
+- MemberEvent  
+- MemberTierAssignment  
+- MemberBenefits  
+- PointTransaction  
 
----
+**Use Cases & Commands / Queries:**
 
-### 12.7. Rollback / Reversal
+- **Rule Matching**  
+  - **Command:** `MatchEventRulesCommand`  
+  - **Handler:** `MatchEventRulesCommandHandler` – Identify applicable rules  
 
-- **Entities:**
-  - MemberTierAssignment
-  - PointTransaction
-  - PromotionAudit
+- **Tier Evaluation**  
+  - **Command:** `EvaluateTierCommand`  
+  - **Handler:** `EvaluateTierCommandHandler` – Determine promotion/demotion  
 
-- **Use Cases:**
-  - **Rollback Tier / Points / Benefits**
-    - Command: RevertPromotionCommand / RevertPointsCommand / RevokeBenefitCommand
-    - CommandHandler: Revert tier, points, benefits, emit rollback events, log audit
-    - Query: GetRollbackHistoryQuery
-    - QueryHandler: Return rollback history
+- **Benefit Evaluation**  
+  - **Command:** `EvaluateBenefitsCommand`  
+  - **Handler:** `EvaluateBenefitsCommandHandler` – Determine eligible benefits  
+
+- **Point Conversion**  
+  - **Command:** `ConvertPointsCommand`  
+  - **Handler:** `ConvertPointsCommandHandler` – Apply base formula, tier multiplier, campaign modifiers  
+
+- **Event Output & Updates**  
+  - **Command:** `ApplyEvaluationResultsCommand`  
+  - **Handler:** `ApplyEvaluationResultsCommandHandler` – Update tier, benefits, points, emit events  
 
 ---
 
-## 12. API Endpoints
+### 12.4 Tier & Benefit Lifecycle Domain
 
-### 12.1. Tier Management (CRUD)
+**Entities:**
+
+- Tier  
+- TierBenefitMapping  
+- MemberTierAssignment  
+
+**Use Cases & Commands / Queries:**
+
+- **Tier Definition & Attributes**  
+  - **Command:** `DefineTierCommand` – Set rank, climbable, immutable, default benefits  
+  - **Handler:** `DefineTierCommandHandler`  
+
+- **Promotion / Demotion Rules**  
+  - **Command:** `ConfigurePromotionDemotionRulesCommand`  
+  - **Handler:** `ConfigurePromotionDemotionRulesCommandHandler`  
+
+- **Time-Bound / Conditional Tiers**  
+  - **Command:** `ApplyTimeBoundTierCommand`  
+  - **Handler:** `ApplyTimeBoundTierCommandHandler`  
+
+- **Admin-Triggered Tier Changes**  
+  - **Command:** `ManualTierChangeCommand`  
+  - **Handler:** `ManualTierChangeCommandHandler` – Validate permissions, apply changes  
+
+---
+
+### 12.5 Benefit Determination Domain
+
+**Entities:**
+
+- Benefit  
+- MemberBenefits  
+- TierBenefitMapping  
+
+**Use Cases & Commands / Queries:**
+
+- **Benefit Eligibility Rules**  
+  - **Command:** `CheckBenefitEligibilityCommand`  
+  - **Handler:** `CheckBenefitEligibilityCommandHandler` – Evaluate eligibility  
+
+- **Tier-Based Benefits**  
+  - **Command:** `AssignTierBenefitsCommand`  
+  - **Handler:** `AssignTierBenefitsCommandHandler` – Apply tier-based benefits  
+
+- **Campaign-Specific / Conditional Benefits**  
+  - **Command:** `AssignCampaignBenefitsCommand`  
+  - **Handler:** `AssignCampaignBenefitsCommandHandler`  
+
+- **Benefit Assignment & Notification**  
+  - **Command:** `ApplyBenefitCommand`  
+  - **Handler:** `ApplyBenefitCommandHandler` – Update internal state, notify IAM / external systems  
+
+---
+
+### 12.6 Point Conversion & Calculation Domain
+
+**Entities:**
+
+- PointTransaction  
+- PointConversionRule  
+
+**Use Cases & Commands / Queries:**
+
+- **Base Conversion Formula**  
+  - **Command:** `CalculateBasePointsCommand`  
+  - **Handler:** `CalculateBasePointsCommandHandler`  
+
+- **Tier / Campaign Modifiers**  
+  - **Command:** `ApplyPointModifiersCommand`  
+  - **Handler:** `ApplyPointModifiersCommandHandler`  
+
+- **Point Caps & Validation**  
+  - **Command:** `ValidatePointCapCommand`  
+  - **Handler:** `ValidatePointCapCommandHandler`  
+
+- **Point Service Integration**  
+  - **Command:** `UpdatePointServiceCommand`  
+  - **Handler:** `UpdatePointServiceCommandHandler` – Send final points to Point MS  
+
+---
+
+### 12.7 Tier & Benefit Synchronization Domain
+
+**Entities:**
+
+- MemberTierAssignment
+- MemberBenefits  
+
+**Use Cases & Commands / Queries:**
+
+- **Sync Tier to IAM**
+  - **Command:** `SyncTierToIAMCommand`  
+  - **Handler:** `SyncTierToIAMCommandHandler`  
+
+- **Sync Benefits**  
+  - **Command:** `SyncBenefitsCommand`  
+  - **Handler:** `SyncBenefitsCommandHandler`  
+
+- **Event Emission**  
+  - **Command:** `EmitTierBenefitEventsCommand`  
+  - **Handler:** `EmitTierBenefitEventsCommandHandler`  
+
+---
+
+### 12.8 Admin Configuration & Simulation Domain
+
+**Entities:**
+
+- Tier
+- Benefit  
+- PromotionRule  
+- PointConversionRule  
+- EventCode  
+
+**Use Cases & Commands / Queries:**  
+
+- **Admin Tier / Benefit / Rule CRUD**  
+  - **Command / Handler:** `Create/Update/DeleteTier/Benefit/RuleCommandHandler`  
+  - **Query / Handler:** `Get/ListTier/Benefit/RuleQueryHandler`  
+
+- **Simulation / Rule Validation**  
+  - **Query:** `SimulateMemberImpactQuery`  
+  - **Query Handler:** Returns predicted tier, points, benefits  
+
+---
+
+### 12.9 Event Propagation & Notification Domain
+
+**Entities:**
+
+- EventBusMessage  
+- Notification  
+
+**Use Cases & Commands / Queries:**  
+
+- **Publish Event**  
+  - **Command:** `PublishEventCommand`  
+  - **Handler:** `PublishEventCommandHandler`  
+
+- **Send Notifications**  
+  - **Command:** `SendNotificationCommand`  
+  - **Handler:** `SendNotificationCommandHandler`  
+
+---
+
+### 12.10 Audit, Logging & Reconciliation Domain
+
+**Entities:**
+
+- AuditEntry  
+- ReconciliationJob  
+
+**Use Cases & Commands / Queries:**
+
+- **Audit Logging**
+  - **Command:** `CreateAuditEntryCommand`  
+  - **Handler:** `CreateAuditEntryCommandHandler`  
+
+- **Reconciliation Job**  
+  - **Command:** `RunReconciliationJobCommand`  
+  - **Handler:** `RunReconciliationJobCommandHandler` – Verify tier, benefits, points consistency  
+
+- **Rollback / Reversal**  
+  - **Command:** `RevertPromotionCommand`, `RevertPointsCommand`, `RevokeBenefitCommand`  
+  - **Handler:** Revert changes, emit events, log audit  
+  - **Query:** `GetRollbackHistoryQuery`  
+  - **Query Handler:** Returns rollback history
+
+---
+
+## 13. API Endpoints
+
+### 13.1. Tier Management (CRUD)
 
 | Endpoint                     | Method | Command / Query         | Description                         |
 | ---------------------------- | ------ | ----------------------- | ----------------------------------- |
@@ -1281,7 +1394,7 @@ sequenceDiagram
     API-->>Admin: 200 OK
 ```
 
-### 12.2. Benefit Management (CRUD & Mapping)
+### 13.2. Benefit Management (CRUD & Mapping)
 
 | Endpoint                          | Method | Command / Query             | Description                          |
 | --------------------------------- | ------ | --------------------------- | ------------------------------------ |
@@ -1458,7 +1571,7 @@ sequenceDiagram
     API-->>Member: 200 OK
 ```
 
-### 12.3. Promotion Rule Management (CRUD)
+### 13.3. Promotion Rule Management (CRUD)
 
 | Endpoint                      | Method | Command / Query            | Description                          |
 | ----------------------------- | ------ | -------------------------- | ------------------------------------ |
@@ -1468,7 +1581,7 @@ sequenceDiagram
 | /api/promotion-rules/{ruleId} | PUT    | UpdatePromotionRuleCommand | Update rule attributes               |
 | /api/promotion-rules/{ruleId} | DELETE | DeletePromotionRuleCommand | Delete a promotion/demotion rule     |
 
-### /api/promotion-rules (POST)
+#### /api/promotion-rules (POST)
 
 ```mermaid
 sequenceDiagram
@@ -1491,7 +1604,7 @@ sequenceDiagram
     API-->>Admin: 200 OK
 ```
 
-### /api/promotion-rules/{ruleId} (GET)
+#### /api/promotion-rules/{ruleId} (GET)
 
 ```mermaid
 sequenceDiagram
@@ -1510,7 +1623,7 @@ sequenceDiagram
     API-->>Admin: 200 OK
 ```
 
-### /api/promotion-rules (GET)
+#### /api/promotion-rules (GET)
 
 ```mermaid
 sequenceDiagram
@@ -1529,7 +1642,7 @@ sequenceDiagram
     API-->>Admin: 200 OK
 ```
 
-### /api/promotion-rules/{ruleId} (PUT)
+#### /api/promotion-rules/{ruleId} (PUT)
 
 ```mermaid
 sequenceDiagram
@@ -1552,7 +1665,7 @@ sequenceDiagram
     API-->>Admin: 200 OK
 ```
 
-### /api/promotion-rules/{ruleId} (DELETE)
+#### /api/promotion-rules/{ruleId} (DELETE)
 
 ```mermaid
 sequenceDiagram
@@ -1573,7 +1686,7 @@ sequenceDiagram
     API-->>Admin: 200 OK
 ```
 
-### 12.4. Point Conversion Rule Management (CRUD)
+#### 12.4. Point Conversion Rule Management (CRUD)
 
 | Endpoint                             | Method | Command / Query                  | Description                        |
 | ------------------------------------ | ------ | -------------------------------- | ---------------------------------- |
@@ -1688,7 +1801,7 @@ sequenceDiagram
     API-->>Admin: 200 OK
 ```
 
-### 12.5. Event Code Management (CRUD)
+### 13.5. Event Code Management (CRUD)
 
 | Endpoint                            | Method | Command / Query        | Description                   |
 | ----------------------------------- | ------ | ---------------------- | ----------------------------- |
@@ -1828,7 +1941,7 @@ sequenceDiagram
     API-->>Member: 200 OK
 ```
 
-### 12.6. Member Event & Tier Evaluation
+### 13.6. Member Event & Tier Evaluation
 
 | Endpoint                              | Method | Command / Query            | Description                                |
 | ------------------------------------- | ------ | -------------------------- | ------------------------------------------ |
@@ -1916,7 +2029,7 @@ sequenceDiagram
     API-->>Admin: 200 OK
 ```
 
-### 12.7. Points & Benefit Application
+### 13.7. Points & Benefit Application
 
 | Endpoint                                 | Method | Command / Query        | Description                         |
 | ---------------------------------------- | ------ | ---------------------- | ----------------------------------- |
@@ -1977,7 +2090,7 @@ sequenceDiagram
     API-->>Member: 200 OK
 ```
 
-### 12.8. Event & Notification
+### 13.8. Event & Notification
 
 | Endpoint                             | Method | Command / Query            | Description                        |
 | ------------------------------------ | ------ | -------------------------- | ---------------------------------- |
@@ -2043,7 +2156,7 @@ sequenceDiagram
     API-->>Member: 200 OK
 ```
 
-### 12.9. Simulation & Audit
+### 13.9. Simulation & Audit
 
 | Endpoint                           | Method | Command / Query             | Description                                      |
 | ---------------------------------- | ------ | --------------------------- | ------------------------------------------------ |
@@ -2124,7 +2237,7 @@ sequenceDiagram
     API-->>Admin: 200 OK
 ```
 
-### 12.10. Rollback / Reversal
+### 13.10. Rollback / Reversal
 
 | Endpoint                                  | Method | Command / Query         | Description               |
 | ----------------------------------------- | ------ | ----------------------- | ------------------------- |
@@ -2133,7 +2246,7 @@ sequenceDiagram
 | /api/members/{memberId}/rollback/benefits | POST   | RevokeBenefitCommand    | Revoke assigned benefits  |
 | /api/members/{memberId}/rollback/history  | GET    | GetRollbackHistoryQuery | Retrieve rollback history |
 
-### /api/members/{memberId}/rollback/tier (POST)
+#### /api/members/{memberId}/rollback/tier (POST)
 
 ```mermaid
 sequenceDiagram
@@ -2154,7 +2267,7 @@ sequenceDiagram
     API-->>Admin: 200 OK
 ```
 
-### /api/members/{memberId}/rollback/points (POST)
+#### /api/members/{memberId}/rollback/points (POST)
 
 ```mermaid
 sequenceDiagram
@@ -2175,7 +2288,7 @@ sequenceDiagram
     API-->>Admin: 200 OK
 ```
 
-### /api/members/{memberId}/rollback/benefits (POST)
+#### /api/members/{memberId}/rollback/benefits (POST)
 
 ```mermaid
 sequenceDiagram
@@ -2196,7 +2309,7 @@ sequenceDiagram
     API-->>Admin: 200 OK
 ```
 
-### /api/members/{memberId}/rollback/history (GET)
+#### /api/members/{memberId}/rollback/history (GET)
 
 ```mermaid
 sequenceDiagram
@@ -2217,7 +2330,7 @@ sequenceDiagram
 
 ---
 
-## 13. Infrastructure
+## 14. Infrastructure
 
 | Component / Responsibility     | AWS Service / Tech Stack   | Instance Name / Identifier | Purpose / Notes                                                                |
 | ------------------------------ | -------------------------- | -------------------------- | ------------------------------------------------------------------------------ |
@@ -2235,8 +2348,6 @@ sequenceDiagram
 | CI/CD Pipeline                 | GitHub Actions / GitLab CI | ci-cd-pipeline             | Automate build, test, deployment                                               |
 | Monitoring / Metrics           | CloudWatch / Prometheus    | privilege-metrics          | Monitor API latency, DB performance, cache hit/miss rate                       |
 | Alerts / Notifications         | CloudWatch Alarms / SNS    | privilege-alerts           | Notify devops/admins on service failures or anomalies                          |
-
-### 13.1. Infrastructure Diagram
 
 ```mermaid
 graph LR
