@@ -10,6 +10,10 @@
 
 ## 0. Change History
 
+- **01-Nov-2025:** - Ittikorn Sopawan
+  - **Version:** 1.0.0  
+  - **Change / Notes:**  
+    - Update Service Design align requirements
 - **20-Oct-2025:** - Ittikorn Sopawan
   - **Version:** 1.0.0  
   - **Change / Notes:**  
@@ -30,1322 +34,1084 @@
 
 ## 2. Purpose
 
-The **IAM Service** is a centralized system responsible for managing **user identities, authentication, and authorization** across all applications in the ecosystem.  
+The **IAM Service** serves as the **centralized identity layer** for the entire platform, designed to provide a unified, secure, and extensible foundation for user authentication, authorization, and identity federation across all internal and external products.
 
-> It provides:
->
-> - **Secure login** using multiple methods (username/password, OTP, social login)
-> - **Fine-grained access control** using roles and attributes (RBAC & ABAC)
-> - **Centralized user attribute management** for dynamic policy evaluation
-> - **Multi-factor authentication (MFA)** integration
-> - **Token-based authentication** with JWT or similar tokens
-> - **Auditability** of all identity and access events
+### Core Objectives
 
-The service ensures consistency, security, and scalability for all identity-related operations in the platform.
+1. **Single Sign-On (SSO)**
+   - Provide seamless login across all platform products with a single authentication session.
+   - Reduce redundant login processes and password fatigue.
+   - Improve user experience through centralized session handling and token propagation.
+
+2. **Attribute-Based User Profile**
+   - Maintain a **centralized directory** of user data in an **attribute-based model**.
+   - Allow each product to define custom attributes (e.g., department, project_id, employee_code) without impacting the global schema.
+   - Support dynamic attribute synchronization between systems (e.g., HR, Project, Vendor).
+
+3. **Attribute-Based Access Control (ABAC)**
+   - Implement fine-grained, **context-aware access control** policies.
+   - Grant or restrict access based on user, resource, and environment attributes.
+   - Automatically adjust permissions when user attributes (e.g., department, role, or tenant) change.
+
+4. **Federation & External Authentication**
+   - Support standard identity protocols (OAuth2, OpenID Connect, SAML 2.0).
+   - Act as an **Identity Broker** between external identity providers (Google Workspace, Microsoft 365, Azure AD) and internal systems.
+   - Allow both directions of federation:
+     - External login via external providers (e.g., “Login with Google”)
+     - IAM acting as an authentication provider for partner systems (“Login with Platform Account”).
+
+5. **Multi-Tenant Identity Layer**
+   - Isolate user and policy data per organization (tenant).
+   - Support cross-tenant users and tenant-level policy management.
+   - Enable partner and vendor integrations under secure tenant boundaries.
+
+6. **Audit, Compliance, and Observability**
+   - Record all authentication, authorization, and attribute modification events.
+   - Provide full traceability for compliance with PDPA, GDPR, and ISO27001.
+   - Integrate with centralized monitoring and SIEM tools for proactive security analytics.
+
+### Vision Alignment
+
+> IAM is the **foundation of the entire ecosystem**, ensuring that all products share a unified, compliant, and scalable identity framework that supports both current and future business growth.
 
 ---
 
 ## 3. Conceptual Workflow
 
-### 3.1 Authentication
+The IAM Service functions as the **core identity orchestration layer** that governs how every entity (user, system, or service) is authenticated, authorized, and governed within the platform.  
+It enables **federation**, **multi-tenancy**, **policy-driven access**, and **compliance-grade auditability** across the entire ecosystem.
 
-#### 3.1.1. **User initiates login**
+### 3.1 Concept Overview
 
-- Supported options:
-  - Username/password
-  - Mobile/email OTP
-  - Social login (Google, Facebook, etc.)
-  - External 2FA (if enabled)
+IAM operates as a **central trust authority** and **policy enforcement hub**, integrating with:
 
-#### 3.1.2. **IAM validates credentials**
+- Internal microservices (e.g., HR, Project, Vendor, Subscription)
+- External systems (e.g., Google Workspace, Azure AD, SSO partners)
+- Platform SDKs (used by all frontend/backends)
 
-- Passwords are hashed and securely compared
-- OTP verified via email/SMS provider
-- Social login tokens validated via OAuth2/OpenID Connect
+It provides both **synchronous APIs** (REST/gRPC) and **event-driven communication** for continuous identity updates and audit trails.
 
-#### 3.1.3. **Issue access tokens**
+IAM Core Domains:
 
-- JWT access token with short expiration
-- Optional refresh token for session renewal
-- Tokens include claims, roles, and attributes
+1. **Authentication & Federation Gateway**
+2. **Authorization & Policy Engine (ABAC)**
+3. **Multi-Tenant Context Isolation**
+4. **Attribute Management & Dynamic Grouping**
+5. **Audit, Compliance & Observability**
+6. **Integration APIs & SDK Layer**
 
-#### 3.1.4. **Optional Multi-Factor Authentication (MFA)**
+Each domain contributes to a unified identity experience and ensures scalable governance across the ecosystem.
 
-- If 2FA is enabled, a second factor challenge is presented
-- Verification must succeed before token issuance
+### 3.2 End-to-End Flow (System Narrative)
 
-### 3.2 Authorization
+1. **Access Request**
+   - A user or system initiates access to a tenant-specific application (e.g., HRMS, FlowerFlow).
+   - The application redirects to IAM `/authorize` endpoint with `client_id` and `tenant_id`.
 
-#### 3.2.1. **Service receives request with token**
+2. **Tenant Context Resolution**
+   - IAM determines tenant boundary from the request (domain, subdomain, or header).
+   - Loads tenant-specific configurations:
+     - Branding
+     - MFA settings
+     - Federation options
+     - Policy namespace
+     - Attribute schema extensions
 
-- Token decoded to extract claims, roles, attributes
+3. **Identity Verification**
+   - IAM authenticates user via one of the following:
+     - Local credentials (username/password)
+     - OTP or passwordless link (email, SMS)
+     - External identity via Federation Gateway (Google, AzureAD, etc.)
+     - Service account / API key for backend integration
+   - MFA or adaptive rules (geo, IP, device) may trigger secondary verification.
 
-#### 3.2.2. **Policy evaluation**
+4. **Token Generation**
+   - IAM issues a combination of:
+     - **ID Token** – identity & claims
+     - **Access Token** – scope & permissions
+     - **Refresh Token** – renews sessions
+   - Tokens are **signed per-tenant via KMS** and **tracked for revocation** in Redis/DB.
 
-- **RBAC**: Check if user’s role grants the required permission
-- **ABAC**: Evaluate user attributes and context against defined policy rules
+5. **Session Establishment**
+   - The frontend receives tokens and stores them in secure storage (cookie, memory).
+   - Applications use Access Token to interact with other microservices.
 
-#### 3.2.3. **Grant or deny access**
+6. **Policy Evaluation (Authorization Phase)**
+   - When a service receives a request with an Access Token:
+     - It validates token via IAM `/introspect` endpoint.
+     - Sends policy evaluation request to `/policy/evaluate`.
+   - The **Policy Engine** performs:
+     - Attribute lookup (from IAM or linked services)
+     - Rule evaluation (JSON/YAML ABAC policy)
+     - Decision response (Permit / Deny / Conditional)
 
-- Return decision to application
-- Log event for auditing and compliance (optional)
+7. **Audit Emission**
+   - Every event (auth success, token issue, policy evaluation, federation handshake) emits an audit event → **Audit Service**
+   - Event schema: `{ event_type, actor, target, result, timestamp, tenant_id, trace_id }`
+   - Stored for compliance (PDPA/GDPR/ISO) and searchable in SIEM.
 
-### 3.3 User & Attribute Management
+8. **Observability Loop**
+   - Metrics (auth latency, token error rate, MFA failure, federation delay) exported to Prometheus/Grafana
+   - Alerts configured for anomaly detection (e.g., failed login spikes, unusual federation patterns).
 
-- Admins can:
-  - Create, update, delete users
-  - Assign roles, permissions, and dynamic attributes
-- Attributes are leveraged in **ABAC policies** to allow contextual access
-- Users can manage their own MFA preferences, recovery methods, and session settings
+### 3.3 Authentication Domain
 
-### 3.4 Token Lifecycle
+#### 3.3.1 Supported Authentication Modes
 
-- **Access Token**
-  - Short-lived, used for resource access
-  - Contains claims, roles, and attributes
-- **Refresh Token**
-  - Long-lived, used to obtain new access tokens
-- **Token Management**
-  - Tokens are signed (JWT_RS256) and optionally encrypted
-  - Expiration, revocation, and rotation handled centrally
-  - Revoked tokens invalidate active sessions
+- Username/Password (BCrypt/Argon2)
+- OTP / Passwordless via Email or SMS
+- Social Login (Google, Facebook)
+- Enterprise Federation (AzureAD, Okta, LDAP)
+- Service Account (Machine-to-Machine)
+- Multi-Factor Authentication (TOTP / WebAuthn / Push)
+
+#### 3.3.2 Authentication Lifecycle
+
+1. App → `/authorize`
+2. IAM → Challenge (credential or external redirect)
+3. User verifies credentials → returns auth code
+4. IAM → `/token` issues tokens
+5. Application → uses access token for APIs
+6. IAM monitors session lifetime, rotation, and revocation
+
+#### 3.3.3 Federation Gateway
+
+- **Inbound:** accept external identities (SSO)
+- **Outbound:** expose IAM as OIDC/SAML IdP
+- **Token Mapping:** normalize external claims to IAM’s attribute schema
+- **JIT Provisioning:** auto-create user profiles on first login
+
+### 3.4 Authorization Domain (ABAC Policy Engine)
+
+#### 3.4.1 Policy Evaluation Flow
+
+1. Resource service requests decision `/policy/evaluate`
+2. IAM loads:
+   - User attributes
+   - Resource metadata
+   - Environment context
+3. Policy Engine checks JSON/YAML rules
+4. Returns `Permit`, `Deny`, or `Conditional`
+5. Decision cached with TTL for performance
+
+#### 3.4.2 Example Policy Definition
+
+```yaml
+policy:
+  id: "document-view-access"
+  description: "Allow managers to view documents in their department"
+  effect: permit
+  condition:
+    and:
+      - equals: [ user.department, resource.department ]
+      - in: [ user.role, ["Manager", "Admin"] ]
+```
+
+### 3.4.3 ABAC Features
+
+- Policy versioning and rollback
+- Tenant-level isolation
+- Real-time policy update propagation
+- Integration with external context providers (HRMS, Project Service)
+
+### 3.5 Multi-Tenant Context Management
+
+#### 3.5.1 Tenant Scoping
+
+- Each tenant has:
+  - Unique namespace for users, roles, policies, and attributes
+  - Separate encryption keys (KMS)
+  - Configurable authentication providers
+
+#### 3.5.2 Cross-Tenant Access
+
+- Delegation Policy:
+  - Allows user from Tenant A to access Tenant B’s resources under scoped token
+- Full audit traceability with `origin_tenant_id` and `target_tenant_id`
+
+#### 3.5.3 Tenant Lifecycle
+
+- Onboarding → creates IAM tenant config, namespace, keys
+- Offboarding → disables tenant endpoints and revokes tokens
+
+### 3.6 Attribute & Group Management
+
+#### 3.6.1 Attribute Directory
+
+- Central user attribute store (JSONB / NoSQL)
+- Supports schema extension and custom fields
+- Attributes linked to ABAC and SSO federation mapping
+
+#### 3.6.2 Dynamic Grouping
+
+- Rules auto-assign users into groups
+
+```yaml
+  group: "Project Admins"
+  rule:
+    equals: [ user.project_role, "Admin" ]
+```
+
+- Groups can trigger dynamic permission sets or notifications
+
+### 3.6.3 Sync & Propagation
+
+- Periodic attribute sync from HR / CRM / Project services
+- Supports webhook and event-driven updates
+
+### 3.7 Audit & Compliance Flow
+
+#### 3.7.1 Event Generation
+
+Every IAM event produces:
+
+- Authentication attempt
+- Token lifecycle event
+- Policy evaluation result
+- Federation handshake
+- Tenant admin changes
+
+#### 3.7.2 Audit Pipeline
+
+- Events → Kafka → Audit Service → Elastic/SIEM
+- Retention by tenant (90–365 days)
+- Exportable JSON/CSV for compliance audits
+
+#### 3.7.3 Compliance Features
+
+- PDPA / GDPR data subject traceability
+- Anomaly detection on access patterns
+- Immutable audit log (append-only ledger option)
+
+### 3.8 Integration & SDK Flow
+
+#### 3.8.1 SDK Functions
+
+- Login / Refresh / Logout
+- Token introspection
+- Policy evaluation
+- Tenant resolution
+- Attribute fetch
+
+#### 3.8.2 SDK Architecture
+
+- Language support: TypeScript (NestJS), Go, Python
+- Auto-caching of tokens
+- Built-in retry, exponential backoff
+- Plug-and-play for any service in the ecosystem
+
+### 3.9 Observability & Security Monitoring
+
+- **Metrics:** Auth latency, token failure rate, policy decision time
+- **Dashboards:** Grafana / Kibana
+- **Alerts:** SIEM integration for unusual access
+- **Zero Trust Compatibility:** Supports continuous verification and behavioral anomaly detection
+- **Traceability:** OpenTelemetry tracing through all auth flows
+
+### 3.10 End-to-End Sequence (Narrative Summary)
+
+1. **User** → **Application** → redirect to **IAM Auth Gateway**  
+2. IAM authenticates (local/federated) → issues tokens  
+3. **Application** → **API Service** → validates token via IAM  
+4. IAM evaluates ABAC policy → returns authorization decision  
+5. IAM emits audit & metrics → **Audit + SIEM**  
+6. IAM auto-syncs user attributes across tenants (if applicable)
+
+> This lifecycle represents the **trusted identity pipeline**:  
+> *Authenticate → Authorize → Federate → Audit → Govern → Observe*
+
+### 3.11 Summary
+
+IAM orchestrates all identity interactions in the ecosystem with:
+
+- **Unified Authentication & SSO**
+- **Policy-Based Authorization (ABAC)**
+- **Multi-Tenant Isolation**
+- **Federation & External Identities**
+- **Dynamic Attribute Profiles**
+- **Complete Audit & Compliance Coverage**
+- **Integrated SDK & Observability**
+
+This design ensures a **secure, scalable, and adaptive** identity framework that supports enterprise-grade operations across multiple tenants and products.
 
 ---
 
 ## 4. Key Responsibilities (ABAC Focus)
 
-| Responsibility                | How It Works                                                                                        |
-| ----------------------------- | --------------------------------------------------------------------------------------------------- |
-| **User Authentication**       | Validate user credentials (password, OTP, social tokens), enforce MFA, and issue access tokens      |
-| **User Authorization (ABAC)** | Evaluate access based on user attributes, resource attributes, environment, and context rules       |
-| **Attribute Management**      | Maintain centralized storage of user, resource, and environment attributes used for ABAC rules      |
-| **Session Management**        | Track issued tokens, support revocation, refresh, and token expiration policies                     |
-| **Audit & Logging**           | Record all identity events including login, logout, token issuance/refresh, and failed attempts     |
-| **Integration**               | Provide standard REST APIs and endpoints for other services to perform authentication & ABAC checks |
+| Responsibility                            | Description                                                                                                                          |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **Single Sign-On (SSO)**                  | Centralized authentication for all products—users log in once to access every system in the platform.                                |
+| **Attribute Management**                  | Maintain a flexible, centralized directory of user profiles and attributes; support dynamic schema and cross-system sync.            |
+| **Attribute-Based Access Control (ABAC)** | Evaluate access using user, resource, and environment attributes via dynamic policies for fine-grained, context-aware authorization. |
+| **Federation & External Authentication**  | Integrate with external identity providers (Google, Microsoft, SAML, OIDC); act as both Identity Provider and Broker.                |
+| **Multi-Tenant Identity Isolation**       | Isolate user data and access policies per organization (tenant); support cross-tenant users and tenant-level controls.               |
+| **Audit & Compliance**                    | Log all authentication, authorization, attribute change, and federation events for compliance (PDPA, GDPR, ISO27001).                |
+| **Integration APIs & SDKs**               | Provide standards-based APIs and SDKs for authentication, attribute retrieval, ABAC evaluation, and federation integration.          |
 
 ---
 
 ## 5. Service Scope
 
-- Acts as the **core identity layer** for internal and external apps
-- Supports multi-tenant architecture
-- Serves both internal dashboards and customer-facing applications
-- Handles authentication, authorization, and attribute management
-- Delegates user UI/UX to front-end applications
+The IAM (Identity & Access Management) system acts as the **centralized identity and access layer** for all internal platform products and external partner systems. It covers the following core service functions:
+
+### 5.1 Authentication
+
+**Pain Points Before IAM:**
+
+- Users need to remember multiple passwords
+- Repeated logins for different systems
+- MFA/OTP processes are fragmented and inconsistent
+
+**Business Benefits After IAM:**
+
+- Single Sign-On (SSO) across all systems
+- Centralized Multi-Factor Authentication (MFA) and passwordless login
+- Support for organizational login accounts (Google Workspace, Microsoft 365, SAML/OIDC)
+
+**Example Use Cases:**
+
+- Employee logs into Project Management system and immediately accesses E-Sign and HRMS without re-login
+- External partner uses Microsoft 365 account to log into the Platform without creating a new account
+
+**User Quote:**
+> “Now I can log in once and use every system without remembering multiple passwords.”
+
+### 5.2 User Profile & Attribute Management
+
+**Pain Points Before IAM:**
+
+- User data scattered across multiple systems
+- Difficult to add system-specific fields
+- Attributes inconsistent across products
+
+**Business Benefits After IAM:**
+
+- Centralized Attribute Directory
+- Support for Core, Custom, and System-defined Attributes
+- Real-time synchronization of user attributes across systems
+
+**Example Use Cases:**
+
+- HR adds “employee_code” attribute; other products can access it via IAM
+- Project Management system retrieves user roles from IAM instead of storing locally
+
+**User Quote:**
+> “User data is centralized and automatically updated, making it instantly accessible.”
+
+### 5.3 Authorization & ABAC
+
+**Pain Points Before IAM:**
+
+- Repeated creation of roles/groups in multiple systems
+- Manual permission adjustments
+- Difficult to implement ABAC or context-aware authorization
+
+**Business Benefits After IAM:**
+
+- Attribute-Based Access Control (ABAC)
+- Automatic permission adjustments when user attributes change
+- Centralized, tenant-aware, context-aware policy management
+
+**Example Use Cases:**
+
+- Users with role=manager can approve documents in their department
+- Users in department=HR access employee data for their tenant only
+
+**User Quote:**
+> “IAM automatically adjusts permissions based on my role, reducing admin workload.”
+
+### 5.4 Dynamic Group Management
+
+**Pain Points Before IAM:**
+
+- Manual addition of members to groups
+- Permission updates required when user data changes
+
+**Business Benefits After IAM:**
+
+- Groups created and updated automatically based on attributes
+- Groups can drive policy or access control
+- Reduces errors and speeds up administration
+
+**Example Use Cases:**
+
+- Employee moves from HR → Finance; IAM updates permissions automatically
+- Group "Project Admins" auto-updates based on project_id attribute
+
+### 5.5 Federation & External Authentication
+
+**Pain Points Before IAM:**
+
+- Multiple accounts needed for partners
+- SSO and OAuth integration challenging
+
+**Business Benefits After IAM:**
+
+- Supports identity federation (Google Workspace, Microsoft 365, SAML, OIDC)
+- Acts as an Identity Broker for internal platform or partner systems
+- Users can choose to log in with organizational accounts
+
+**Example Use Cases:**
+
+- Partner selects “Login with Microsoft 365” → IAM validates → issues platform token
+
+**Partner Quote:**
+> “I can use my company’s Google account to access the platform without creating a new account.”
+
+### 5.6 Multi-Tenant & Tenant Isolation
+
+**Pain Points Before IAM:**
+
+- User data from different organizations mixed together
+- Users unable to access multiple tenants safely
+
+**Business Benefits After IAM:**
+
+- Separate databases and policies per tenant
+- Supports multi-tenant users
+- Synchronizes attributes/roles between tenants securely
+
+**Example Use Cases:**
+
+- Company A and B use the same platform, but data is isolated
+- Multi-tenant users can switch tenants without permission conflicts
+
+### 5.7 Audit & Compliance
+
+**Pain Points Before IAM:**
+
+- No centralized audit log
+- Hard to track access history
+- Difficult to generate compliance reports
+
+**Business Benefits After IAM:**
+
+- Centralized logging for login, token, attribute, and policy events
+- Supports PDPA / GDPR / ISO27001 compliance
+- Logs can be exported to external SIEM systems
+
+**Example Use Cases:**
+
+- Audit who accessed what data, when, and from which tenant
+- Generate compliance reports automatically
+
+**Compliance Team Quote:**
+> “All access and changes are traceable, making PDPA audits and security reviews much easier.”
 
 ---
 
 ## 6. Non-Goals
 
-- Not responsible for storing business-specific data unrelated to identity
-- Does not provide end-user UI (front-end apps handle this)
-- Not a general-purpose MFA provider (relies on external 2FA services)
-- Does not store sensitive data like credit cards
+The IAM Service is designed to provide centralized identity and access management for the platform. However, there are specific areas and responsibilities that are **explicitly out of scope** for this service, to ensure clear boundaries and alignment with platform requirements:
+
+1. **No Storage or Management of Business-Specific Data**
+   - IAM does **not** store, process, or manage business or application-specific data such as project content, business documents, transactional records, or any domain data unrelated to user identity, attributes, or access control.
+   - **Reason:** Business data remains the responsibility of each product or service domain to ensure proper data segregation, compliance, and scalability. IAM focuses strictly on user, attribute, and access information.
+
+2. **No End-User Application UI**
+   - IAM does **not** provide user-facing application interfaces (e.g., web portals, mobile apps, dashboards) for end users to interact directly with their accounts.
+   - **Reason:** All user interfaces are developed and managed by consuming products. IAM exposes APIs and SDKs for integration, but UI/UX is handled by each application to meet product-specific requirements.
+
+3. **Not a General-Purpose Multi-Factor Authentication (MFA) Provider**
+   - IAM does **not** act as a standalone, universal MFA/2FA service for arbitrary external systems or as a generic OTP delivery platform.
+   - **Reason:** IAM integrates with external, specialized MFA/2FA providers (e.g., SMS/email OTP gateways, authenticator apps, or third-party services) and orchestrates MFA flows as part of authentication, but does not offer MFA as an independent service for use outside of IAM-managed identity flows.
+
+4. **No Storage of Highly Sensitive Financial Data**
+   - IAM does **not** store, process, or manage sensitive financial or payment data such as credit card numbers, bank account details, or PCI-regulated data.
+   - **Reason:** Handling such data requires compliance with additional regulatory standards (e.g., PCI DSS) and is outside the scope of IAM, which is focused on identity, authentication, and authorization data only.
+
+5. **No Fine-Grained In-App Permission Management**
+   - IAM does **not** manage or enforce detailed, application-specific UI permissions, feature toggles, or workflow-level access within individual product modules.
+   - **Reason:** IAM provides access decisions (Permit/Deny/Conditional) and user attributes to consuming systems. Each application is responsible for interpreting these decisions and implementing fine-grained access control at the UI or feature level as appropriate.
+
+6. **No Management of External System Credentials or Secrets**
+   - IAM does **not** store or manage credentials, passwords, or secrets for external systems, databases, or third-party applications.
+   - **Reason:** Secret management for infrastructure, integrations, or applications is delegated to dedicated secret management solutions (e.g., AWS KMS, Vault). IAM only manages credentials relevant to its own authentication flows.
+
+7. **No Product-Specific Attribute or Policy Logic**
+   - IAM does **not** define or enforce business-specific logic or workflows (e.g., HR approval flows, document signing processes, project-specific validations).
+   - **Reason:** IAM provides a flexible attribute and policy engine, but the definition and enforcement of product-specific logic must be handled by the respective product teams using IAM's APIs and policy outcomes.
 
 ---
 
-## 7. Technology Stack (initial proposal)
+## 7. Technology Stack
 
-| Component                    | Technology                 |
-| ---------------------------- | -------------------------- |
-| **Language / Framework**     | .NET CORE (C#)             |
-| **Database**                 | PostgreSQL                 |
-| **Cache**                    | Redis                      |
-| **Message Queue (optional)** | RabbitMQ / Kafka           |
-| **Token Management**         | JWT (RS256)                |
-| **Secret Management**        | KMS / Vault                |
-| **Containerization**         | Docker + Kubernetes        |
-| **CI/CD**                    | GitHub Actions / GitLab CI |
+| Component                  | Technology                                   | Description                                                                                                 |
+| -------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Language / Framework       | .NET 8/9 (C#), ASP.NET Core Web API, gRPC    | Microservices architecture for scalable, modular IAM core services                                          |
+| Database                   | PostgreSQL, JSONB                            | Stores users, tenants, roles, policies, attributes; JSONB allows flexible/dynamic attribute schema          |
+| Cache                      | Redis                                        | Caching for sessions, tokens, policy decisions, and login throttling                                        |
+| Message Queue              | Kafka or RabbitMQ                            | Event-driven architecture for audit, notification, and attribute sync flows                                 |
+| Token Management           | JWT (RS256, OIDC-compliant), AWS KMS         | Secure token issuance, per-tenant signing keys managed by AWS KMS                                           |
+| Secret Management          | AWS KMS, HashiCorp Vault                     | Manages encryption keys, OIDC secrets, federation keys                                                      |
+| Containerization           | Docker, Kubernetes (EKS/GKE/AKS)             | Service orchestration, deployment, and scaling                                                              |
+| CI/CD                      | GitHub Actions, GitLab CI/CD                 | Automated build, test, deploy, and security scanning                                                        |
+| Monitoring & Observability | Prometheus, Grafana, OpenTelemetry, ELK/SIEM | Metrics collection, dashboards, distributed tracing, and centralized audit log management                   |
+| File/Object Storage        | S3-compatible storage                        | Optional: For storing logs, archives, and file attachments                                                  |
+| Admin Console              | React or Angular SPA                         | Web UI for IAM administration (user, group, policy, audit management), connects to IAM Admin API            |
+| Federation Gateway         | OIDC/SAML2 Proxy Service                     | Integrates with external IdPs (Google, Microsoft, SAML, OIDC); handles inbound/outbound federation flows    |
+| Attribute Engine           | Dedicated microservice                       | Manages attribute schema, mapping, synchronization, and dynamic group logic                                 |
+| Policy Engine              | Dedicated microservice                       | ABAC/RBAC evaluation, policy versioning, real-time updates, caching, and integration with context providers |
+| Audit Service              | Dedicated microservice                       | Centralized logging for auth, policy, attribute, federation, admin actions; SIEM/ELK export, compliance     |
+| Token Service              | Dedicated microservice                       | Issues, verifies, revokes JWTs (access, ID, refresh); manages signing keys per tenant                       |
+| SDK Layer                  | TypeScript, Go, Python SDKs                  | Official SDKs for login, token, attribute, and policy APIs for integration with all platform services       |
+| DevOps/Platform            | CI/CD, Docker/K8s, Monitoring, Security      | Platform services for deployment, orchestration, monitoring, alerting, and security scanning                |
+
+### Component Details
+
+- **Auth Gateway**: Handles all authentication flows (password, OTP, SSO, federation), session lifecycle, MFA, and login throttling.
+- **Federation Gateway**: Manages inbound (external IdP) and outbound (IAM as IdP) federation, SSO brokering, mapping external claims to internal attributes, and JIT provisioning.
+- **Attribute Engine**: Provides dynamic, extensible attribute schema for users and resources; manages custom fields, attribute mapping, and dynamic group rules; supports sync from HR/ERP systems.
+- **Policy Engine**: ABAC/RBAC evaluation, policy versioning, real-time policy updates, and caching; supports complex conditions and external context providers.
+- **Admin Console**: Web UI for administrators to manage users, groups, attributes, tenants, policies, federation settings, and view audit logs.
+- **Audit Service**: Centralized event logging (auth, policy, attribute, federation, admin actions), exports to SIEM/ELK, supports compliance retention and search.
+- **Token Service**: Issues, verifies, and revokes JWTs (access, ID, refresh); manages per-tenant signing keys via KMS.
+- **SDK Layer**: Official SDKs for major languages (TypeScript, Go, Python) providing login, token, attribute, and policy APIs.
+- **DevOps/Platform**: CI/CD, container orchestration, monitoring, alerting, and security scanning.
+
+---
 
 ```mermaid
-flowchart TD
-    %% ==========================
-    %% Clients
-    %% ==========================
-    subgraph Client["Client Layer"]
-        direction TB
-        Web["Web App"]
-        Mobile["Mobile App"]
-        Other["Integration"]
+flowchart LR
+    subgraph CLIENTS["Clients / Entry"]
+        WebApp["Web App"]
+        MobileApp["Mobile App"]
+        PartnerApp["Partner App"]
+        AuthGateway["Auth Gateway"]
     end
 
-    %% ==========================
-    %% API / Core Services
-    %% ==========================
-    subgraph Core["Core Application Layer (.NET 9 Microservices)"]
-        direction TB
-        AuthAPI["Auth Service<br/>(Handle Login, Tokens, MFA)"]
-        UserAPI["User Service<br/>(User, Role, Permission Management)"]
-        PolicyAPI["Policy Service<br/>(ABAC / RBAC Evaluation)"]
+    subgraph CORE["Core IAM Services"]
+        FederationGW["Federation Gateway"]
+        AttributeEngine["Attribute Engine"]
+        PolicyEngine["Policy Engine"]
+        TokenService["Token Service"]
+        AuditService["Audit Service"]
+        AdminConsole["Admin Console"]
     end
 
-    %% ==========================
-    %% Supporting Components
-    %% ==========================
-    subgraph Components["Supporting Components"]
-        direction TB
-        TokenService["Token Service<br/>(JWT RS256 Issue / Verify / Refresh)"]
-        Cache["Cache Service<br/>(Session / Token Cache)"]
-        SecretVault["Secret Vault<br/>(Manage Keys / Secrets)"]
-        Queue["Event Queue<br/>(Audit / Notification Events)"]
-        FileStorage["File Storage<br/>(Store Logs / Attachments)"]
+    subgraph INFRA["Supporting Infrastructure"]
+        Redis["Redis Cache"]
+        Kafka["Kafka / Event Bus"]
+        KMS["KMS / Vault"]
+        Postgres["PostgreSQL DB"]
+        S3["S3 / Object Storage"]
+        Prometheus["Prometheus / Grafana"]
+        Docker["Docker / Kubernetes"]
+        CI["CI/CD Pipeline"]
     end
 
-    %% ==========================
-    %% Data Layer
-    %% ==========================
-    subgraph DataLayer["Data Layer"]
-        direction TB
-        LogDB["Audit Log DB<br/>(Login History, Activity Logs)"]
-        AuthDB["Auth Database<br/>(Users, Roles, Permissions, Sessions)"]
-    end
+    %% Main flows (one edge per node pair)
+    WebApp -->|Login / API Request| AuthGateway
+    MobileApp -->|Login / API Request| AuthGateway
+    PartnerApp -->|Login / Federation| AuthGateway
 
-    %% ==========================
-    %% DevOps Layer
-    %% ==========================
-    subgraph Platform["Deployment & Operations Layer"]
-        direction TB
-        Container["Container Orchestration<br/>(Docker + Kubernetes)"]
-        CICD["CI/CD Pipeline<br/>(GitHub Actions / GitLab CI)"]
-        Monitor["Monitoring & Metrics<br/>(CloudWatch / Prometheus / Grafana)"]
-    end
+    AuthGateway -->|"Authenticate / MFA / SSO / Token / Policy / Attribute / Audit"| FederationGW
+    AuthGateway -->|"Fetch Attributes / Dynamic Groups / Policy Request"| AttributeEngine
+    AuthGateway -->|"Token Issue / Validate"| TokenService
+    AuthGateway -->|"Policy Evaluation / Decision"| PolicyEngine
+    AuthGateway -->|"Emit Audit Event"| AuditService
 
-    %% ==========================
-    %% Flows
-    %% ==========================
-    Client -->|"Login / API Request"| AuthAPI
-    AuthAPI -->|"Validate User / Token"| UserAPI
-    AuthAPI -->|"Generate / Verify Token"| TokenService
-    AuthAPI -->|"Read Cache"| Cache
-    AuthAPI -->|"Write Logs / Events"| Queue
-    AuthAPI -->|"Read Secrets"| SecretVault
-    AuthAPI -->|"Store Session / Audit"| AuthDB
+    FederationGW -->|"Federated Auth / Attribute Mapping / Audit / Event Stream"| AttributeEngine
+    AttributeEngine -->|"Attribute Data / Cache / Dynamic Groups / Audit"| Postgres
+    AttributeEngine -->|"Cache / Event Stream"| Redis
+    AttributeEngine -->|"Audit / Event Stream"| AuditService
 
-    UserAPI -->|"Sync Policy / Role"| PolicyAPI
-    PolicyAPI -->|"Evaluate Access Rules"| AuthDB
-    PolicyAPI -->|"Cache Policy Rules"| Cache
+    PolicyEngine -->|"Policy Data / Cache / Audit"| Postgres
+    PolicyEngine -->|"Cache Policy"| Redis
+    PolicyEngine -->|"Emit Policy Audit"| AuditService
 
-    Queue -->|"Persist Logs"| LogDB
-    Queue -->|"Send Notifications"| FileStorage
+    TokenService -->|"JWT Keys / Session / Token Data / Audit"| Redis
+    TokenService -->|"Persist Tokens"| Postgres
+    TokenService -->|"Keys / Audit"| KMS
+    TokenService -->|"Emit Token Audit"| AuditService
 
-    %% DevOps Integration
-    Core --> Container
-    Container --> CICD
-    CICD --> Monitor
+    AdminConsole -->|"Admin Actions / Policy / Attribute / Federation / Audit"| AuthGateway
+    AdminConsole -->|"Manage Attributes / Policies"| AttributeEngine
+    AdminConsole -->|"Policy Management"| PolicyEngine
+    AdminConsole -->|"Federation Config"| FederationGW
+    AdminConsole -->|"Audit Review"| AuditService
+
+    AuditService -->|"Store Logs / Export / Event Stream / Metrics"| Postgres
+    AuditService --> S3
+    AuditService --> Kafka
+    AuditService --> Prometheus
+
+    CORE --> Docker
+    Docker --> CI
 ```
 
 ---
 
 ## 8. Success Metrics
 
-| Metric                 | Description                  |
-| ---------------------- | ---------------------------- |
-| Authentication latency | Avg login response < 500ms   |
-| Availability           | ≥ 99.9% uptime               |
-| Audit coverage         | 100% of auth events logged   |
-| API standardization    | All endpoints follow OpenAPI |
-| Security compliance    | OWASP ASVS Level 2 compliant |
+| Metric                        | Target / Description                                               |
+| ----------------------------- | ------------------------------------------------------------------ |
+| Authentication Latency        | Average login response time < 500ms                                |
+| Availability                  | Service uptime ≥ 99.9%                                             |
+| Audit Coverage                | 100% of authentication, authorization, and attribute events logged |
+| Policy Evaluation Accuracy    | 100% correct ABAC/RBAC decisions                                   |
+| API Compliance                | All endpoints follow OpenAPI specification                         |
+| Security Compliance           | OWASP ASVS Level 2 compliance                                      |
+| Multi-Tenant Isolation        | No cross-tenant data leakage                                       |
+| Federation Success Rate       | ≥ 99% successful logins via external IdPs                          |
+| Token Issuance Reliability    | ≥ 99.9% success rate for JWT / Refresh token generation            |
+| Incident Detection & Alerting | All anomalies detected and alerted within defined SLA              |
 
 ---
 
-## 9. Ubiquitous Language
+## 9. Ubiquitous Language (Expanded)
 
-| Term                       | Meaning                                                 | Description                                                |
-| -------------------------- | ------------------------------------------------------- | ---------------------------------------------------------- |
-| Registration               | The process of a user signing up for the service        | May include email or mobile verification                   |
-| Login                      | The process of user authentication                      | Different flows: username/password, OTP, social login, SSO |
-| Password Policy            | Rules defining how passwords must be created            | Minimum length, complexity, expiry, history                |
-| Account Lockout            | Temporarily blocking access after failed login attempts | Can trigger alerts to user or admin                        |
-| Session Timeout            | Automatic logout after inactivity                       | Ensures account security                                   |
-| Audit Log                  | Recording critical events                               | Useful for compliance and troubleshooting                  |
-| Federation                 | Logging in via external identity providers              | Allows single sign-on from other systems                   |
-| Consent                    | User permission to access personal data                 | Required for privacy compliance (e.g., GDPR)               |
-| MFA Method                 | Method used for multi-factor authentication             | SMS, Email, Authenticator App, Hardware Token              |
-| Password Reset             | Process for a user to reset a forgotten password        | Usually via email link or OTP                              |
-| Deactivation / Deprovision | Disabling or removing a user account                    | Part of user lifecycle management                          |
-| Policy                     | Rules defining access rights                            | Used to determine who can do what                          |
-| Role                       | Grouping of permissions                                 | Assigned to users or user groups                           |
-| Claim                      | Attribute associated with a user                        | e.g., roles, department, clearance                         |
-| Attribute                  | Property of a user                                      | Used to enforce policies and access control                |
-| Authorization              | Granting access rights based on rules                   | Determines what resources/actions a user can access        |
-| ABAC                       | Access control based on user attributes and context     | Example: Only managers in department X can approve budgets |
-| Event                      | Significant action or occurrence related to users       | e.g., UserLoggedIn, PasswordChanged                        |
-| Refresh Token              | Token to extend a user's session                        | Helps maintain seamless access                             |
-| Identity Provider          | External service that authenticates users               | e.g., Google, Facebook, corporate SSO                      |
-| Social Login               | Login via third-party social platforms                  | Federated login using OAuth2                               |
-| OTP                        | One-time password for verification                      | Short-lived code via SMS or email                          |
-| 2FA                        | Two-factor authentication                               | Adds an extra security layer to login                      |
-| User Lifecycle             | The full journey of a user account                      | From registration to deactivation                          |
-| Identity Verification      | Confirming a user’s identity                            | KYC, email, or phone verification                          |
-
-## 10. Domain
+| Term                                    | Definition / Meaning                                      | Notes / Examples                                                        |
+| --------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Registration                            | User signs up for the platform                            | May include email/mobile verification                                   |
+| Login                                   | User authentication process                               | Username/password, OTP, social login, SSO                               |
+| Logout                                  | Termination of an active session                          | Invalidates access & refresh tokens                                     |
+| Password Policy                         | Rules for creating secure passwords                       | Minimum length, complexity, expiration, reuse restrictions              |
+| Password Reset                          | User-initiated reset of forgotten password                | Usually via email or OTP link                                           |
+| Account Lockout                         | Temporary blocking of account after failed attempts       | May trigger user/admin alerts                                           |
+| Session                                 | Active authentication context of a user                   | Includes token, device, IP, tenant info                                 |
+| Session Timeout                         | Automatic logout after inactivity                         | Ensures account/session security                                        |
+| Token                                   | Security artifact representing identity or access rights  | JWT (access, ID, refresh)                                               |
+| Refresh Token                           | Token used to extend session validity                     | Maintains seamless access                                               |
+| Access Token                            | Token granting access to resources                        | Short-lived, used by APIs                                               |
+| ID Token                                | Token containing user claims for identity                 | Often used in OIDC                                                      |
+| Claim                                   | Attribute attached to a user                              | e.g., roles, department, clearance                                      |
+| Attribute                               | User or resource property                                 | Used in ABAC policies                                                   |
+| Role                                    | Collection of permissions                                 | Assigned to users or groups                                             |
+| Permission                              | Specific operation or action a role grants                | e.g., read, write, approve                                              |
+| Policy                                  | Set of rules governing access rights                      | ABAC / RBAC definitions                                                 |
+| ABAC                                    | Attribute-Based Access Control                            | Context-aware access: e.g., only managers in dept X can approve budgets |
+| RBAC                                    | Role-Based Access Control                                 | Access decisions based on static role-permission mapping                |
+| Authorization                           | Granting access based on roles or attributes              | Determines actions/resources a user can access                          |
+| Authentication                          | Verifying user identity                                   | Password, MFA, social login, external IdP                               |
+| Multi-Factor Authentication (MFA / 2FA) | Additional verification factors                           | SMS, Email, Authenticator App, Hardware Token                           |
+| OTP                                     | One-time password for verification                        | Short-lived via SMS or Email                                            |
+| Federation                              | Authentication via external identity providers            | Enables SSO from Google, Microsoft, SAML, OIDC                          |
+| Identity Provider (IdP)                 | External system for authenticating users                  | e.g., Google, Microsoft 365, corporate SSO                              |
+| Social Login                            | Authentication via third-party platforms                  | OAuth2-based (Google, Facebook, etc.)                                   |
+| Consent                                 | User permission for personal data usage                   | Required for GDPR/PDPA compliance                                       |
+| Attribute Mapping                       | Mapping external IdP claims to internal attributes        | Used during federation or SSO                                           |
+| Just-in-Time Provisioning               | Auto-creation of user accounts during first login         | For federated external users                                            |
+| Tenant                                  | Organizational boundary for isolation                     | Defines users, roles, policies, attributes                              |
+| Multi-Tenant User                       | User existing across multiple tenants                     | May have scoped permissions                                             |
+| Cross-Tenant Access                     | Controlled access between tenants                         | Requires explicit delegation policies                                   |
+| Dynamic Group                           | Group whose membership is calculated based on attributes  | e.g., project role = "Admin"                                            |
+| Audit Log                               | Record of critical system events                          | Authentication, authorization, attribute changes                        |
+| Event                                   | Significant action or occurrence related to users         | e.g., UserLoggedIn, PasswordChanged, TokenRevoked                       |
+| Observability                           | Metrics, logging, tracing                                 | Prometheus, Grafana, OpenTelemetry                                      |
+| Security Alert                          | Notification of anomalous or suspicious activity          | Failed login spikes, token abuse                                        |
+| Revocation                              | Invalidation of tokens or permissions                     | Access termination                                                      |
+| Identity Verification                   | Confirming user identity                                  | KYC, email, phone verification                                          |
+| Service Account                         | Non-human user account for automated or backend processes | API keys or JWT-based credentials                                       |
+| API Key                                 | Secret token for programmatic access                      | Used for service-to-service authentication                              |
+| Rate Limiting                           | Restriction on number of requests per unit time           | Prevent brute-force or abuse                                            |
+| Session Revocation                      | Force termination of an active session                    | Admin or system triggered                                               |
+| Policy Versioning                       | Maintaining multiple versions of policies                 | Supports rollback or auditing                                           |
+| Policy Evaluation                       | Runtime decision based on current attributes and policies | Returns Permit / Deny / Conditional                                     |
+| Token Expiry                            | Duration after which a token is invalid                   | Enforced by IAM                                                         |
+| Consent Revocation                      | User revokes previously granted permissions               | Requires system to remove granted access                                |
+| SLA / Availability                      | Expected service uptime and response targets              | e.g., ≥ 99.9% uptime                                                    |
+| Compliance                              | Adherence to laws, standards, or internal policies        | PDPA, GDPR, ISO27001                                                    |
+| Encryption                              | Protection of sensitive data in transit and at rest       | e.g., TLS, AES, RSA                                                     |
+| Secret Management                       | Secure storage of credentials, keys, and secrets          | AWS KMS, Vault                                                          |
+| Token Signing Key                       | Cryptographic key to sign JWTs                            | Managed per-tenant in KMS                                               |
+| Identity Federation                     | Trust relationship between IdPs                           | Allows single-sign-on across organizations                              |
+| Login Attempt                           | Record of a login trial                                   | Includes timestamp, IP, device, and result                              |
+| Anomaly Detection                       | Detect unusual behavior or access patterns                | Failed logins, abnormal location/device                                 |
+| User Lifecycle                          | Full account journey                                      | Registration → Active → Deactivation / Deprovision                      |
+| Passwordless Authentication             | Login without password                                    | Email link, magic link, or OTP-based                                    |
+| Token Introspection                     | API to validate token and inspect claims                  | `/introspect` endpoint                                                  |
+| Audit Export                            | Export of logs for compliance                             | JSON, CSV, or integration with SIEM                                     |
+| OpenID Connect (OIDC)                   | Standard protocol for federated authentication            | Token-based authentication                                              |
+| SAML                                    | Security Assertion Markup Language for SSO                | XML-based federation protocol                                           |
 
 ---
 
-### 10.1. Authentication Domain
+## 10. Domain (Complete & Refactored for IAM)
+
+### 10.1 Authentication Domain
+
+Responsible for verifying user identities via multiple mechanisms (username/password, OTP, passwordless, 2FA, social/external login) and issuing tokens for secure, centralized access. Supports Single Sign-On (SSO) and federated authentication for seamless access across all platform products. Also includes token introspection and revocation.
+
+- **Object Values:**
+  - **username:** Unique login identifier for the user.
+  - **password:** Secret credential, subject to password policies.
+  - **email:** Used for login, verification, OTP, and passwordless flows.
+  - **mobile number:** Used for OTP/passwordless login and as a contact attribute.
+  - **OTP:** One-time password (SMS/email) for secure, time-limited authentication.
+  - **social provider token:** Token from external identity providers (Google, Microsoft, etc.).
+  - **2FA code:** Secondary verification code for multi-factor authentication.
+  - **auth token:** JWTs (access, ID, refresh) for session management and SSO.
+  - **token claims:** Identity and authorization claims embedded in JWT.
+  - **token status:** Indicates if a token is valid, revoked, or expired.
 
 - **Entities:**
-  - User - Represents a registered system user containing credentials, email, and phone number.
-  - AuthToken - Stores access and refresh tokens issued during authentication.
-  - LoginAttempt - Records each login attempt with timestamp, IP address, and device information.
+  - **User:** User profile containing credentials, contact info, status, and authentication history.
+  - **AuthToken:** JWTs (access, ID, refresh) for session management and SSO.
+  - **LoginAttempt:** Records authentication attempts with timestamp, IP, device, and result.
+  - **Session:** Active authentication context.
 
 - **Use Cases:**
-  - Login via username/password
-    - **Command:**
-      - LoginUserCommand - Authenticate user using username and password.
-    - **CommandHandler:**
-      - LoginUserCommandHandler - Validates credentials and generates access tokens.
-    - **Query:**
-      - GetUserSessionQuery - Retrieve the active user session.
-    - **QueryHandler:**
-      - GetUserSessionQueryHandler - Fetches user session details from cache or database.
-
-  - Login via mobile/OTP
-    - **Command:**
-      - LoginViaMobileOtpCommand - Authenticate user using mobile number and OTP.
-    - **CommandHandler:**
-      - LoginViaMobileOtpCommandHandler - Verifies OTP and issues new tokens.
-    - **Query:**
-      - GetUserSessionQuery - Retrieve session data after mobile OTP verification.
-    - **QueryHandler:**
-      - GetUserSessionQueryHandler - Returns current session state.
-
-  - Login via email/OTP
-    - **Command:**
-      - LoginViaEmailOtpCommand - Authenticate user using email and OTP.
-    - **CommandHandler:**
-      - LoginViaEmailOtpCommandHandler - Validates email OTP and creates a session token.
-    - **Query:**
-      - GetUserSessionQuery - Retrieve session details.
-    - **QueryHandler:**
-      - GetUserSessionQueryHandler - Returns user session from storage.
-
-  - Login with 2FA (external 2FA)
-    - **Command:**
-      - VerifyTwoFactorCommand - Validate user identity with external 2FA provider.
-    - **CommandHandler:**
-      - VerifyTwoFactorCommandHandler - Confirms the 2FA code and completes login.
-    - **Query:**
-      - GetUserSessionQuery - Get session info after 2FA verification.
-    - **QueryHandler:**
-      - GetUserSessionQueryHandler - Fetches active session details.
-
-  - Login via social provider (Google, Facebook, etc.)
-    - **Command:**
-      - LoginViaSocialCommand - Authenticate via third-party OAuth provider.
-    - **CommandHandler:**
-      - LoginViaSocialCommandHandler - Validates social token and issues local access tokens.
-    - **Query:**
-      - GetUserSessionQuery - Retrieve session of authenticated user.
-    - **QueryHandler:**
-      - GetUserSessionQueryHandler - Returns social-login session data.
+  1. **Login via username/password**
+     - **Command:** LoginUserCommand - Authenticate user via username/password.
+     - **CommandHandler:** LoginUserCommandHandler - Handles authentication, issues tokens, records login attempts.
+     - **Query:** GetUserSessionQuery - Retrieve session and token information for authenticated user.
+     - **QueryHandler:** GetUserSessionQueryHandler - Fetches user session data.
+  2. **Login via mobile OTP**
+     - **Command:** LoginViaMobileOtpCommand - Authenticate user via mobile number and OTP.
+     - **CommandHandler:** LoginViaMobileOtpCommandHandler - Verifies OTP, issues tokens, records login.
+     - **Query:** GetUserSessionQuery - Retrieve session and token information.
+     - **QueryHandler:** GetUserSessionQueryHandler - Fetches user session data.
+  3. **Login via email OTP**
+     - **Command:** LoginViaEmailOtpCommand - Authenticate user via email OTP.
+     - **CommandHandler:** LoginViaEmailOtpCommandHandler - Verifies OTP, issues tokens, records login.
+     - **Query:** GetUserSessionQuery - Retrieve session and token information.
+     - **QueryHandler:** GetUserSessionQueryHandler - Fetches user session data.
+  4. **Login with 2FA (external 2FA)**
+     - **Command:** VerifyTwoFactorCommand - Verify second factor authentication code.
+     - **CommandHandler:** VerifyTwoFactorCommandHandler - Handles external 2FA verification, issues tokens.
+     - **Query:** GetUserSessionQuery - Retrieve session and token information.
+     - **QueryHandler:** GetUserSessionQueryHandler - Fetches user session data.
+  5. **Login via social provider**
+     - **Command:** LoginViaSocialCommand - Authenticate user via social provider OAuth.
+     - **CommandHandler:** LoginViaSocialCommandHandler - Validates token from provider, maps user attributes, issues tokens.
+     - **Query:** GetUserSessionQuery - Retrieve session and token information.
+     - **QueryHandler:** GetUserSessionQueryHandler - Fetches user session data.
+  6. **Token Introspection**
+     - **Query:** IntrospectTokenQuery - Check validity and claims of a token.
+     - **QueryHandler:** IntrospectTokenQueryHandler - Validates token signature, expiry, and returns claims/status.
+  7. **Token Revocation**
+     - **Command:** RevokeTokenCommand - Revoke access/refresh tokens for a session.
+     - **CommandHandler:** RevokeTokenCommandHandler - Marks token as revoked, terminates session if needed.
 
 ---
 
-### 10.2. Authorization Domain
+### 10.2 Authorization / ABAC Domain
+
+Governs access to resources and APIs using RBAC (via attribute: role) and ABAC. Evaluates user attributes, resource context, and dynamic policies to grant or deny access. Supports context-aware, flexible authorization and policy management.
+
+- **Object Values:**
+  - **attributes:** Properties of users, resources, or environment for ABAC evaluation (role, department, clearance, tenant).
+  - **permissions:** Specific actions allowed on resources (read, write, approve).
+  - **resources:** Entities requiring access control (APIs, documents, modules).
+  - **policies:** Declarative ABAC rules defining access conditions.
+  - **context:** Runtime/environmental information (time, location, device, tenant).
+  - **policy versions:** Versioned policy definitions for rollback/audit.
 
 - **Entities:**
-  - Role - Represents a predefined access level assigned to one or more users.
-  - Permission - Defines specific operations or actions that can be performed on resources.
-  - Resource - Represents a protected entity, such as an API endpoint, module, or data object.
-  - Policy - Defines access rules based on attributes (ABAC) or roles (RBAC).
-  - Attribute - Represents contextual or user-based properties used in ABAC evaluation.
-
-#### 10.2.1. Role-Based Access Control (RBAC)
-
-- **Description:**  
-  RBAC provides authorization based on a user's assigned roles and their associated permissions.  
-  Access decisions are determined by the static mapping between roles and permissions.
+  - **Attribute:** Data used in policy evaluation.
+  - **Policy:** ABAC rules with conditions and effects (Permit/Deny).
+  - **PolicyVersion:** Versioned snapshot of policy for audit/rollback.
+  - **Resource:** Object or service being protected.
 
 - **Use Cases:**
-  - Manage Roles and Permissions
-    - **Command:**
-      - CreateRoleCommand - Define a new role with specific permissions.
-      - UpdateRoleCommand - Modify existing role or its permissions.
-      - DeleteRoleCommand - Remove a role and revoke related permissions.
-    - **CommandHandler:**
-      - CreateRoleCommandHandler - Handles creation of new roles.
-      - UpdateRoleCommandHandler - Updates role and permission relationships.
-      - DeleteRoleCommandHandler - Safely removes a role from the system.
-  - Assign / Revoke User Role
-    - **Command:**
-      - AssignUserRoleCommand - Assign one or more roles to a user.
-      - RevokeUserRoleCommand - Remove assigned roles from a user.
-    - **CommandHandler:**
-      - AssignUserRoleCommandHandler - Updates user-role relationships.
-      - RevokeUserRoleCommandHandler - Handles role removal from users.
-
-  - Role-Based Authorization Check
-    - **Query:**
-      - CheckRolePermissionQuery - Check if a user’s role grants a specific permission.
-    - **QueryHandler:**
-      - CheckRolePermissionQueryHandler - Validates access based on predefined role-permission mapping.
+  1. **Evaluate Access**
+     - **Query:** EvaluateAccessQuery - Evaluate user access using attributes and context.
+     - **QueryHandler:** EvaluateAccessQueryHandler - Loads user/resource attributes, evaluates ABAC policies.
+  2. **Evaluate Policy**
+     - **Query:** EvaluatePolicyQuery - Evaluate user access based on ABAC policies.
+     - **QueryHandler:** EvaluatePolicyQueryHandler - Evaluates specific policy for access decision.
+  3. **Policy Management**
+     - **Command:** CreatePolicyCommand / UpdatePolicyCommand / DeletePolicyCommand
+     - **CommandHandler:** Corresponding handlers manage policy lifecycle.
+     - **Query:** GetPolicyQuery / GetPolicyVersionQuery
+     - **QueryHandler:** Corresponding handlers fetch policy and version details.
+  4. **Attribute Management**
+     - **Command:** CreateAttributeCommand / UpdateAttributeCommand / DeleteAttributeCommand
+     - **CommandHandler:** Corresponding handlers manage attributes.
+     - **Query:** GetUserAttributesQuery
+     - **QueryHandler:** GetUserAttributesQueryHandler
 
 ---
 
-#### 10.2.2. Attribute-Based Access Control (ABAC)
+### 10.3 User Management Domain
 
-- **Description:**  
-  ABAC authorizes access dynamically based on user, resource, and environmental attributes.  
-  Policies define conditions (e.g., department = “HR” AND access_time < 6PM) for fine-grained control.
+Manages user profiles, preferences, account settings, and assigned attributes across the platform.
 
-- **Use Cases:**
-  - Manage Access Policies
-    - **Command:**
-      - CreatePolicyCommand - Define new ABAC policy with attributes and conditions.
-      - UpdatePolicyCommand - Modify existing policy rules or attributes.
-      - DeletePolicyCommand - Remove policy from the evaluation engine.
-    - **CommandHandler:**
-      - CreatePolicyCommandHandler - Validates and saves policy definitions.
-      - UpdatePolicyCommandHandler - Applies changes to active policy sets.
-      - DeletePolicyCommandHandler - Safely removes obsolete or inactive policies.
-  - Attribute Management
-    - **Command:**
-      - AddAttributeCommand - Add new attribute for policy evaluation.
-      - UpdateAttributeCommand - Modify attribute values.
-      - DeleteAttributeCommand - Remove unused attribute.
-    - **CommandHandler:**
-      - AddAttributeCommandHandler - Adds attribute to repository or directory.
-      - UpdateAttributeCommandHandler - Updates attribute value across system.
-      - DeleteAttributeCommandHandler - Deletes attribute safely after validation.
-  - Policy Evaluation
-    - **Query:**
-      - EvaluateAccessQuery - Evaluate access request using user and resource attributes.
-      - EvaluatePolicyQuery - Assess access decision based on defined ABAC policy.
-    - **QueryHandler:**
-      - EvaluateAccessQueryHandler - Evaluates conditions dynamically against attributes.
-      - EvaluatePolicyQueryHandler - Executes policy logic and returns access decision (Allow/Deny).
-
----
-
-**Summary:**  
-> **RBAC** ensures simple and consistent access control via roles and permissions, ideal for predictable hierarchies.  
-> **ABAC** enhances flexibility by considering dynamic attributes and context, enabling fine-grained, conditional authorization.
-
----
-
-### 10.3. User Management Domain
+- **Object Values:**
+  - **personal details:** Name, email, and contact information.
+  - **department:** Organizational unit or team.
+  - **preferences:** User-specific settings.
+  - **account settings:** Security and notification configurations.
+  - **user attributes:** Assigned roles (as attributes), department, dynamic groups.
 
 - **Entities:**
-  - UserProfile - Contains personal details, department, and preferences.
-  - UserSettings - Stores account-level configurations and notification preferences.
+  - **UserProfile:** Core user information.
+  - **UserSettings:** Preferences and account configuration.
 
 - **Use Cases:**
-  - Create / Update / Delete User
-    - **Command:**
-      - CreateUserCommand - Register a new user in the system.
-      - UpdateUserCommand - Modify existing user data.
-      - DeleteUserCommand - Remove user account and related records.
-    - **CommandHandler:**
-      - CreateUserCommandHandler - Validates input and creates user record.
-      - UpdateUserCommandHandler - Applies updates and maintains data consistency.
-      - DeleteUserCommandHandler - Deletes user safely with dependency checks.
-
-  - Get User Profile
-    - **Query:**
-      - GetUserProfileQuery - Retrieve detailed user profile information.
-    - **QueryHandler:**
-      - GetUserProfileQueryHandler - Fetch profile data from database or cache.
+  1. **Create / Update / Delete User**
+     - **Command:** CreateUserCommand / UpdateUserCommand / DeleteUserCommand
+     - **CommandHandler:** Handles user profile lifecycle.
+  2. **Get User Profile**
+     - **Query:** GetUserProfileQuery
+     - **QueryHandler:** GetUserProfileQueryHandler
+  3. **Assign / Revoke User Attributes**
+     - **Command:** AssignUserAttributeCommand / RevokeUserAttributeCommand
+     - **CommandHandler:** Assign/Revoke handler
+     - **Query:** GetUserAttributesQuery
+     - **QueryHandler:** GetUserAttributesQueryHandler
+  4. **Get User Dynamic Groups**
+     - **Query:** GetUserDynamicGroupsQuery
+     - **QueryHandler:** GetUserDynamicGroupsQueryHandler
 
 ---
 
-### 10.4. Session Management Domain
+### 10.4 Session Management Domain
+
+Manages active sessions, token issuance, session validation, refresh tokens, and logout processes.
+
+- **Object Values:**
+  - **session tokens:** JWT representing active sessions.
+  - **refresh tokens:** Tokens to renew session validity.
+  - **session metadata:** Session start time, last activity, status.
+  - **device info:** Device used to access the system.
+  - **IP address:** Client IP address.
 
 - **Entities:**
-  - Session - Represents an active user session with metadata like device and IP.
-  - AuthToken - Contains JWT and refresh tokens for authenticated users.
+  - **Session:** Represents an active user session.
+  - **AuthToken:** Access and refresh token objects.
 
 - **Use Cases:**
-  - Validate Session
-    - **Query:**
-      - ValidateSessionQuery - Check if a session token is valid.
-    - **QueryHandler:**
-      - ValidateSessionQueryHandler - Validates token expiration and session status.
-
-  - Refresh Token
-    - **Command:**
-      - RefreshTokenCommand - Request new access token using refresh token.
-    - **CommandHandler:**
-      - RefreshTokenCommandHandler - Verifies refresh token and issues a new access token.
-
-  - Logout
-    - **Command:**
-      - LogoutUserCommand - Terminate an active user session.
-    - **CommandHandler:**
-      - LogoutUserCommandHandler - Revokes tokens and clears session from cache.
+  1. **Validate Session**
+     - **Query:** ValidateSessionQuery
+     - **QueryHandler:** ValidateSessionQueryHandler
+  2. **Refresh Token**
+     - **Command:** RefreshTokenCommand
+     - **CommandHandler:** RefreshTokenCommandHandler
+  3. **Logout**
+     - **Command:** LogoutUserCommand
+     - **CommandHandler:** LogoutUserCommandHandler
 
 ---
 
-### 10.5. Attribute Management Domain
+### 10.5 Attribute Management Domain
+
+Manages user, resource, and environment attributes for ABAC policies, dynamic groups, and policy evaluation.
+
+- **Object Values:**
+  - **attribute definition:** Name, type, validation, scope.
+  - **user attributes:** Role, department, project, etc.
+  - **attribute groups:** Logical groupings for policy or assignment.
+  - **dynamic group rules:** Logic for automatic group membership.
+  - **dynamic permissions:** Access rights calculated from attribute/group rules.
 
 - **Entities:**
-  - Attribute - Defines an attribute (e.g., department, clearance, location) for ABAC.  
-  - AttributeGroup - Groups related attributes for structured access policies.
+  - **Attribute:** Single attribute for user or resource.
+  - **AttributeGroup:** Group of attributes used for policy evaluation.
+  - **DynamicGroup:** Group with rule-based membership.
 
 - **Use Cases:**
-  - Manage user attributes
-    - **Command:**
-      - AddAttributeCommand - Add a new attribute for a user or group.
-      - UpdateAttributeCommand - Modify existing attribute details.
-      - DeleteAttributeCommand - Remove attribute from the system.
-    - **CommandHandler:**
-      - AddAttributeCommandHandler - Validates and persists attribute data.
-      - UpdateAttributeCommandHandler - Updates attribute records in database.
-      - DeleteAttributeCommandHandler - Deletes attribute safely after validation.
-
-  - Query user attributes
-    - **Query:**
-      - GetUserAttributesQuery - Retrieve all attributes associated with a user.
-    - **QueryHandler:**
-      - GetUserAttributesQueryHandler - Fetches attribute data for access evaluation.
+  1. **Manage Attribute Definitions**
+     - **Command:** Create/Update/DeleteAttributeCommand
+     - **CommandHandler:** Corresponding handler
+     - **Query:** GetUserAttributesQuery
+     - **QueryHandler:** GetUserAttributesQueryHandler
+  2. **Manage Dynamic Groups**
+     - **Command:** Create/Update/DeleteAttributeGroupCommand
+     - **CommandHandler:** Corresponding handler
+     - **Query:** GetAttributeGroupQuery
+     - **QueryHandler:** GetAttributeGroupQueryHandler
+  3. **Assign/Revoke Attributes to Users**
+     - **Command:** AssignUserAttributeCommand / RevokeUserAttributeCommand
+     - **CommandHandler:** Corresponding handler
+     - **Query:** GetUserAttributesQuery
+     - **QueryHandler:** GetUserAttributesQueryHandler
 
 ---
 
-### 10.6. Infra / DevOps Domain
+### 10.6 Tenant Management Domain
+
+Manages organizational boundaries, tenant-specific configuration, and isolation.
+
+- **Object Values:**
+  - **tenant name:** Organization identifier.
+  - **tenant config:** MFA, branding, federation, policy namespace.
+  - **tenant status:** Active, suspended, deleted.
+  - **encryption keys:** Per-tenant signing/encryption.
 
 - **Entities:**
-  - AuditLog - Records security and system events for compliance and analysis.
-  - EventLog - Tracks operational and authentication-related asynchronous events.
+  - **Tenant:** Represents an organization/tenant.
+  - **TenantConfig:** Configuration for authentication, federation, branding, etc.
 
 - **Use Cases:**
-  - Log authentication events
-    - **Command:**
-      - LogAuthEventCommand - Record authentication or session activities.
-    - **CommandHandler:**
-      - LogAuthEventCommandHandler - Sends logs to storage or monitoring systems.
-
-  - Monitor failed login attempts
-    - **Query:**
-      - GetFailedLoginAttemptsQuery - Retrieve failed login records for analysis.
-    - **QueryHandler:**
-      - GetFailedLoginAttemptsQueryHandler - Fetches aggregated login attempt data.
-
-  - Send notifications / alerts
-    - **Command:**
-      - SendSecurityAlertCommand - Trigger alert when a security event occurs.
-    - **CommandHandler:**
-      - SendSecurityAlertCommandHandler - Dispatches alerts via email, SMS, or notification service.
-
-## 11. API Endpoint
-
-### 11.1. Authentication Domain
-
-| Endpoint               | Method | Command / Query                                | Description                                  |
-| ---------------------- | ------ | ---------------------------------------------- | -------------------------------------------- |
-| /api/auth/login        | POST   | LoginUserCommand / GetUserSessionQuery         | Authenticate user via username/password.     |
-| /api/auth/login/mobile | POST   | LoginViaMobileOtpCommand / GetUserSessionQuery | Authenticate user via mobile number + OTP.   |
-| /api/auth/login/email  | POST   | LoginViaEmailOtpCommand / GetUserSessionQuery  | Authenticate user via email + OTP.           |
-| /api/auth/login/2fa    | POST   | VerifyTwoFactorCommand / GetUserSessionQuery   | Verify login using external 2FA mechanism.   |
-| /api/auth/login/social | POST   | LoginViaSocialCommand / GetUserSessionQuery    | Authenticate user via social provider OAuth. |
-
-#### /api/auth/login (POST)
-
-```mermaid
-sequenceDiagram
-    participant U as User / Client
-    participant API as API: /api/auth/login
-    participant CMD as Command: LoginUserCommand
-    participant H as Handler: LoginUserCommandHandler
-    participant R1 as UserRepository
-    participant R2 as AuthTokenRepository
-    participant R3 as LoginAttemptRepository
-    participant DB1 as Table: users
-    participant DB2 as Table: auth_tokens
-    participant DB3 as Table: login_attempts
-
-    U->>API: POST /api/auth/login (username, password)
-    API->>CMD: Create LoginUserCommand
-    CMD->>H: Execute()
-    H->>R1: findUserByUsername()
-    R1->>DB1: SELECT * FROM users WHERE username=?
-    DB1-->>R1: User data
-    H->>R3: recordLoginAttempt(success/failure)
-    R3->>DB3: INSERT INTO login_attempts
-    H->>R2: createAuthToken(user)
-    R2->>DB2: INSERT INTO auth_tokens
-    DB2-->>R2: Token record
-    H-->>API: Return AuthToken (JWT)
-    API-->>U: 200 OK (access_token, refresh_token)
-```
-
-#### /api/auth/login/mobile (POST)
-
-```mermaid
-sequenceDiagram
-    participant U as User / Client
-    participant API as API: /api/auth/login/mobile
-    participant CMD as Command: LoginViaMobileOtpCommand
-    participant H as Handler: LoginViaMobileOtpCommandHandler
-    participant R1 as UserRepository
-    participant R2 as OtpRepository
-    participant R3 as AuthTokenRepository
-    participant DB1 as Table: users
-    participant DB2 as Table: otp_requests
-    participant DB3 as Table: auth_tokens
-
-    U->>API: POST /api/auth/login/mobile (mobile, otp)
-    API->>CMD: Create LoginViaMobileOtpCommand
-    CMD->>H: Execute()
-    H->>R2: verifyOtp(mobile, otp)
-    R2->>DB2: SELECT * FROM otp_requests
-    DB2-->>R2: OTP valid
-    H->>R1: findOrCreateUserByMobile()
-    R1->>DB1: SELECT / INSERT INTO users
-    DB1-->>R1: User data
-    H->>R3: createAuthToken(user)
-    R3->>DB3: INSERT INTO auth_tokens
-    DB3-->>R3: Token created
-    H-->>API: Return AuthToken
-    API-->>U: 200 OK (JWT tokens)
-```
-
-#### /api/auth/login/email (POST)
-
-```mermaid
-sequenceDiagram
-    participant U as User / Client
-    participant API as API: /api/auth/login/email
-    participant CMD as Command: LoginViaEmailOtpCommand
-    participant H as Handler: LoginViaEmailOtpCommandHandler
-    participant R1 as UserRepository
-    participant R2 as EmailVerificationRepository
-    participant R3 as AuthTokenRepository
-    participant DB1 as Table: users
-    participant DB2 as Table: user_email_verifications
-    participant DB3 as Table: auth_tokens
-
-    U->>API: POST /api/auth/login/email (email, otp)
-    API->>CMD: Create LoginViaEmailOtpCommand
-    CMD->>H: Execute()
-    H->>R2: verifyEmailOtp(email, otp)
-    R2->>DB2: SELECT * FROM user_email_verifications
-    DB2-->>R2: OTP valid
-    H->>R1: findOrCreateUserByEmail()
-    R1->>DB1: SELECT / INSERT INTO users
-    DB1-->>R1: User data
-    H->>R3: createAuthToken(user)
-    R3->>DB3: INSERT INTO auth_tokens
-    DB3-->>R3: Token record
-    H-->>API: Return AuthToken
-    API-->>U: 200 OK (JWT tokens)
-```
-
-#### /api/auth/login/2fa (POST)
-
-```mermaid
-sequenceDiagram
-    participant U as User / Client
-    participant API as API: /api/auth/login/2fa
-    participant CMD as Command: VerifyTwoFactorCommand
-    participant H as Handler: VerifyTwoFactorCommandHandler
-    participant R1 as UserRepository
-    participant R2 as TwoFactorRepository
-    participant R3 as AuthTokenRepository
-    participant DB1 as Table: users
-    participant DB2 as Table: two_factor_auth
-    participant DB3 as Table: auth_tokens
-
-    U->>API: POST /api/auth/login/2fa (userId, code)
-    API->>CMD: Create VerifyTwoFactorCommand
-    CMD->>H: Execute()
-    H->>R1: findUserById(userId)
-    R1->>DB1: SELECT * FROM users
-    DB1-->>R1: User data
-    H->>R2: verify2FACode(userId, code)
-    R2->>DB2: SELECT * FROM two_factor_auth
-    DB2-->>R2: Validated
-    H->>R3: createAuthToken(user)
-    R3->>DB3: INSERT INTO auth_tokens
-    DB3-->>R3: Token created
-    H-->>API: Return JWT Token
-    API-->>U: 200 OK
-```
-
-#### /api/auth/login/social (POST)
-
-```mermaid
-sequenceDiagram
-    participant U as User / Client
-    participant API as API: /api/auth/login/social
-    participant CMD as Command: LoginViaSocialCommand
-    participant H as Handler: LoginViaSocialCommandHandler
-    participant R_FB as FacebookAuthRepository
-    participant R_GO as GoogleAuthRepository
-    participant R_LINE as LineAuthRepository
-    participant R2 as UserRepository
-    participant R3 as AuthTokenRepository
-    participant DB1 as Table: social_accounts
-    participant DB2 as Table: users
-    participant DB3 as Table: auth_tokens
-    participant FB_API as Facebook Graph API
-    participant GO_API as Google People API
-    participant LINE_API as Line API
-
-    U->>API: POST /api/auth/login/social (provider, access_token)
-    API->>CMD: Create LoginViaSocialCommand
-    CMD->>H: Execute()
-
-    alt Provider = Facebook
-        H->>R_FB: validateToken(access_token)
-        R_FB->>FB_API: GET /me?fields=id,name,email&access_token=token
-        FB_API-->>R_FB: {id, name, email, profile_pic}
-        R_FB->>DB1: SELECT * FROM social_accounts WHERE social_id=id
-        DB1-->>R_FB: Social account record or null
-    else Provider = Google
-        H->>R_GO: validateToken(access_token)
-        R_GO->>GO_API: GET /userinfo?access_token=token
-        GO_API-->>R_GO: {sub, name, email, picture}
-        R_GO->>DB1: SELECT * FROM social_accounts WHERE social_id=sub
-        DB1-->>R_GO: Social account record or null
-    else Provider = Line
-        H->>R_LINE: validateToken(access_token)
-        R_LINE->>LINE_API: GET /profile?access_token=token
-        LINE_API-->>R_LINE: {userId, displayName, pictureUrl}
-        R_LINE->>DB1: SELECT * FROM social_accounts WHERE social_id=userId
-        DB1-->>R_LINE: Social account record or null
-    end
-
-    H->>R2: findOrCreateUserFromSocial(profile_data)
-    R2->>DB2: SELECT / INSERT INTO users (name, email, etc)
-    DB2-->>R2: User record
-    H->>R3: createAuthToken(user)
-    R3->>DB3: INSERT INTO auth_tokens
-    DB3-->>R3: Token created
-    H-->>API: Return JWT Token
-    API-->>U: 200 OK
-```
+  1. **Tenant Lifecycle**
+     - **Command:** CreateTenantCommand / UpdateTenantCommand / DeleteTenantCommand
+     - **CommandHandler:** Corresponding handler
+     - **Query:** GetTenantQuery
+     - **QueryHandler:** GetTenantQueryHandler
 
 ---
 
-### 11.2. Authorization Domain
+### 10.7 Federation / External IdP Domain
 
-#### 11.2.1. Role-Based Access Control (RBAC)
+Manages integration with external IdPs, handles federation flows, claim mapping, and just-in-time (JIT) provisioning.
 
-| Endpoint                 | Method | Command / Query          | Description                                          |
-| ------------------------ | ------ | ------------------------ | ---------------------------------------------------- |
-| /api/auth/authorize/rbac | GET    | CheckRolePermissionQuery | Check if a user’s role grants a specific permission. |
-| /api/roles               | POST   | CreateRoleCommand        | Create a new role with assigned permissions.         |
-| /api/roles/{id}          | PUT    | UpdateRoleCommand        | Update role details or modify permissions.           |
-| /api/roles/{id}          | DELETE | DeleteRoleCommand        | Delete an existing role.                             |
-| /api/roles/{id}/assign   | POST   | AssignUserRoleCommand    | Assign one or more roles to a user.                  |
-| /api/roles/{id}/revoke   | POST   | RevokeUserRoleCommand    | Revoke assigned roles from a user.                   |
+- **Object Values:**
+  - **IdP config:** SAML/OIDC endpoints, metadata, keys.
+  - **claim mapping:** Rules for mapping external claims to internal attributes.
+  - **jit provisioning:** Rules for auto-creating users on first login.
+  - **federation status:** Active, pending, disabled.
 
-##### /api/auth/authorize/rbac (GET)
+- **Entities:**
+  - **IdentityProvider (IdP)**
+  - **ClaimMapping**
+  - **FederatedUser**
 
-```mermaid
-sequenceDiagram
-    participant U as User / Client
-    participant API as API: /api/auth/authorize/rbac
-    participant Q as Query: CheckRolePermissionQuery
-    participant H as Handler: CheckRolePermissionQueryHandler
-    participant R as RoleRepository
-    participant P as PermissionRepository
-    participant DB1 as Table: roles
-    participant DB2 as Table: permissions
-
-    U->>API: GET /api/auth/authorize/rbac (userId, permission)
-    API->>Q: Create CheckRolePermissionQuery
-    Q->>H: Execute()
-    H->>R: findRolesByUser(userId)
-    R->>DB1: SELECT * FROM roles WHERE user_id=?
-    DB1-->>R: User roles
-    H->>P: checkPermission(roles, permission)
-    P->>DB2: SELECT * FROM permissions WHERE role_id IN (roleIds)
-    DB2-->>P: Permission data
-    H-->>API: Return access_granted (true/false)
-    API-->>U: 200 OK (access_granted)
-```
-
-##### /api/roles (POST)
-
-```mermaid
-sequenceDiagram
-    participant U as Admin / Client
-    participant API as API: /api/roles
-    participant CMD as Command: CreateRoleCommand
-    participant H as Handler: CreateRoleCommandHandler
-    participant R as RoleRepository
-    participant P as PermissionRepository
-    participant DB1 as Table: roles
-    participant DB2 as Table: permissions
-
-    U->>API: POST /api/roles (roleName, permissions)
-    API->>CMD: Create CreateRoleCommand
-    CMD->>H: Execute()
-    H->>R: createRole(roleName)
-    R->>DB1: INSERT INTO roles
-    DB1-->>R: Role created
-    H->>P: assignPermissions(roleId, permissions)
-    P->>DB2: INSERT INTO permissions
-    DB2-->>P: Permissions created
-    H-->>API: Return Role with permissions
-    API-->>U: 201 Created
-```
-
-##### /api/roles/{id} (PUT)
-
-```mermaid
-sequenceDiagram
-    participant U as Admin / Client
-    participant API as API: /api/roles/{id}
-    participant CMD as Command: UpdateRoleCommand
-    participant H as Handler: UpdateRoleCommandHandler
-    participant R as RoleRepository
-    participant P as PermissionRepository
-    participant DB1 as Table: roles
-    participant DB2 as Table: permissions
-
-    U->>API: PUT /api/roles/{id} (roleName, permissions)
-    API->>CMD: Create UpdateRoleCommand
-    CMD->>H: Execute()
-    H->>R: updateRole(roleId, roleName)
-    R->>DB1: UPDATE roles SET name=? WHERE id=?
-    H->>P: updatePermissions(roleId, permissions)
-    P->>DB2: UPDATE / INSERT / DELETE permissions
-    H-->>API: Return updated role
-    API-->>U: 200 OK
-```
-
-##### /api/roles/{id} (DELETE)
-
-```mermaid
-sequenceDiagram
-    participant U as Admin / Client
-    participant API as API: /api/roles/{id}
-    participant CMD as Command: DeleteRoleCommand
-    participant H as Handler: DeleteRoleCommandHandler
-    participant R as RoleRepository
-    participant P as PermissionRepository
-    participant DB1 as Table: roles
-    participant DB2 as Table: permissions
-
-    U->>API: DELETE /api/roles/{id}
-    API->>CMD: Create DeleteRoleCommand
-    CMD->>H: Execute()
-    H->>P: removePermissions(roleId)
-    P->>DB2: DELETE FROM permissions WHERE role_id=?
-    H->>R: deleteRole(roleId)
-    R->>DB1: DELETE FROM roles WHERE id=?
-    H-->>API: Return success
-    API-->>U: 200 OK
-```
-
-##### /api/roles/{id}/assign (POST)
-
-```mermaid
-sequenceDiagram
-    participant U as Admin / Client
-    participant API as API: /api/roles/{id}/assign
-    participant CMD as Command: AssignUserRoleCommand
-    participant H as Handler: AssignUserRoleCommandHandler
-    participant R as RoleRepository
-    participant UR as UserRoleRepository
-    participant DB1 as Table: roles
-    participant DB2 as Table: user_roles
-
-    U->>API: POST /api/roles/{id}/assign (userId)
-    API->>CMD: Create AssignUserRoleCommand
-    CMD->>H: Execute()
-    H->>R: getRoleById(roleId)
-    R->>DB1: SELECT * FROM roles WHERE id=?
-    DB1-->>R: Role data
-    H->>UR: assignRoleToUser(userId, roleId)
-    UR->>DB2: INSERT INTO user_roles
-    DB2-->>UR: Assignment created
-    H-->>API: Return success
-    API-->>U: 200 OK
-```
-
-##### /api/roles/{id}/revoke (POST)
-
-```mermaid
-sequenceDiagram
-    participant U as Admin / Client
-    participant API as API: /api/roles/{id}/revoke
-    participant CMD as Command: RevokeUserRoleCommand
-    participant H as Handler: RevokeUserRoleCommandHandler
-    participant UR as UserRoleRepository
-    participant DB as Table: user_roles
-
-    U->>API: POST /api/roles/{id}/revoke (userId)
-    API->>CMD: Create RevokeUserRoleCommand
-    CMD->>H: Execute()
-    H->>UR: removeRoleFromUser(userId, roleId)
-    UR->>DB: DELETE FROM user_roles WHERE user_id=? AND role_id=?
-    H-->>API: Return success
-    API-->>U: 200 OK
-```
+- **Use Cases:**
+  1. **Manage IdP Configurations**
+     - **Command:** Create/Update/DeleteIdPCommand
+     - **CommandHandler:** Corresponding handler
+     - **Query:** GetIdPQuery
+     - **QueryHandler:** GetIdPQueryHandler
+  2. **JIT Provisioning**
+     - **Command:** JITProvisionCommand
+     - **CommandHandler:** JITProvisionCommandHandler
+  3. **Claim Mapping**
+     - **Command:** MapClaimsCommand
+     - **CommandHandler:** MapClaimsCommandHandler
 
 ---
 
-#### 11.2.2. Attribute-Based Access Control (ABAC)
+### 10.8 Infrastructure / DevOps Domain
 
-| Endpoint                   | Method | Command / Query     | Description                                        |
-| -------------------------- | ------ | ------------------- | -------------------------------------------------- |
-| /api/auth/authorize/abac   | POST   | EvaluateAccessQuery | Evaluate user access using attributes and context. |
-| /api/auth/authorize/policy | POST   | EvaluatePolicyQuery | Assess user access based on defined ABAC policies. |
-| /api/policies              | POST   | CreatePolicyCommand | Create a new attribute-based access policy.        |
-| /api/policies/{id}         | PUT    | UpdatePolicyCommand | Update existing ABAC policy rules or conditions.   |
-| /api/policies/{id}         | DELETE | DeletePolicyCommand | Delete a policy from the ABAC engine.              |
+Provides logging, monitoring, and security alerting to support authentication, authorization, and compliance.
 
-##### /api/auth/authorize/abac (POST)
+- **Object Values:**
+  - **audit events:** Records of security-relevant actions.
+  - **operational events:** System events related to service health and runtime operations.
+  - **security alerts:** Notifications for anomalous or potentially malicious activity.
 
-```mermaid
-sequenceDiagram
-    participant U as User / Client
-    participant API as API: /api/auth/authorize/abac
-    participant Q as Query: EvaluateAccessQuery
-    participant H as Handler: EvaluateAccessQueryHandler
-    participant A as AttributeRepository
-    participant DB as Table: attributes
+- **Entities:**
+  - **AuditLog**
+  - **EventLog**
 
-    U->>API: POST /api/auth/authorize/abac (userId, resource, action)
-    API->>Q: Create EvaluateAccessQuery
-    Q->>H: Execute()
-    H->>A: getUserAttributes(userId)
-    A->>DB: SELECT * FROM attributes WHERE user_id=?
-    DB-->>A: User attributes
-    H-->>API: Return access_granted (true/false)
-    API-->>U: 200 OK
-```
-
-##### /api/auth/authorize/policy (POST)
-
-```mermaid
-sequenceDiagram
-    participant U as User / Client
-    participant API as API: /api/auth/authorize/policy
-    participant Q as Query: EvaluatePolicyQuery
-    participant H as Handler: EvaluatePolicyQueryHandler
-    participant P as PolicyRepository
-    participant DB as Table: policies
-
-    U->>API: POST /api/auth/authorize/policy (userId, resource, action)
-    API->>Q: Create EvaluatePolicyQuery
-    Q->>H: Execute()
-    H->>P: getApplicablePolicies(userId, resource)
-    P->>DB: SELECT * FROM policies WHERE conditions match
-    DB-->>P: Policies
-    H-->>API: Return access_granted (true/false)
-    API-->>U: 200 OK
-```
-
-##### /api/policies (POST)
-
-```mermaid
-sequenceDiagram
-    participant U as Admin / Client
-    participant API as API: /api/policies
-    participant CMD as Command: CreatePolicyCommand
-    participant H as Handler: CreatePolicyCommandHandler
-    participant P as PolicyRepository
-    participant DB as Table: policies
-
-    U->>API: POST /api/policies (policyName, rules)
-    API->>CMD: Create CreatePolicyCommand
-    CMD->>H: Execute()
-    H->>P: savePolicy(policyName, rules)
-    P->>DB: INSERT INTO policies
-    DB-->>P: Policy created
-    H-->>API: Return policy
-    API-->>U: 201 Created
-```
-
-##### /api/policies/{id} (PUT)
-
-```mermaid
-sequenceDiagram
-    participant U as Admin / Client
-    participant API as API: /api/policies/{id}
-    participant CMD as Command: UpdatePolicyCommand
-    participant H as Handler: UpdatePolicyCommandHandler
-    participant P as PolicyRepository
-    participant DB as Table: policies
-
-    U->>API: PUT /api/policies/{id} (rules)
-    API->>CMD: Create UpdatePolicyCommand
-    CMD->>H: Execute()
-    H->>P: updatePolicy(policyId, rules)
-    P->>DB: UPDATE policies SET rules=? WHERE id=?
-    DB-->>P: Policy updated
-    H-->>API: Return updated policy
-    API-->>U: 200 OK
-```
-
-##### /api/policies/{id} (DELETE)
-
-```mermaid
-sequenceDiagram
-    participant U as Admin / Client
-    participant API as API: /api/policies/{id}
-    participant CMD as Command: DeletePolicyCommand
-    participant H as Handler: DeletePolicyCommandHandler
-    participant P as PolicyRepository
-    participant DB as Table: policies
-
-    U->>API: DELETE /api/policies/{id}
-    API->>CMD: Create DeletePolicyCommand
-    CMD->>H: Execute()
-    H->>P: deletePolicy(policyId)
-    P->>DB: DELETE FROM policies WHERE id=?
-    DB-->>P: Policy deleted
-    H-->>API: Return success
-    API-->>U: 200 OK
-```
+- **Use Cases:**
+  1. **Log Authentication Events**
+     - **Command:** LogAuthEventCommand
+     - **CommandHandler:** LogAuthEventCommandHandler
+  2. **Monitor Failed Login Attempts**
+     - **Query:** GetFailedLoginAttemptsQuery
+     - **QueryHandler:** GetFailedLoginAttemptsQueryHandler
+  3. **Send Notifications / Alerts**
+     - **Command:** SendSecurityAlertCommand
+     - **CommandHandler:** SendSecurityAlertCommandHandler
 
 ---
 
-### 11.3. User Management Domain
+## 11. API Endpoints (Complete & Updated IAM Microservices)
 
-| Endpoint                | Method | Command / Query     | Description                  |
-| ----------------------- | ------ | ------------------- | ---------------------------- |
-| /api/users              | POST   | CreateUserCommand   | Create a new user record.    |
-| /api/users/{id}         | PUT    | UpdateUserCommand   | Update user details.         |
-| /api/users/{id}         | DELETE | DeleteUserCommand   | Delete user from the system. |
-| /api/users/{id}/profile | GET    | GetUserProfileQuery | Retrieve user profile data.  |
+| Environment    | URL                      |
+| -------------- | ------------------------ |
+| Dev            | dev-api.example.com      |
+| QA             | qa-api.example.com       |
+| UAT            | uat-api.example.com      |
+| Staging        | staging-api.example.com  |
+| Pre-Production | pre-prod-api.example.com |
+| Production     | api.example.com          |
 
-#### /api/users (POST)
+### 11.1 Authentication Domain
 
-```mermaid
-sequenceDiagram
-    participant U as Admin / Client
-    participant API as API: /api/users
-    participant CMD as Command: CreateUserCommand
-    participant H as Handler: CreateUserCommandHandler
-    participant R as Repository: UserRepository
-    participant DB as Table: users
+| Endpoint                  | Method | Command / Query                                | Description                                  |
+| ------------------------- | ------ | ---------------------------------------------- | -------------------------------------------- |
+| /api/v1/auth/login        | POST   | LoginUserCommand / GetUserSessionQuery         | Authenticate user via username/password.     |
+| /api/v1/auth/login/mobile | POST   | LoginViaMobileOtpCommand / GetUserSessionQuery | Authenticate user via mobile number + OTP.   |
+| /api/v1/auth/login/email  | POST   | LoginViaEmailOtpCommand / GetUserSessionQuery  | Authenticate user via email + OTP.           |
+| /api/v1/auth/login/2fa    | POST   | VerifyTwoFactorCommand / GetUserSessionQuery   | Verify login using external 2FA mechanism.   |
+| /api/v1/auth/login/social | POST   | LoginViaSocialCommand / GetUserSessionQuery    | Authenticate user via social provider OAuth. |
+| /api/v1/token/introspect  | POST   | IntrospectTokenQuery                           | Check validity and claims of a token.        |
+| /api/v1/token/revoke      | POST   | RevokeTokenCommand                             | Revoke access/refresh tokens for a session.  |
 
-    U->>API: POST /api/users (user data)
-    API->>CMD: Create CreateUserCommand
-    CMD->>H: Execute()
-    H->>R: saveUser(userData)
-    R->>DB: INSERT INTO users (...)
-    DB-->>R: User created
-    H-->>API: Return created user
-    API-->>U: 201 Created
-```
+### 11.2 Authorization / ABAC Domain
 
-#### /api/users/{id} (PUT)
+| Endpoint                       | Method | Command / Query             | Description                                               |
+| ------------------------------ | ------ | --------------------------- | --------------------------------------------------------- |
+| /api/v1/auth/authorize/abac    | POST   | EvaluateAccessQuery         | Evaluate user access using attributes and context.        |
+| /api/v1/auth/authorize/policy  | POST   | EvaluatePolicyQuery         | Evaluate user access based on ABAC policies.              |
+| /api/v1/policies               | POST   | CreatePolicyCommand         | Create a new ABAC policy.                                 |
+| /api/v1/policies/{id}          | GET    | GetPolicyQuery              | Retrieve a single ABAC policy details.                    |
+| /api/v1/policies/{id}          | PUT    | UpdatePolicyCommand         | Update an existing ABAC policy.                           |
+| /api/v1/policies/{id}          | DELETE | DeletePolicyCommand         | Delete a policy.                                          |
+| /api/v1/policies/{id}/versions | GET    | GetPolicyVersionQuery       | List all versions of a policy.                            |
+| /api/v1/policies/{id}/versions | POST   | CreatePolicyVersionCommand  | Create new version of a policy.                           |
+| /api/v1/attributes             | POST   | CreateAttributeCommand      | Create a new attribute definition.                        |
+| /api/v1/attributes/{id}        | PUT    | UpdateAttributeCommand      | Update an existing attribute definition.                  |
+| /api/v1/attributes/{id}        | DELETE | DeleteAttributeCommand      | Delete an existing attribute definition.                  |
+| /api/v1/attributes             | GET    | GetUserAttributesQuery      | Retrieve all system attributes for assignment/evaluation. |
+| /api/v1/attributes/groups      | POST   | CreateAttributeGroupCommand | Create dynamic attribute group with rules.                |
+| /api/v1/attributes/groups/{id} | PUT    | UpdateAttributeGroupCommand | Update dynamic group rules.                               |
+| /api/v1/attributes/groups/{id} | DELETE | DeleteAttributeGroupCommand | Delete dynamic group.                                     |
+| /api/v1/attributes/groups/{id} | GET    | GetAttributeGroupQuery      | Retrieve dynamic group details.                           |
 
-```mermaid
-sequenceDiagram
-    participant U as Admin / Client
-    participant API as API: /api/users/{id}
-    participant CMD as Command: UpdateUserCommand
-    participant H as Handler: UpdateUserCommandHandler
-    participant R as Repository: UserRepository
-    participant DB as Table: users
+### 11.3 User Management Domain
 
-    U->>API: PUT /api/users/{id} (updated data)
-    API->>CMD: Create UpdateUserCommand
-    CMD->>H: Execute()
-    H->>R: updateUser(userId, updatedData)
-    R->>DB: UPDATE users SET ... WHERE id=?
-    DB-->>R: User updated
-    H-->>API: Return updated user
-    API-->>U: 200 OK
-```
+| Endpoint                          | Method | Command / Query            | Description                                           |
+| --------------------------------- | ------ | -------------------------- | ----------------------------------------------------- |
+| /api/v1/users                     | POST   | CreateUserCommand          | Create a new user record.                             |
+| /api/v1/users/{id}                | PUT    | UpdateUserCommand          | Update user details.                                  |
+| /api/v1/users/{id}                | DELETE | DeleteUserCommand          | Delete a user from the system.                        |
+| /api/v1/users/{id}/profile        | GET    | GetUserProfileQuery        | Retrieve user profile data.                           |
+| /api/v1/users/{id}/attributes     | POST   | AssignUserAttributeCommand | Assign attributes to a user (role, department, etc.). |
+| /api/v1/users/{id}/attributes     | GET    | GetUserAttributesQuery     | Retrieve attributes assigned to a specific user.      |
+| /api/v1/users/{id}/attributes     | DELETE | RevokeUserAttributeCommand | Remove attributes from a user.                        |
+| /api/v1/users/{id}/dynamic-groups | GET    | GetUserDynamicGroupsQuery  | Retrieve dynamic groups assigned based on attributes. |
 
-#### /api/users/{id} (DELETE)
+### 11.4 Session Management Domain
 
-```mermaid
-sequenceDiagram
-    participant U as Admin / Client
-    participant API as API: /api/users/{id}
-    participant CMD as Command: DeleteUserCommand
-    participant H as Handler: DeleteUserCommandHandler
-    participant R as Repository: UserRepository
-    participant DB as Table: users
+| Endpoint                  | Method | Command / Query      | Description                                |
+| ------------------------- | ------ | -------------------- | ------------------------------------------ |
+| /api/v1/sessions/validate | POST   | ValidateSessionQuery | Validate user session or access token.     |
+| /api/v1/sessions/refresh  | POST   | RefreshTokenCommand  | Generate a new access token using refresh. |
+| /api/v1/sessions/logout   | POST   | LogoutUserCommand    | Logout user and invalidate active session. |
 
-    U->>API: DELETE /api/users/{id}
-    API->>CMD: Create DeleteUserCommand
-    CMD->>H: Execute()
-    H->>R: deleteUser(userId)
-    R->>DB: DELETE FROM users WHERE id=?
-    DB-->>R: User deleted
-    H-->>API: Return success
-    API-->>U: 200 OK
-```
+### 11.5 Tenant Management Domain
 
-#### /api/users/{id}/profile (GET)
+| Endpoint             | Method | Command / Query     | Description                                 |
+| -------------------- | ------ | ------------------- | ------------------------------------------- |
+| /api/v1/tenants      | POST   | CreateTenantCommand | Create a new tenant.                        |
+| /api/v1/tenants/{id} | PUT    | UpdateTenantCommand | Update tenant configurations.               |
+| /api/v1/tenants/{id} | DELETE | DeleteTenantCommand | Remove a tenant and revoke associated data. |
+| /api/v1/tenants/{id} | GET    | GetTenantQuery      | Retrieve tenant details.                    |
 
-```mermaid
-sequenceDiagram
-    participant U as Client
-    participant API as API: /api/users/{id}/profile
-    participant Q as Query: GetUserProfileQuery
-    participant H as Handler: GetUserProfileQueryHandler
-    participant R as Repository: UserRepository
-    participant DB as Table: users
+### 11.6 Federation / External IdP Domain
 
-    U->>API: GET /api/users/{id}/profile
-    API->>Q: Create GetUserProfileQuery
-    Q->>H: Execute()
-    H->>R: getUserProfile(userId)
-    R->>DB: SELECT * FROM users WHERE id=?
-    DB-->>R: User profile
-    H-->>API: Return user profile
-    API-->>U: 200 OK
-```
+| Endpoint                         | Method | Command / Query     | Description                                          |
+| -------------------------------- | ------ | ------------------- | ---------------------------------------------------- |
+| /api/v1/federation/idp           | POST   | CreateIdPCommand    | Register new external IdP (SAML/OIDC).               |
+| /api/v1/federation/idp/{id}      | PUT    | UpdateIdPCommand    | Update IdP configuration.                            |
+| /api/v1/federation/idp/{id}      | DELETE | DeleteIdPCommand    | Remove IdP configuration.                            |
+| /api/v1/federation/idp/{id}      | GET    | GetIdPQuery         | Retrieve IdP details.                                |
+| /api/v1/federation/jit-provision | POST   | JITProvisionCommand | Auto-provision users on first login from IdP.        |
+| /api/v1/federation/claim-mapping | POST   | MapClaimsCommand    | Map external IdP claims to internal user attributes. |
 
----
+### 11.7 Infrastructure / DevOps Domain
 
-### 11.4. Session Management Domain
-
-| Endpoint               | Method | Command / Query      | Description                                |
-| ---------------------- | ------ | -------------------- | ------------------------------------------ |
-| /api/sessions/validate | POST   | ValidateSessionQuery | Validate user session or access token.     |
-| /api/sessions/refresh  | POST   | RefreshTokenCommand  | Generate a new access token using refresh. |
-| /api/sessions/logout   | POST   | LogoutUserCommand    | Logout user and invalidate active session. |
-
-#### /api/sessions/validate (POST)
-
-```mermaid
-sequenceDiagram
-    participant U as Client
-    participant API as API: /api/sessions/validate
-    participant Q as Query: ValidateSessionQuery
-    participant H as Handler: ValidateSessionQueryHandler
-    participant R as Repository: SessionRepository
-    participant DB as Table: sessions
-
-    U->>API: POST /api/sessions/validate (token)
-    API->>Q: Create ValidateSessionQuery
-    Q->>H: Execute()
-    H->>R: getSessionByToken(token)
-    R->>DB: SELECT * FROM sessions WHERE token=?
-    DB-->>R: Session data
-    H-->>API: Return validation result
-    API-->>U: 200 OK / 401 Unauthorized
-```
-
-#### /api/sessions/refresh (POST)
-
-```mermaid
-sequenceDiagram
-    participant U as Client
-    participant API as API: /api/sessions/refresh
-    participant CMD as Command: RefreshTokenCommand
-    participant H as Handler: RefreshTokenCommandHandler
-    participant R as Repository: SessionRepository
-    participant DB as Table: sessions
-
-    U->>API: POST /api/sessions/refresh (refresh token)
-    API->>CMD: Create RefreshTokenCommand
-    CMD->>H: Execute()
-    H->>R: refreshSession(refreshToken)
-    R->>DB: SELECT * FROM sessions WHERE refresh_token=?
-    DB-->>R: Session data
-    R->>DB: UPDATE sessions SET token=newToken WHERE id=?
-    DB-->>R: Updated session
-    H-->>API: Return new access token
-    API-->>U: 200 OK
-```
-
-#### /api/sessions/logout (POST)
-
-```mermaid
-sequenceDiagram
-    participant U as Client
-    participant API as API: /api/sessions/logout
-    participant CMD as Command: LogoutUserCommand
-    participant H as Handler: LogoutUserCommandHandler
-    participant R as Repository: SessionRepository
-    participant DB as Table: sessions
-
-    U->>API: POST /api/sessions/logout (token)
-    API->>CMD: Create LogoutUserCommand
-    CMD->>H: Execute()
-    H->>R: invalidateSession(token)
-    R->>DB: UPDATE sessions SET active=false WHERE token=?
-    DB-->>R: Session invalidated
-    H-->>API: Return logout confirmation
-    API-->>U: 200 OK
-```
+| Endpoint                 | Method | Command / Query             | Description                                     |
+| ------------------------ | ------ | --------------------------- | ----------------------------------------------- |
+| /api/v1/logs/auth        | POST   | LogAuthEventCommand         | Log authentication and security events.         |
+| /api/v1/logs/auth/failed | GET    | GetFailedLoginAttemptsQuery | Retrieve list of failed login attempts.         |
+| /api/v1/alerts/security  | POST   | SendSecurityAlertCommand    | Send security-related notifications or alerts.  |
+| /api/v1/mq/publish       | POST   | PublishEventCommand         | Publish event to message queue / event bus.     |
+| /api/v1/mq/consume       | GET    | ConsumeEventQuery           | Retrieve events from message queue / event bus. |
 
 ---
-
-### 11.5. Attribute Management Domain
-
-| Endpoint             | Method | Command / Query        | Description                      |
-| -------------------- | ------ | ---------------------- | -------------------------------- |
-| /api/attributes      | POST   | AddAttributeCommand    | Add a new attribute definition.  |
-| /api/attributes/{id} | PUT    | UpdateAttributeCommand | Modify attribute data or values. |
-| /api/attributes/{id} | DELETE | DeleteAttributeCommand | Delete an existing attribute.    |
-| /api/attributes      | GET    | GetUserAttributesQuery | Retrieve all user attributes.    |
-
-#### /api/attributes (POST)
-
-```mermaid
-sequenceDiagram
-    participant U as Client
-    participant API as API: /api/attributes
-    participant CMD as Command: AddAttributeCommand
-    participant H as Handler: AddAttributeCommandHandler
-    participant R as Repository: AttributeRepository
-    participant DB as Table: attributes
-
-    U->>API: POST /api/attributes (attribute data)
-    API->>CMD: Create AddAttributeCommand
-    CMD->>H: Execute()
-    H->>R: addAttribute(data)
-    R->>DB: INSERT INTO attributes (...)
-    DB-->>R: Insert result
-    H-->>API: Return success
-    API-->>U: 201 Created
-```
-
-#### /api/attributes/{id} (PUT)
-
-```mermaid
-sequenceDiagram
-    participant U as Client
-    participant API as API: /api/attributes/{id}
-    participant CMD as Command: UpdateAttributeCommand
-    participant H as Handler: UpdateAttributeCommandHandler
-    participant R as Repository: AttributeRepository
-    participant DB as Table: attributes
-
-    U->>API: PUT /api/attributes/{id} (new attribute data)
-    API->>CMD: Create UpdateAttributeCommand
-    CMD->>H: Execute()
-    H->>R: updateAttribute(id, data)
-    R->>DB: UPDATE attributes SET ... WHERE id=?
-    DB-->>R: Update result
-    H-->>API: Return success
-    API-->>U: 200 OK
-```
-
-#### /api/attributes/{id} (DELETE)
-
-```mermaid
-sequenceDiagram
-    participant U as Client
-    participant API as API: /api/attributes/{id}
-    participant CMD as Command: DeleteAttributeCommand
-    participant H as Handler: DeleteAttributeCommandHandler
-    participant R as Repository: AttributeRepository
-    participant DB as Table: attributes
-
-    U->>API: DELETE /api/attributes/{id}
-    API->>CMD: Create DeleteAttributeCommand
-    CMD->>H: Execute()
-    H->>R: deleteAttribute(id)
-    R->>DB: DELETE FROM attributes WHERE id=?
-    DB-->>R: Delete result
-    H-->>API: Return success
-    API-->>U: 200 OK
-```
-
-#### /api/attributes (GET)
-
-```mermaid
-sequenceDiagram
-    participant U as Client
-    participant API as API: /api/attributes
-    participant Q as Query: GetUserAttributesQuery
-    participant H as Handler: GetUserAttributesQueryHandler
-    participant R as Repository: AttributeRepository
-    participant DB as Table: attributes
-
-    U->>API: GET /api/attributes
-    API->>Q: Create GetUserAttributesQuery
-    Q->>H: Execute()
-    H->>R: getAllAttributes()
-    R->>DB: SELECT * FROM attributes
-    DB-->>R: List of attributes
-    H-->>API: Return attribute list
-    API-->>U: 200 OK
-```
-
----
-
-### 11.6. Infra / DevOps Domain
-
-| Endpoint              | Method | Command / Query             | Description                                    |
-| --------------------- | ------ | --------------------------- | ---------------------------------------------- |
-| /api/logs/auth        | POST   | LogAuthEventCommand         | Log authentication and security events.        |
-| /api/logs/auth/failed | GET    | GetFailedLoginAttemptsQuery | Retrieve list of failed login attempts.        |
-| /api/alerts/security  | POST   | SendSecurityAlertCommand    | Send security-related notifications or alerts. |
-
-#### /api/logs/auth (POST)
-
-```mermaid
-sequenceDiagram
-    participant U as Client
-    participant API as API: /api/logs/auth
-    participant CMD as Command: LogAuthEventCommand
-    participant H as Handler: LogAuthEventCommandHandler
-    participant R as Repository: AuditLogRepository
-    participant DB as Table: audit_logs
-
-    U->>API: POST /api/logs/auth (event data)
-    API->>CMD: Create LogAuthEventCommand
-    CMD->>H: Execute()
-    H->>R: saveEvent(eventData)
-    R->>DB: INSERT INTO audit_logs (...)
-    DB-->>R: Insert result
-    H-->>API: Return success
-    API-->>U: 201 Created
-```
-
-#### /api/logs/auth/failed (GET)
-
-```mermaid
-sequenceDiagram
-    participant U as Client
-    participant API as API: /api/logs/auth/failed
-    participant Q as Query: GetFailedLoginAttemptsQuery
-    participant H as Handler: GetFailedLoginAttemptsQueryHandler
-    participant R as Repository: AuditLogRepository
-    participant DB as Table: audit_logs
-
-    U->>API: GET /api/logs/auth/failed
-    API->>Q: Create GetFailedLoginAttemptsQuery
-    Q->>H: Execute()
-    H->>R: findFailedLogins()
-    R->>DB: SELECT * FROM audit_logs WHERE type='failed_login'
-    DB-->>R: List of failed logins
-    H-->>API: Return list
-    API-->>U: 200 OK
-```
-
-#### /api/alerts/security (POST)
-
-```mermaid
-sequenceDiagram
-    participant U as Client
-    participant API as API: /api/alerts/security
-    participant CMD as Command: SendSecurityAlertCommand
-    participant H as Handler: SendSecurityAlertCommandHandler
-    participant R as Repository: NotificationRepository
-    participant MQ as MessageQueue: SecurityAlertsQueue
-
-    U->>API: POST /api/alerts/security (alert details)
-    API->>CMD: Create SendSecurityAlertCommand
-    CMD->>H: Execute()
-    H->>R: enqueueAlert(alertData)
-    R->>MQ: Publish alert message
-    MQ-->>R: Acknowledged
-    H-->>API: Return success
-    API-->>U: 201 Created
-```
 
 ## 12. Infrastructure
 
-| Component / Responsibility    | AWS Service                        | Instance Name / Identifier             | Purpose / Notes                                                                                              |
-| ----------------------------- | ---------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| API Entry                     | Amazon API Gateway                 | iam-api-gateway-1                      | Front door for all incoming requests; handles throttling, routing, CORS                                      |
-| Load Balancing                | Application Load Balancer (ALB)    | iam-alb-1                              | Distribute incoming traffic from public subnet to ECS/Fargate services                                       |
-| Microservice Runtime          | ECS Fargate / EKS                  | iam-auth-service-1, iam-auth-service-2 | Run stateless .NET 9 containers; private subnet; handles authentication, authorization, and business logic   |
-| Relational Database           | Amazon RDS (PostgreSQL)            | iam-rds-1 (primary), iam-rds-replica-1 | Store users, roles, permissions, policies, sessions; replicated for high availability                        |
-| Caching Layer                 | Amazon ElastiCache (Redis)         | iam-redis-1                            | Store short-lived session tokens, access tokens, and frequently accessed data                                |
-| Token Signing / Encryption    | AWS KMS                            | iam-kms-1                              | Store signing keys for JWT; manage cryptographic operations                                                  |
-| Secrets Management            | AWS Secrets Manager                | iam-secrets-1                          | Store DB credentials, OAuth client secrets, and other sensitive information                                  |
-| File Storage                  | Amazon S3                          | iam-s3-files-1                         | Store application files, user uploads, and static content                                                    |
-| Internal Logs / Audit Storage | Amazon S3                          | iam-s3-internal-1                      | Store internal logs, audit logs, and other immutable data                                                    |
-| Observability / Logging       | Amazon CloudWatch (Logs & Metrics) | iam-cloudwatch-1                       | Monitor service health, log events, generate metrics, and set alarms                                         |
-| VPC / Networking              | Amazon VPC                         | vpc-iam-1                              | Public subnet (ALB) + Private subnet (ECS, RDS, ElastiCache, S3); isolate resources and control traffic flow |
+| Component / Responsibility    | AWS Service                        | Instance Name                             | Purpose                                                                                                  |
+| ----------------------------- | ---------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| API Entry                     | Amazon API Gateway                 | iam-api-gateway-1                         | Front door for all incoming requests; handles throttling, routing, CORS                                  |
+| Load Balancing                | Application Load Balancer (ALB)    | iam-alb-1                                 | Distribute incoming traffic from public subnet to ECS/Fargate services                                   |
+| Microservice Runtime          | ECS Fargate / EKS                  | iam-auth-service-1, iam-auth-service-2    | Run stateless containers; handle authentication, authorization, business logic                           |
+| Relational Database           | Amazon RDS (PostgreSQL)            | iam-rds-1 (primary), iam-rds-replica-1    | Store users, attributes, policies, sessions; replicated for high availability                            |
+| Caching Layer                 | Amazon ElastiCache (Redis)         | iam-redis-1                               | Store short-lived session tokens, access tokens, ABAC policy caches, frequently accessed data            |
+| Token Signing / Encryption    | AWS KMS                            | iam-kms-1                                 | Store signing keys for JWT; manage cryptographic operations                                              |
+| Secrets Management            | AWS Secrets Manager                | iam-secrets-1                             | Store DB credentials, OAuth client secrets, federation keys, and other sensitive information             |
+| File Storage                  | Amazon S3                          | iam-s3-files-1                            | Store application files, user uploads, static content                                                    |
+| Internal Logs / Audit Storage | Amazon S3                          | iam-s3-internal-1                         | Store internal logs, audit logs, immutable event data                                                    |
+| Message Queue / Event Bus     | Amazon SQS / SNS / EventBridge     | iam-sqs-1 / iam-sns-1 / iam-eventbridge-1 | Handle async communication between microservices (e.g., attribute updates, audit events, notifications)  |
+| Observability / Logging       | Amazon CloudWatch (Logs & Metrics) | iam-cloudwatch-1                          | Monitor service health, log events, generate metrics, trigger alarms                                     |
+| VPC / Networking              | Amazon VPC                         | vpc-iam-1                                 | Public subnet (ALB) + private subnet (ECS, RDS, ElastiCache, S3, MQ); isolate resources, control traffic |
 
 ### 12.1. Infrastructure Diagram
 
@@ -1362,69 +1128,74 @@ flowchart TD
         Other1["Other App-1 (Windows)"]
     end
 
-    %% DNS Layer (AWS Route53)
+    %% DNS Layer
     subgraph Route53["AWS Route53"]
         PUBLIC1["Public Hosted Zone-1<br/>AWS: Route53"]
     end
 
-    %% API Gateway (AWS API Gateway)
+    %% API Gateway
     subgraph APIGW["AWS API Gateway"]
-        GW1["privilege-api-gateway-1<br/>AWS: API Gateway"]
+        GW1["iam-api-gateway-1<br/>API Gateway"]
     end
 
     %% VPC Layer
     subgraph VPC["AWS VPC"]
         direction TB
 
-        %% Load Balancer (Public Subnet)
+        %% Public Subnet / Load Balancer
         subgraph PublicLayer["Public Subnet"]
-            subgraph ALB["AWS Load Balancer"]
-                LB1["privilege-alb-1<br/>AWS: ALB"]
+            subgraph ALB["Application Load Balancer"]
+                LB1["iam-alb-1<br/>ALB"]
             end
         end
 
-        %% Private Layer (Private Subnet)
+        %% Private Subnet
         subgraph PrivateLayer["Private Subnet"]
             direction TB
 
-            %% Microservices (AWS ECS / Fargate)
+            %% ECS / Fargate Microservices
             subgraph ECS["AWS ECS / Fargate"]
                 direction TB
-                MS1["privilege-service-1<br/>AWS: ECS / Fargate"]
-                MS2["privilege-service-2<br/>AWS: ECS / Fargate"]
+                MS1["iam-auth-service-1"]
+                MS2["iam-auth-service-2"]
             end
 
-            %% Database Layer (AWS RDS)
+            %% RDS Database Layer
             subgraph RDS["AWS RDS - PostgreSQL"]
-                DB_Primary1[(Primary privilege-rds-1<br/>Tiers, Benefits, Rules, Member Assignments)]
-                DB_Replica1[(Read privilege-rds-replica-1)]
+                DB_Primary1[(Primary iam-rds-1)]
+                DB_Replica1[(Read iam-rds-replica-1)]
             end
 
-            %% Cache Layer (AWS ElastiCache)
+            %% Redis Cache
             subgraph Redis["AWS ElastiCache Redis"]
-                C1["privilege-redis-1<br/>AWS: ElastiCache Redis"]
+                C1["iam-redis-1"]
             end
 
-            %% Secrets & Keys (AWS Secrets Manager + KMS + S3)
+            %% Secrets & Keys
             subgraph Secrets["AWS Secrets & Key Management"]
-                S1["privilege-secrets-1<br/>AWS: Secrets Manager"]
-                K1["privilege-kms-1<br/>AWS: KMS"]
-                S3_INT1["privilege-s3-internal-1<br/>AWS: S3 Internal Storage / Audit Logs"]
+                S1["iam-secrets-1<br/>Secrets Manager"]
+                K1["iam-kms-1<br/>KMS"]
+                S3_INT1["iam-s3-internal-1<br/>S3 Internal Storage / Audit Logs"]
             end
 
-            %% File Storage (AWS S3)
+            %% File Storage (S3)
             subgraph S3["AWS S3"]
-                S3_FS1["privilege-s3-files-1<br/>AWS: S3 File Storage"]
+                S3_FS1["iam-s3-files-1"]
             end
 
-            %% Logging & Monitoring (AWS CloudWatch)
+            %% Message Queue / Event Bus
+            subgraph MQ["Message Queue / Event Bus"]
+                MQ1["iam-sqs-1 / iam-sns-1 / iam-eventbridge-1"]
+            end
+
+            %% CloudWatch Logging & Metrics
             subgraph CloudWatch["AWS CloudWatch"]
-                L1["privilege-cloudwatch-1<br/>CloudWatch Logs & Metrics"]
+                L1["iam-cloudwatch-1<br/>Logs & Metrics"]
             end
         end
     end
 
-    %% Flows from Clients
+    %% Client Flows
     Mobile_iOS1 -->|"DNS request"| PUBLIC1
     Mobile_Android1 -->|"DNS request"| PUBLIC1
     Web1 -->|"DNS request"| PUBLIC1
@@ -1432,7 +1203,7 @@ flowchart TD
 
     PUBLIC1 -->|"Route request"| GW1
     GW1 -->|"Forward request"| LB1
-    LB1 -->|"Distribute to services"| ECS
+    LB1 -->|"Distribute to ECS/Fargate"| ECS
 
     ECS -->|"Read/Write"| DB_Primary1
     ECS -->|"Read"| DB_Replica1
@@ -1443,5 +1214,10 @@ flowchart TD
     ECS -->|"Sign tokens / Encrypt keys"| K1
     ECS -->|"Store internal logs"| S3_INT1
     ECS -->|"Store / Read files"| S3_FS1
+    ECS -->|"Send async events"| MQ1
     ECS -->|"Metrics / Logs"| L1
+
+    %% MQ consumers
+    MQ1 -->|"Consume events"| S3_INT1
+    MQ1 -->|"Consume events"| L1
 ```

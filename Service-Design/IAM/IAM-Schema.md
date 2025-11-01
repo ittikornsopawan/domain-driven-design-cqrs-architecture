@@ -1,15 +1,37 @@
 # 🧩 Overview
 
-| Title            | Description                                                                                                                                             |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Design By        | Ittikorn Sopawan                                                                                                                                        |
-| Design At        | 20-Oct-2025                                                                                                                                             |
-| Version          | 1.0.0                                                                                                                                                   |
-| Service Name     | IAM Service - For Ecosystem                                                                                                                             |
-| Service Detailed | Identity & Access Management for users, roles, permissions,authentication (login/2FA/social),authorization (RBAC/ABAC),sessions & attribute management. |
+| Title            | Description                                                                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Design By        | Ittikorn Sopawan                                                                                                                                 |
+| Design At        | 20-Oct-2025                                                                                                                                      |
+| Version          | 1.0.0                                                                                                                                            |
+| Service Name     | IAM Service - For Ecosystem                                                                                                                      |
+| Service Detailed | Identity & Access Management for users, permissions,authentication (login/2FA/social),authorization (RBAC/ABAC),sessions & attribute management. |
 
 ## Change History
 
+- **01-Nov-2025:** - Ittikorn Sopawan
+  - Remove to current version
+    - **Authorization Schema:**
+      - `m_user_groups`
+      - `t_user_group_mappings`
+      - `t_policy_user_group_mappings`
+  - Add to current version
+    - **Infrastructure Schema:**
+      - `infra.t_auth_logs`
+      - `infra.t_policy_decision_logs`
+      - `infra.t_event_queue_messages`
+      - `infra.t_alerts`
+    - **Federation Schema:**
+      - `federation.t_idp`
+      - `federation.t_idp_user_mappings`
+      - `federation.t_idp_claim_mappings`
+    - **Audit Schema:**
+      - `audit.t_data_change_logs`
+      - `audit.t_data_change_items`
+    - **Token Schema:**
+      - `token.t_sessions`
+      - `token.t_session_attributes`
 - **27-Oct-2025:** - Ittikorn Sopawan
   - Update ERD to current version
 - **20-Oct-2025:** - Ittikorn Sopawan
@@ -341,59 +363,6 @@ erDiagram
         TEXT value
     }
 
-    m_user_groups {
-        UUID id PK
-        UUID created_by FK
-        TIMESTAMP created_at
-        UUID updated_by FK
-        TIMESTAMP updated_at
-        BOOLEAN is_active
-        TIMESTAMP inactive_at
-        UUID inactive_by FK
-        BOOLEAN is_deleted
-        TIMESTAMP deleted_at
-        UUID deleted_by FK
-        VARCHAR name
-        TEXT description
-    }
-
-    t_user_group_mappings {
-        UUID id PK
-        UUID created_by FK
-        TIMESTAMP created_at
-        UUID updated_by FK
-        TIMESTAMP updated_at
-        BOOLEAN is_active
-        TIMESTAMP inactive_at
-        UUID inactive_by FK
-        BOOLEAN is_deleted
-        TIMESTAMP deleted_at
-        UUID deleted_by FK
-        TIMESTAMP effective_at
-        TIMESTAMP expires_at
-        UUID user_group_id FK
-        UUID user_id FK
-    }
-
-    t_policy_user_group_mappings {
-        UUID id PK
-        UUID created_by FK
-        TIMESTAMP created_at
-        UUID updated_by FK
-        TIMESTAMP updated_at
-        BOOLEAN is_active
-        TIMESTAMP inactive_at
-        UUID inactive_by FK
-        BOOLEAN is_deleted
-        TIMESTAMP deleted_at
-        UUID deleted_by FK
-        UUID policy_id FK
-        UUID user_group_id FK
-        VARCHAR operator
-        TEXT expected_value
-        VARCHAR logic_group
-    }
-
     %% Consent Schema
     m_consent_types {
         UUID id PK
@@ -502,39 +471,164 @@ erDiagram
         BYTEA key
     }
 
-    %% Relationships
+    %% Token Schema
+    t_sessions {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        UUID user_id FK
+        VARCHAR ip_address
+        VARCHAR device_info
+        TIMESTAMP last_access_at
+        TIMESTAMP expires_at
+    }
+
+    t_session_attributes {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        BOOLEAN is_active
+        TIMESTAMP inactive_at
+        UUID inactive_by FK
+        BOOLEAN is_deleted
+        TIMESTAMP deleted_at
+        UUID deleted_by FK
+        UUID session_id FK
+        UUID attribute_id FK
+        JSONB values
+    }
+
+    %% Federation Schema
+    t_idp {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID updated_by FK
+        TIMESTAMP updated_at
+        VARCHAR name
+        VARCHAR type
+        TEXT metadata
+    }
+
+    t_idp_user_mappings {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID user_id FK
+        UUID idp_id FK
+        VARCHAR external_user_id
+    }
+
+    t_idp_claim_mappings {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID attribute_id FK
+        UUID idp_id FK
+        VARCHAR external_claim
+    }
+
+    %% Infrastructure Schema
+    t_auth_logs {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID user_id FK
+        VARCHAR action
+        VARCHAR ip_address
+        TEXT remark
+    }
+
+    t_policy_decision_logs {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        UUID user_id FK
+        UUID policy_id FK
+        VARCHAR resource
+        VARCHAR action
+        VARCHAR decision
+        JSONB evaluated_attributes
+        TEXT reason
+    }
+
+    t_event_queue_messages {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        VARCHAR queue_name
+        JSONB payload
+        VARCHAR status
+        TIMESTAMP processed_at
+    }
+
+    t_alerts {
+        UUID id PK
+        UUID created_by FK
+        TIMESTAMP created_at
+        VARCHAR alert_type
+        TEXT message
+        BOOLEAN resolved
+        TIMESTAMP resolved_at
+    }
+
+    %% Authentication Relationships
     t_users ||--o{ t_user_authentications : has
     t_users ||--o{ t_user_referrer_mappings : has
     t_users ||--o{ t_user_attribute_mappings : has
-    t_users ||--o{ t_user_group_mappings : has
-    t_users ||--o{ t_policy_decision_logs : created_by
+
+    %% Public Relationships
     t_users ||--o{ m_parameters : created_by
     t_users ||--o{ t_contacts : created_by
     t_users ||--o{ t_files : created_by
     t_users ||--o{ t_personal_info : created_by
     t_users ||--o{ t_personal_contacts : created_by
     t_users ||--o{ t_personal_addresses : created_by
-    t_users ||--o{ m_user_groups : created_by
 
     t_personal_info ||--o{ t_personal_contacts : id
     t_personal_info ||--o{ t_personal_addresses : id
     t_contacts ||--o{ t_personal_contacts : id
     t_addresses ||--o{ t_personal_addresses : id
 
+    %% Authorization Relationships
     m_attributes ||--o{ t_user_attribute_mappings : id
     m_attributes ||--o{ t_policy_attribute_mappings : id
     t_policies ||--o{ t_policy_attribute_mappings : id
     t_policies ||--o{ t_policy_decision_logs : id
-    m_user_groups ||--o{ t_user_group_mappings : id
-    t_user_group_mappings ||--o{ t_policy_user_group_mappings : id
-    t_policies ||--o{ t_policy_user_group_mappings : id
 
+    %% Consent Relationships
     m_consent_types ||--o{ m_consents : id
     m_consent_types ||--o{ t_user_consent_mappings : id
     m_consents ||--o{ t_user_consent_mappings : id
 
+    %% Key / Algorithm Relationships
     m_key_types ||--o{ m_keys : id
     m_algorithms ||--o{ t_user_authentications : id
+
+    %% Token Relationships
+    t_users ||--o{ t_sessions : user_id
+    t_sessions ||--o{ t_session_attributes : session_id
+    m_attributes ||--o{ t_session_attributes : id
+
+    %% Federation Relationships
+    t_users ||--o{ t_idp_user_mappings : user_id
+    t_idp ||--o{ t_idp_user_mappings : idp_id
+    m_attributes ||--o{ t_idp_claim_mappings : id
+    t_idp ||--o{ t_idp_claim_mappings : idp_id
+
+    %% Infrastructure Relationships
+    t_users ||--o{ t_auth_logs : user_id
+    t_users ||--o{ t_policy_decision_logs : user_id
 ```
 
 ## Schema: Public
@@ -1466,7 +1560,6 @@ CREATE TABLE IF NOT EXISTS authentication.t_users
     username VARCHAR(128) NOT NULL UNIQUE,
     authentication_type VARCHAR(16) NOT NULL CHECK (authentication_type IN ('PASSWORD', 'OAUTH', 'EMAIL_OTP', 'MOBILE_OTP'))
 );
-CREATE UNIQUE INDEX IF NOT EXISTS idx_t_users_code ON authentication.t_users(type_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_t_users_username ON authentication.t_users(username);
 
 COMMENT ON TABLE authentication.t_users IS 'Stores system users, their authentication type, and status.';
@@ -1588,18 +1681,19 @@ Stores mappings between users and their referrers.
 | PK  | id          | UUID      | GEN_RANDOM_UUID() | Primary key of the mapping record      |
 | FK  | created_by  | UUID      |                   | User who created the mapping           |
 |     | created_at  | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp when the mapping was created |
-| FK  | referrer_id | UUID      |                   | Reference to the referrer user         |
 | FK  | user_id     | UUID      |                   | Reference to the user being referred   |
+| FK  | referrer_id | UUID      |                   | Reference to the referrer user         |
 
 #### Table Constraints
 
-| Constraint Type | Column Name | Constraint Name                      | Description                                        |
-| --------------- | ----------- | ------------------------------------ | -------------------------------------------------- |
-| PRIMARY KEY     | id          |                                      | Defines `id` as the primary key                    |
-| FOREIGN KEY     | created_by  |                                      | References `authentication.t_users(id)`            |
-| FOREIGN KEY     | referrer_id |                                      | References `authentication.t_users(id)`            |
-| FOREIGN KEY     | user_id     |                                      | References `authentication.t_users(id)`            |
-| INDEX           | user_id     | idx_t_user_referrer_mappings_user_id | Creates an index on `user_id` for query efficiency |
+| Constraint Type | Column Name          | Constraint Name                                 | Description                                                    |
+| --------------- | -------------------- | ----------------------------------------------- | -------------------------------------------------------------- |
+| PRIMARY KEY     | id                   |                                                 | Defines `id` as the primary key                                |
+| FOREIGN KEY     | created_by           |                                                 | References `authentication.t_users(id)`                        |
+| FOREIGN KEY     | referrer_id          |                                                 | References `authentication.t_users(id)`                        |
+| FOREIGN KEY     | user_id              |                                                 | References `authentication.t_users(id)`                        |
+| INDEX           | user_id              | idx_t_user_referrer_mappings_user_id            | Creates an index on `user_id` for query efficiency             |
+| UNIQUE          | user_id, referrer_id | uq_t_user_referrer_mappings_user_id_referral_id | Ensures each `user_id` and `referrer_id` combination is unique |
 
 #### Query
 
@@ -1610,10 +1704,12 @@ CREATE TABLE IF NOT EXISTS authentication.t_user_referrer_mappings
     created_by UUID NOT NULL REFERENCES authentication.t_users(id),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
+    user_id UUID NOT NULL REFERENCES authentication.t_users(id),
     referrer_id UUID NOT NULL REFERENCES authentication.t_users(id),
-    user_id UUID NOT NULL REFERENCES authentication.t_users(id)
+    UNIQUE(user_id, referrer_id)
 );
 CREATE INDEX IF NOT EXISTS idx_t_user_referrer_mappings_user_id ON authentication.t_user_referrer_mappings(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_t_user_referrer_mappings_user_id_referral_id ON authentication.t_user_referrer_mappings(user_id, referrer_id);
 
 COMMENT ON TABLE authentication.t_user_referrer_mappings IS 'Stores mappings between users and their referrers';
 COMMENT ON COLUMN authentication.t_user_referrer_mappings.id IS 'Primary key of the mapping record';
@@ -1996,6 +2092,8 @@ Stores attribute definitions used for ABAC (Attribute-Based Access Control) poli
 |     | is_required  | BOOLEAN      | FALSE             | Indicates if the attribute is required                          |
 |     | is_display   | BOOLEAN      | FALSE             | Indicates if the attribute should be displayed in UI            |
 |     | category     | VARCHAR(32)  | 'USER'            | Attribute category: USER, RESOURCE, ATTRIBUTE,  or ENVIRONMENT  |
+|     | group        | VARCHAR(128) |                   | Logical group or namespace of the attribute                     |
+|     | name         | VARCHAR(128) |                   | Name of the attribute (internal identifier)                     |
 |     | key          | VARCHAR(128) |                   | Attribute key; must be unique                                   |
 |     | data_type    | VARCHAR(64)  |                   | Data type of the attribute (e.g., STRING, BOOLEAN, DATE)        |
 |     | title        | VARCHAR(256) |                   | Human-readable title of the attribute                           |
@@ -2036,6 +2134,8 @@ CREATE TABLE IF NOT EXISTS authorization.m_attributes
     is_display BOOLEAN NOT NULL DEFAULT FALSE,
 
     category VARCHAR(32) DEFAULT 'USER' CHECK (category IN ('USER','ATTRIBUTE', 'RESOURCE','ENVIRONMENT')),
+    group VARCHAR(128),
+    name VARCHAR(128) NOT NULL,
     key VARCHAR(128) NOT NULL,
     data_type VARCHAR(64) NOT NULL,
     title VARCHAR(256),
@@ -2059,6 +2159,8 @@ COMMENT ON COLUMN authorization.m_attributes.is_parameter IS 'Indicates if the a
 COMMENT ON COLUMN authorization.m_attributes.is_required IS 'Indicates if the attribute is required';
 COMMENT ON COLUMN authorization.m_attributes.is_display IS 'Indicates if the attribute should be displayed in UI';
 COMMENT ON COLUMN authorization.m_attributes.category IS 'Category of the attribute: USER, ATTRIBUTE, RESOURCE, or ENVIRONMENT';
+COMMENT ON COLUMN authorization.m_attributes.group IS 'Logical group or namespace of the attribute';
+COMMENT ON COLUMN authorization.m_attributes.name IS 'Name of the attribute (internal identifier)';
 COMMENT ON COLUMN authorization.m_attributes.key IS 'Unique key of the attribute';
 COMMENT ON COLUMN authorization.m_attributes.data_type IS 'Data type of the attribute';
 COMMENT ON COLUMN authorization.m_attributes.title IS 'Title or label of the attribute';
@@ -2282,6 +2384,8 @@ CREATE TABLE IF NOT EXISTS authorization.t_policy_decision_logs
     reason TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_t_policy_decision_logs_user_id_policy_id ON authorization.t_policy_decision_logs(user_id, policy_id);
+CREATE INDEX IF NOT EXISTS idx_t_policy_decision_logs_user_id ON authorization.t_policy_decision_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_t_policy_decision_logs_policy_id ON authorization.t_policy_decision_logs(policy_id);
 
 COMMENT ON TABLE authorization.t_policy_decision_logs IS 'Stores logs of policy decisions for users and resources';
 COMMENT ON COLUMN authorization.t_policy_decision_logs.id IS 'Primary key of the decision log';
@@ -2317,7 +2421,7 @@ Stores user-specific attribute values for ABAC evaluation.
 | FK  | deleted_by   | UUID      |                   | User who deleted the mapping                                     |
 | FK  | user_id      | UUID      |                   | Reference to the user owning the attribute                       |
 | FK  | attribute_id | UUID      |                   | Reference to the attribute (m_attributes.id)                     |
-|     | value        | TEXT      |                   | Value assigned to the attribute for the user                     |
+|     | value        | BYTEA     |                   | Value assigned to the attribute for the user                     |
 
 #### Table Constraints
 
@@ -2352,7 +2456,7 @@ CREATE TABLE IF NOT EXISTS authorization.t_user_attribute_mappings
 
     user_id UUID NOT NULL REFERENCES authentication.t_users(id),
     attribute_id UUID NOT NULL REFERENCES authorization.m_attributes(id),
-    value TEXT NOT NULL
+    value BYTEA NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_t_user_attribute_mappings_user_id_attribute_id ON authorization.t_user_attribute_mappings(user_id, attribute_id);
 
@@ -2371,246 +2475,6 @@ COMMENT ON COLUMN authorization.t_user_attribute_mappings.deleted_by IS 'User wh
 COMMENT ON COLUMN authorization.t_user_attribute_mappings.user_id IS 'Reference to the user';
 COMMENT ON COLUMN authorization.t_user_attribute_mappings.attribute_id IS 'Reference to the attribute';
 COMMENT ON COLUMN authorization.t_user_attribute_mappings.value IS 'Value of the attribute for the user';
-```
-
-### Table: authorization.m_user_groups
-
-Master table for defining user groups within the authorization system.
-
-#### Table Columns
-
-| Key | Column Name | Data Type    | Default           | Description                                                    |
-| --- | ----------- | ------------ | ----------------- | -------------------------------------------------------------- |
-| PK  | id          | UUID         | GEN_RANDOM_UUID() | Primary key of the user group record.                          |
-| FK  | created_by  | UUID         |                   | User who created the user group.                               |
-|     | created_at  | TIMESTAMP    | CURRENT_TIMESTAMP | Timestamp when the user group record was created.              |
-| FK  | updated_by  | UUID         |                   | User who last updated the user group.                          |
-|     | updated_at  | TIMESTAMP    |                   | Timestamp of the last update of the user group record.         |
-|     | is_active   | BOOLEAN      | FALSE             | Indicates whether the user group is currently active.          |
-|     | inactive_at | TIMESTAMP    |                   | Timestamp when the user group was set as inactive.             |
-| FK  | inactive_by | UUID         |                   | User who marked the user group as inactive.                    |
-|     | is_deleted  | BOOLEAN      | FALSE             | Indicates if the user group record has been logically deleted. |
-|     | deleted_at  | TIMESTAMP    |                   | Timestamp when the user group record was deleted.              |
-| FK  | deleted_by  | UUID         |                   | User who deleted the user group record.                        |
-|     | name        | VARCHAR(128) |                   | Key type name                                                  |
-|     | description | TEXT         |                   | Detailed description or purpose of the user group              |
-
-#### Table Constraints
-
-| Constraint Type | Column Name | Constraint Name        | Description                             |
-| --------------- | ----------- | ---------------------- | --------------------------------------- |
-| PRIMARY KEY     | id          |                        | Defines `id` as the primary key         |
-| FOREIGN KEY     | created_by  |                        | References `authentication.t_users(id)` |
-| FOREIGN KEY     | updated_by  |                        | References `authentication.t_users(id)` |
-| FOREIGN KEY     | inactive_by |                        | References `authentication.t_users(id)` |
-| FOREIGN KEY     | deleted_by  |                        | References `authentication.t_users(id)` |
-| UNIQUE INDEX    | name        | idx_m_user_groups_name | Ensures user group names are unique     |
-
-#### Query
-
-```SQL
-CREATE TABLE IF NOT EXISTS authorization.m_user_groups
-(
-    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
-    created_by UUID NOT NULL REFERENCES authentication.t_users(id),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_by UUID REFERENCES authentication.t_users(id),
-    updated_at TIMESTAMP,
-
-    is_active BOOLEAN NOT NULL DEFAULT FALSE,
-    inactive_at TIMESTAMP,
-    inactive_by UUID REFERENCES authentication.t_users(id),
-
-    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMP,
-    deleted_by UUID REFERENCES authentication.t_users(id),
-
-    name VARCHAR(128) NOT NULL,
-    description TEXT
-);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_m_user_groups_name ON authorization.m_user_groups(name);
-
-COMMENT ON TABLE authorization.m_user_groups IS 'Master table for defining user groups within the authorization system.';
-COMMENT ON COLUMN authorization.m_user_groups.id IS 'Primary key of the user group record.';
-COMMENT ON COLUMN authorization.m_user_groups.created_by IS 'User who created the user group.';
-COMMENT ON COLUMN authorization.m_user_groups.created_at IS 'Timestamp when the user group record was created.';
-COMMENT ON COLUMN authorization.m_user_groups.updated_by IS 'User who last updated the user group.';
-COMMENT ON COLUMN authorization.m_user_groups.updated_at IS 'Timestamp of the last update of the user group record.';
-COMMENT ON COLUMN authorization.m_user_groups.is_active IS 'Indicates whether the user group is currently active.';
-COMMENT ON COLUMN authorization.m_user_groups.inactive_at IS 'Timestamp when the user group was set as inactive.';
-COMMENT ON COLUMN authorization.m_user_groups.inactive_by IS 'User who marked the user group as inactive.';
-COMMENT ON COLUMN authorization.m_user_groups.is_deleted IS 'Indicates whether the user group record has been logically deleted.';
-COMMENT ON COLUMN authorization.m_user_groups.deleted_at IS 'Timestamp when the user group record was deleted.';
-COMMENT ON COLUMN authorization.m_user_groups.deleted_by IS 'User who deleted the user group record.';
-COMMENT ON COLUMN authorization.m_user_groups.name IS 'Name of the user group.';
-COMMENT ON COLUMN authorization.m_user_groups.description IS 'Detailed description or purpose of the user group.';
-```
-
-### Table: authorization.t_user_group_mappings
-
-Transaction table mapping users to user groups, including activation and expiration control.
-
-#### Table Columns
-
-| Key | Column Name   | Data Type | Default           | Description                                                 |
-| --- | ------------- | --------- | ----------------- | ----------------------------------------------------------- |
-| PK  | id            | UUID      | GEN_RANDOM_UUID() | Primary key of the user-group mapping record.               |
-| FK  | created_by    | UUID      |                   | User who created the mapping record.                        |
-|     | created_at    | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp when the mapping record was created.              |
-| FK  | updated_by    | UUID      |                   | User who last updated the mapping record.                   |
-|     | updated_at    | TIMESTAMP |                   | Timestamp when the mapping was last updated                 |
-|     | is_active     | BOOLEAN   | FALSE             | Indicates if the mapping is currently active.               |
-|     | inactive_at   | TIMESTAMP |                   | Timestamp when the mapping was set to inactive.             |
-| FK  | inactive_by   | UUID      |                   | User who marked the mapping as inactive.                    |
-|     | is_deleted    | BOOLEAN   | FALSE             | Indicates if the mapping record has been logically deleted. |
-|     | deleted_at    | TIMESTAMP |                   | Timestamp when the mapping record was deleted.              |
-| FK  | deleted_by    | UUID      |                   | User who deleted the mapping record.                        |
-|     | effective_at  | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp when this user-group mapping becomes effective.   |
-|     | expires_at    | TIMESTAMP |                   | Timestamp when this user-group mapping expires.             |
-| FK  | user_group_id | UUID      |                   | Reference to the user group that the user belongs to.       |
-| FK  | user_id       | UUID      |                   | Reference to the user who is assigned to the group.         |
-
-#### Table Constraints
-
-| Constraint Type | Column Name   | Constraint Name                         | Description                                         |
-| --------------- | ------------- | --------------------------------------- | --------------------------------------------------- |
-| PRIMARY KEY     | id            |                                         | Defines `id` as the primary key                     |
-| FOREIGN KEY     | created_by    |                                         | References `authentication.t_users(id)`             |
-| FOREIGN KEY     | updated_by    |                                         | References `authentication.t_users(id)`             |
-| FOREIGN KEY     | inactive_by   |                                         | References `authentication.t_users(id)`             |
-| FOREIGN KEY     | deleted_by    |                                         | References `authentication.t_users(id)`             |
-| FOREIGN KEY     | user_group_id |                                         | References `authorization.m_user_groups(id)`        |
-| FOREIGN KEY     | user_id       |                                         | References `authentication.t_users(id)`             |
-| CHECK           | expires_at    |                                         | Ensures `expires_at` > `effective_at` and not null. |
-| UNIQUE INDEX    | user_group_id | idx_t_user_group_mappings_user_group_id | Ensures unique mapping by user_group_id.            |
-| UNIQUE INDEX    | user_id       | idx_t_user_group_mappings_user_id       | Ensures unique mapping by user_id.                  |
-
-#### Query
-
-```SQL
-CREATE TABLE IF NOT EXISTS authorization.t_user_group_mappings
-(
-    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
-    created_by UUID NOT NULL REFERENCES authentication.t_users(id),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_by UUID REFERENCES authentication.t_users(id),
-    updated_at TIMESTAMP,
-
-    is_active BOOLEAN NOT NULL DEFAULT FALSE,
-    inactive_at TIMESTAMP,
-    inactive_by UUID REFERENCES authentication.t_users(id),
-
-    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMP,
-    deleted_by UUID REFERENCES authentication.t_users(id),
-
-    effective_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP CHECK (expires_at IS NOT NULL AND expires_at > effective_at),
-
-    user_group_id UUID NOT NULL REFERENCES authorization.m_user_groups(id),
-    user_id UUID NOT NULL REFERENCES authentication.t_users(id)
-);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_t_user_group_mappings_user_group_id ON authorization.m_user_groups(user_group_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_t_user_group_mappings_user_id ON authorization.m_user_groups(user_id);
-
-COMMENT ON TABLE authorization.t_user_group_mappings IS 'Transaction table mapping users to user groups, including activation and expiration control.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.id IS 'Primary key of the user-group mapping record.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.created_by IS 'User who created the mapping record.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.created_at IS 'Timestamp when the mapping record was created.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.updated_by IS 'User who last updated the mapping record.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.updated_at IS 'Timestamp when the mapping record was last updated.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.is_active IS 'Indicates whether the mapping is currently active.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.inactive_at IS 'Timestamp when the mapping was deactivated.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.inactive_by IS 'User who deactivated the mapping.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.is_deleted IS 'Indicates if the record has been logically deleted.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.deleted_at IS 'Timestamp when the record was deleted.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.deleted_by IS 'User who deleted the record.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.effective_at IS 'Timestamp when this user-group mapping becomes effective.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.expires_at IS 'Timestamp when this user-group mapping expires.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.user_group_id IS 'Reference to the user group that the user belongs to.';
-COMMENT ON COLUMN authorization.t_user_group_mappings.user_id IS 'Reference to the user who is assigned to the group.';
-```
-
-### Table: authorization.t_policy_user_group_mappings
-
-Mapping table linking authorization policies with user groups and defining logical conditions for policy evaluation.
-
-#### Table Columns
-
-| Key | Column Name   | Data Type   | Default           | Description                                                                        |
-| --- | ------------- | ----------- | ----------------- | ---------------------------------------------------------------------------------- |
-| PK  | id            | UUID        | GEN_RANDOM_UUID() | Primary key of the mapping record.                                                 |
-| FK  | created_by    | UUID        |                   | User who created the mapping record.                                               |
-|     | created_at    | TIMESTAMP   | CURRENT_TIMESTAMP | Timestamp when the record was created.                                             |
-| FK  | updated_by    | UUID        |                   | User who last updated the mapping.                                                 |
-|     | updated_at    | TIMESTAMP   |                   | Timestamp when the mapping was last updated                                        |
-|     | is_active     | BOOLEAN     | FALSE             | Indicates if the mapping is currently active.                                      |
-|     | inactive_at   | TIMESTAMP   |                   | Timestamp when the mapping was deactivated                                         |
-| FK  | inactive_by   | UUID        |                   | User who deactivated the mapping.                                                  |
-|     | is_deleted    | BOOLEAN     | FALSE             | Indicates if the record has been logically deleted.                                |
-|     | deleted_at    | TIMESTAMP   |                   | Timestamp when the record was deleted                                              |
-| FK  | deleted_by    | UUID        |                   | User who deleted the mapping record                                                |
-| FK  | policy_id     | UUID        |                   | Reference to the authorization policy associated with the mapping.                 |
-| FK  | user_group_id | UUID        |                   | Reference to the user group affected by this policy.                               |
-|     | operator      | VARCHAR(32) |                   | Logical operator used for evaluating the condition (e.g., EQUALS, NOT_EQUALS, IN). |
-
-#### Table Constraints
-
-| Constraint Type | Column Name                        | Constraint Name                                      | Description                                                |
-| --------------- | ---------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------- |
-| PRIMARY KEY     | id                                 |                                                      | Defines `id` as the primary key                            |
-| FOREIGN KEY     | created_by                         |                                                      | References `authentication.t_users(id)`                    |
-| FOREIGN KEY     | updated_by                         |                                                      | References `authentication.t_users(id)`                    |
-| FOREIGN KEY     | inactive_by                        |                                                      | References `authentication.t_users(id)`                    |
-| FOREIGN KEY     | deleted_by                         |                                                      | References `authentication.t_users(id)`                    |
-| FOREIGN KEY     | policy_id                          |                                                      | References `authorization.t_policies(id)`                  |
-| FOREIGN KEY     | user_group_id                      |                                                      | References `authorization.m_user_groups(id)`               |
-| INDEX           | policy_id                          | idx_t_policy_user_group_mappings_policy_id           | Improves lookup performance by policy_id.                  |
-| INDEX           | user_group_id                      | idx_t_policy_user_group_mappings_user_group_id       | Improves lookup performance by user_group_id.              |
-| UNIQUE INDEX    | policy_id, user_group_id, operator | idx_t_policy_user_group_mappings_policy_group_unique | Ensures unique combination of policy, group, and operator. |
-
-#### Query
-
-```SQL
-CREATE TABLE IF NOT EXISTS authorization.t_policy_user_group_mappings
-(
-    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
-    created_by UUID NOT NULL REFERENCES authentication.t_users(id),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_by UUID REFERENCES authentication.t_users(id),
-    updated_at TIMESTAMP,
-
-    is_active BOOLEAN NOT NULL DEFAULT FALSE,
-    inactive_at TIMESTAMP,
-    inactive_by UUID REFERENCES authentication.t_users(id),
-
-    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMP,
-    deleted_by UUID REFERENCES authentication.t_users(id),
-
-    policy_id UUID NOT NULL REFERENCES authorization.t_policies(id),
-    user_group_id UUID NOT NULL REFERENCES authorization.m_user_groups(id),
-    operator VARCHAR(32) NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_t_policy_user_group_mappings_policy_id ON authorization.t_policy_user_group_mappings(policy_id);
-CREATE INDEX IF NOT EXISTS idx_t_policy_user_group_mappings_user_group_id ON authorization.t_policy_user_group_mappings(user_group_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_t_policy_user_group_mappings_policy_group_unique ON authorization.t_policy_user_group_mappings(policy_id, user_group_id, operator);
-
-COMMENT ON TABLE authorization.t_policy_user_group_mappings IS 'Mapping table linking authorization policies with user groups and defining logical conditions for policy evaluation.';
-COMMENT ON COLUMN authorization.t_policy_user_group_mappings.id IS 'Primary key of the mapping record.';
-COMMENT ON COLUMN authorization.t_policy_user_group_mappings.created_by IS 'User who created the mapping record.';
-COMMENT ON COLUMN authorization.t_policy_user_group_mappings.created_at IS 'Timestamp when the record was created.';
-COMMENT ON COLUMN authorization.t_policy_user_group_mappings.updated_by IS 'User who last updated the mapping.';
-COMMENT ON COLUMN authorization.t_policy_user_group_mappings.updated_at IS 'Timestamp when the record was last updated.';
-COMMENT ON COLUMN authorization.t_policy_user_group_mappings.is_active IS 'Indicates whether the mapping is currently active.';
-COMMENT ON COLUMN authorization.t_policy_user_group_mappings.inactive_at IS 'Timestamp when the mapping was deactivated.';
-COMMENT ON COLUMN authorization.t_policy_user_group_mappings.inactive_by IS 'User who deactivated the mapping.';
-COMMENT ON COLUMN authorization.t_policy_user_group_mappings.is_deleted IS 'Indicates if the record has been logically deleted.';
-COMMENT ON COLUMN authorization.t_policy_user_group_mappings.deleted_at IS 'Timestamp when the record was deleted.';
-COMMENT ON COLUMN authorization.t_policy_user_group_mappings.deleted_by IS 'User who deleted the record.';
-COMMENT ON COLUMN authorization.t_policy_user_group_mappings.policy_id IS 'Reference to the authorization policy associated with the mapping.';
-COMMENT ON COLUMN authorization.t_policy_user_group_mappings.user_group_id IS 'Reference to the user group affected by this policy.';
-COMMENT ON COLUMN authorization.t_policy_user_group_mappings.operator IS 'Logical operator used for evaluating the condition (e.g., EQUALS, NOT_EQUALS, IN).';
 ```
 
 ---
@@ -2945,4 +2809,764 @@ COMMENT ON COLUMN profile.m_user_profiles.deleted_at IS 'Timestamp when the prof
 COMMENT ON COLUMN profile.m_user_profiles.deleted_by IS 'User who deleted the profile';
 COMMENT ON COLUMN profile.m_user_profiles.user_id IS 'Reference to the user account';
 COMMENT ON COLUMN profile.m_user_profiles.personal_id IS 'Reference to the personal information record';
+```
+
+## Schema: session
+
+### Table: token.t_sessions
+
+Stores session information and tokens for users.
+
+#### Table Columns
+
+| Key | Column Name                     | Data Type   | Default           | Description                                |
+| --- | ------------------------------- | ----------- | ----------------- | ------------------------------------------ |
+| PK  | id                              | UUID        | GEN_RANDOM_UUID() | Primary key of the session record          |
+| FK  | created_by                      | UUID        |                   | User who created the session               |
+|     | created_at                      | TIMESTAMP   | CURRENT_TIMESTAMP | Timestamp when the session was created     |
+| FK  | updated_by                      | UUID        |                   | User who last updated the session          |
+|     | updated_at                      | TIMESTAMP   |                   | Timestamp of last update                   |
+|     | is_active                       | BOOLEAN     | FALSE             | Indicates if the session is active         |
+|     | inactive_at                     | TIMESTAMP   |                   | Timestamp when the session became inactive |
+| FK  | inactive_by                     | UUID        |                   | User who marked the session inactive       |
+|     | is_revoked                      | BOOLEAN     | FALSE             | Indicates if the session has been revoked  |
+|     | revoked_at                      | TIMESTAMP   |                   | Timestamp when the session was revoked     |
+| FK  | revoked_by                      | UUID        |                   | User who revoked the session               |
+|     | revoked_reason                  | TEXT        |                   | Reason for revoking the session            |
+|     | expires_at                      | TIMESTAMP   |                   | Expiration timestamp of the session        |
+| FK  | user_id                         | UUID        |                   | Reference to the user account              |
+|     | code                            | VARCHAR(32) |                   | Session code                               |
+|     | access_token                    | BYTEA       |                   | Access token data                          |
+|     | access_token_expires_at         | TIMESTAMP   |                   | Expiration timestamp of the access token   |
+|     | refresh_access_token            | BYTEA       |                   | Refresh token data                         |
+|     | refresh_access_token_expires_at | TIMESTAMP   |                   | Expiration timestamp of the refresh token  |
+|     | payload                         | JSONB       |                   | Additional session payload data            |
+
+#### Table Constraints
+
+| Constraint Type | Column Name | Constraint Name        | Description                                        |
+| --------------- | ----------- | ---------------------- | -------------------------------------------------- |
+| PRIMARY KEY     | id          |                        | Defines `id` as the primary key                    |
+| FOREIGN KEY     | created_by  |                        | References `authentication.t_users(id)`            |
+| FOREIGN KEY     | updated_by  |                        | References `authentication.t_users(id)`            |
+| FOREIGN KEY     | inactive_by |                        | References `authentication.t_users(id)`            |
+| FOREIGN KEY     | revoked_by  |                        | References `authentication.t_users(id)`            |
+| FOREIGN KEY     | user_id     |                        | References `authentication.t_users(id)`            |
+| INDEX           | user_id     | idx_t_sessions_user_id | Creates an index on `user_id` for query efficiency |
+
+#### Query
+
+```SQL
+CREATE TABLE IF NOT EXISTS token.t_sessions
+(
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
+    created_by UUID NOT NULL REFERENCES authentication.t_users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID REFERENCES authentication.t_users(id),
+    updated_at TIMESTAMP,
+
+    is_active BOOLEAN NOT NULL DEFAULT FALSE,
+    inactive_at TIMESTAMP,
+    inactive_by UUID REFERENCES authentication.t_users(id),
+
+    is_revoked BOOLEAN NOT NULL DEFAULT FALSE,
+    revoked_at TIMESTAMP,
+    revoked_by UUID REFERENCES authentication.t_users(id),
+    revoked_reason TEXT,
+
+    expires_at TIMESTAMP,
+
+    user_id UUID NOT NULL REFERENCES authentication.t_users(id),
+
+    code VARCHAR(32) NOT NULL,
+    access_token BYTEA NOT NULL,
+    access_token_expires_at TIMESTAMP NOT NULL,
+    refresh_access_token BYTEA NOT NULL,
+    refresh_access_token_expires_at TIMESTAMP NOT NULL,
+    payload JSONB NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_t_sessions_user_id ON token.t_sessions(user_id);
+
+COMMENT ON TABLE token.t_sessions IS 'Stores session information and tokens for users';
+COMMENT ON COLUMN token.t_sessions.id IS 'Primary key of the session record';
+COMMENT ON COLUMN token.t_sessions.created_by IS 'User who created the session';
+COMMENT ON COLUMN token.t_sessions.created_at IS 'Timestamp when the session was created';
+COMMENT ON COLUMN token.t_sessions.updated_by IS 'User who last updated the session';
+COMMENT ON COLUMN token.t_sessions.updated_at IS 'Timestamp of last update';
+COMMENT ON COLUMN token.t_sessions.is_active IS 'Indicates if the session is active';
+COMMENT ON COLUMN token.t_sessions.inactive_at IS 'Timestamp when the session became inactive';
+COMMENT ON COLUMN token.t_sessions.inactive_by IS 'User who marked the session inactive';
+COMMENT ON COLUMN token.t_sessions.is_revoked IS 'Indicates if the session has been revoked';
+COMMENT ON COLUMN token.t_sessions.revoked_at IS 'Timestamp when the session was revoked';
+COMMENT ON COLUMN token.t_sessions.revoked_by IS 'User who revoked the session';
+COMMENT ON COLUMN token.t_sessions.revoked_reason IS 'Reason for revoking the session';
+COMMENT ON COLUMN token.t_sessions.expires_at IS 'Expiration timestamp of the session';
+COMMENT ON COLUMN token.t_sessions.user_id IS 'Reference to the user account';
+COMMENT ON COLUMN token.t_sessions.code IS 'Session code';
+COMMENT ON COLUMN token.t_sessions.access_token IS 'Access token data';
+COMMENT ON COLUMN token.t_sessions.access_token_expires_at IS 'Expiration timestamp of the access token';
+COMMENT ON COLUMN token.t_sessions.refresh_access_token IS 'Refresh token data';
+COMMENT ON COLUMN token.t_sessions.refresh_access_token_expires_at IS 'Expiration timestamp of the refresh token';
+COMMENT ON COLUMN token.t_sessions.payload IS 'Additional session payload data';
+```
+
+### Table: token.t_session_attributes
+
+Stores attribute values associated with a user session.
+
+#### Table Columns
+
+| Key | Column Name  | Data Type | Default           | Description                                  |
+| --- | ------------ | --------- | ----------------- | -------------------------------------------- |
+| PK  | id           | UUID      | GEN_RANDOM_UUID() | Primary key of the session attribute record  |
+| FK  | created_by   | UUID      |                   | User who created the record                  |
+|     | created_at   | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp when the record was created        |
+| FK  | updated_by   | UUID      |                   | User who last updated the record             |
+|     | updated_at   | TIMESTAMP |                   | Timestamp of last update                     |
+|     | is_active    | BOOLEAN   | FALSE             | Indicates if the record is active            |
+|     | inactive_at  | TIMESTAMP |                   | Timestamp when the record became inactive    |
+| FK  | inactive_by  | UUID      |                   | User who marked the record inactive          |
+|     | is_deleted   | BOOLEAN   | FALSE             | Indicates if the record is deleted           |
+|     | deleted_at   | TIMESTAMP |                   | Timestamp when the record was deleted        |
+| FK  | deleted_by   | UUID      |                   | User who deleted the record                  |
+| FK  | session_id   | UUID      |                   | Reference to the user session                |
+| FK  | attribute_id | UUID      |                   | Reference to the attribute definition        |
+|     | values       | JSONB     |                   | Attribute values associated with the session |
+
+#### Table Constraints
+
+| Constraint Type | Column Name  | Constraint Name                     | Description                                           |
+| --------------- | ------------ | ----------------------------------- | ----------------------------------------------------- |
+| PRIMARY KEY     | id           |                                     | Defines `id` as the primary key                       |
+| FOREIGN KEY     | created_by   |                                     | References `authentication.t_users(id)`               |
+| FOREIGN KEY     | updated_by   |                                     | References `authentication.t_users(id)`               |
+| FOREIGN KEY     | inactive_by  |                                     | References `authentication.t_users(id)`               |
+| FOREIGN KEY     | deleted_by   |                                     | References `authentication.t_users(id)`               |
+| FOREIGN KEY     | session_id   |                                     | References `session.t_sessions(id)`                   |
+| FOREIGN KEY     | attribute_id |                                     | References `authorization.m_attributes(id)`           |
+| INDEX           | session_id   | idx_t_session_attributes_session_id | Creates an index on `session_id` for query efficiency |
+
+#### Query
+
+```SQL
+CREATE TABLE IF NOT EXISTS token.t_session_attributes
+(
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
+    created_by UUID NOT NULL REFERENCES authentication.t_users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID REFERENCES authentication.t_users(id),
+    updated_at TIMESTAMP,
+
+    is_active BOOLEAN NOT NULL DEFAULT FALSE,
+    inactive_at TIMESTAMP,
+    inactive_by UUID REFERENCES authentication.t_users(id),
+
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
+    deleted_by UUID REFERENCES authentication.t_users(id),
+
+    session_id UUID NOT NULL REFERENCES session.t_sessions(id),
+    attribute_id UUID NOT NULL REFERENCES authorization.m_attributes(id),
+    values JSONB NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_t_session_attributes_session_id ON token.t_session_attributes(session_id);
+
+COMMENT ON TABLE token.t_session_attributes IS 'Stores attribute values associated with a user session';
+COMMENT ON COLUMN token.t_session_attributes.id IS 'Primary key of the session attribute record';
+COMMENT ON COLUMN token.t_session_attributes.created_by IS 'User who created the record';
+COMMENT ON COLUMN token.t_session_attributes.created_at IS 'Timestamp when the record was created';
+COMMENT ON COLUMN token.t_session_attributes.updated_by IS 'User who last updated the record';
+COMMENT ON COLUMN token.t_session_attributes.updated_at IS 'Timestamp of last update';
+COMMENT ON COLUMN token.t_session_attributes.is_active IS 'Indicates if the record is active';
+COMMENT ON COLUMN token.t_session_attributes.inactive_at IS 'Timestamp when the record became inactive';
+COMMENT ON COLUMN token.t_session_attributes.inactive_by IS 'User who marked the record inactive';
+COMMENT ON COLUMN token.t_session_attributes.is_deleted IS 'Indicates if the record is deleted';
+COMMENT ON COLUMN token.t_session_attributes.deleted_at IS 'Timestamp when the record was deleted';
+COMMENT ON COLUMN token.t_session_attributes.deleted_by IS 'User who deleted the record';
+COMMENT ON COLUMN token.t_session_attributes.session_id IS 'Reference to the user session';
+COMMENT ON COLUMN token.t_session_attributes.attribute_id IS 'Reference to the attribute definition';
+COMMENT ON COLUMN token.t_session_attributes.values IS 'Attribute values associated with the session';
+```
+
+## Schema: federation
+
+### Table: federation.t_idp
+
+Stores registered Identity Providers (IdPs) for SAML/OIDC federation.
+
+#### Table Columns
+
+| Key | Column Name   | Data Type    | Default           | Description                                  |
+| --- | ------------- | ------------ | ----------------- | -------------------------------------------- |
+| PK  | id            | UUID         | GEN_RANDOM_UUID() | Primary key of the IdP record                |
+| FK  | created_by    | UUID         |                   | User who registered the IdP                  |
+|     | created_at    | TIMESTAMP    | CURRENT_TIMESTAMP | Timestamp when the IdP was created           |
+| FK  | updated_by    | UUID         |                   | User who last updated the IdP record         |
+|     | updated_at    | TIMESTAMP    |                   | Timestamp of last update                     |
+|     | is_active     | BOOLEAN      | TRUE              | Indicates if IdP is active                   |
+|     | inactive_at   | TIMESTAMP    |                   | Timestamp when IdP was deactivated           |
+| FK  | inactive_by   | UUID         |                   | User who deactivated the IdP                 |
+|     | is_deleted    | BOOLEAN      | FALSE             | Indicates if IdP record is deleted           |
+|     | deleted_at    | TIMESTAMP    |                   | Timestamp when IdP was deleted               |
+| FK  | deleted_by    | UUID         |                   | User who deleted the IdP record              |
+|     | name          | VARCHAR(128) |                   | Human-readable name of the IdP               |
+|     | type          | VARCHAR(16)  |                   | IdP type: SAML or OIDC                       |
+|     | client_id     | VARCHAR(128) |                   | Client/Entity ID for OIDC or SAML            |
+|     | client_secret | VARCHAR(256) |                   | Client secret for OIDC (optional for SAML)   |
+|     | metadata_url  | VARCHAR(512) |                   | URL to IdP metadata (SAML or OIDC discovery) |
+|     | redirect_uris | TEXT[]       |                   | List of allowed redirect URIs                |
+|     | scopes        | TEXT[]       |                   | List of default scopes for OIDC              |
+
+#### Table Constraints
+
+| Constraint Type | Column Name | Constraint Name    | Description                             |
+| --------------- | ----------- | ------------------ | --------------------------------------- |
+| PRIMARY KEY     | id          |                    | Defines `id` as primary key             |
+| FOREIGN KEY     | created_by  |                    | References `authentication.t_users(id)` |
+| FOREIGN KEY     | updated_by  |                    | References `authentication.t_users(id)` |
+| FOREIGN KEY     | inactive_by |                    | References `authentication.t_users(id)` |
+| FOREIGN KEY     | deleted_by  |                    | References `authentication.t_users(id)` |
+| UNIQUE          | client_id   | uq_t_idp_client_id | Ensures client_id is unique per IdP     |
+
+#### Query
+
+```SQL
+CREATE TABLE IF NOT EXISTS federation.t_idp
+(
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
+    created_by UUID NOT NULL REFERENCES authentication.t_users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID REFERENCES authentication.t_users(id),
+    updated_at TIMESTAMP,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    inactive_at TIMESTAMP,
+    inactive_by UUID REFERENCES authentication.t_users(id),
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
+    deleted_by UUID REFERENCES authentication.t_users(id),
+    name VARCHAR(128) NOT NULL,
+    type VARCHAR(16) NOT NULL CHECK (type IN ('SAML', 'OIDC')),
+    client_id VARCHAR(128) NOT NULL,
+    client_secret VARCHAR(256),
+    metadata_url VARCHAR(512),
+    redirect_uris TEXT[],
+    scopes TEXT[]
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_t_idp_client_id ON federation.t_idp(client_id);
+
+COMMENT ON TABLE federation.t_idp IS 'Stores registered Identity Providers for SAML/OIDC federation';
+COMMENT ON COLUMN federation.t_idp.id IS 'Primary key of the IdP record';
+COMMENT ON COLUMN federation.t_idp.created_by IS 'User who registered the IdP';
+COMMENT ON COLUMN federation.t_idp.created_at IS 'Timestamp when the IdP was created';
+COMMENT ON COLUMN federation.t_idp.updated_by IS 'User who last updated the IdP record';
+COMMENT ON COLUMN federation.t_idp.updated_at IS 'Timestamp of last update';
+COMMENT ON COLUMN federation.t_idp.is_active IS 'Indicates if IdP is active';
+COMMENT ON COLUMN federation.t_idp.inactive_at IS 'Timestamp when IdP was deactivated';
+COMMENT ON COLUMN federation.t_idp.inactive_by IS 'User who deactivated the IdP';
+COMMENT ON COLUMN federation.t_idp.is_deleted IS 'Indicates if IdP record is deleted';
+COMMENT ON COLUMN federation.t_idp.deleted_at IS 'Timestamp when IdP was deleted';
+COMMENT ON COLUMN federation.t_idp.deleted_by IS 'User who deleted the IdP record';
+COMMENT ON COLUMN federation.t_idp.name IS 'Human-readable name of the IdP';
+COMMENT ON COLUMN federation.t_idp.type IS 'IdP type: SAML or OIDC';
+COMMENT ON COLUMN federation.t_idp.client_id IS 'Client/Entity ID for OIDC or SAML';
+COMMENT ON COLUMN federation.t_idp.client_secret IS 'Client secret for OIDC (optional for SAML)';
+COMMENT ON COLUMN federation.t_idp.metadata_url IS 'URL to IdP metadata';
+COMMENT ON COLUMN federation.t_idp.redirect_uris IS 'Allowed redirect URIs for the IdP';
+COMMENT ON COLUMN federation.t_idp.scopes IS 'Default scopes for OIDC';
+```
+
+### Table: federation.t_idp_user_mappings
+
+Stores mapping between external IdP users and internal users.
+
+#### Table Columns
+
+| Key | Column Name      | Data Type    | Default           | Description                             |
+| --- | ---------------- | ------------ | ----------------- | --------------------------------------- |
+| PK  | id               | UUID         | GEN_RANDOM_UUID() | Primary key of the mapping record       |
+| FK  | created_by       | UUID         |                   | User who created the mapping            |
+|     | created_at       | TIMESTAMP    | CURRENT_TIMESTAMP | Timestamp when mapping was created      |
+| FK  | updated_by       | UUID         |                   | User who last updated the mapping       |
+|     | updated_at       | TIMESTAMP    |                   | Timestamp of last update                |
+|     | is_active        | BOOLEAN      | TRUE              | Indicates if mapping is active          |
+|     | inactive_at      | TIMESTAMP    |                   | Timestamp when mapping became inactive  |
+| FK  | inactive_by      | UUID         |                   | User who deactivated the mapping        |
+|     | is_deleted       | BOOLEAN      | FALSE             | Indicates if mapping is deleted         |
+|     | deleted_at       | TIMESTAMP    |                   | Timestamp when mapping was deleted      |
+| FK  | deleted_by       | UUID         |                   | User who deleted the mapping            |
+| FK  | idp_id           | UUID         |                   | Reference to the IdP                    |
+| FK  | external_user_id | VARCHAR(128) |                   | External user identifier (from IdP)     |
+| FK  | internal_user_id | UUID         |                   | Reference to internal user (t_users.id) |
+
+#### Table Constraints
+
+| Constraint Type | Column Name              | Constraint Name        | Description                                  |
+| --------------- | ------------------------ | ---------------------- | -------------------------------------------- |
+| PRIMARY KEY     | id                       |                        | Defines `id` as primary key                  |
+| FOREIGN KEY     | created_by               |                        | References `authentication.t_users(id)`      |
+| FOREIGN KEY     | updated_by               |                        | References `authentication.t_users(id)`      |
+| FOREIGN KEY     | inactive_by              |                        | References `authentication.t_users(id)`      |
+| FOREIGN KEY     | deleted_by               |                        | References `authentication.t_users(id)`      |
+| FOREIGN KEY     | idp_id                   |                        | References `federation.t_idp(id)`            |
+| FOREIGN KEY     | internal_user_id         |                        | References `authentication.t_users(id)`      |
+| UNIQUE          | idp_id, external_user_id | uq_t_idp_user_mappings | Ensures external user is mapped once per IdP |
+
+#### Query
+
+```SQL
+CREATE TABLE IF NOT EXISTS federation.t_idp_user_mappings
+(
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
+    created_by UUID NOT NULL REFERENCES authentication.t_users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID REFERENCES authentication.t_users(id),
+    updated_at TIMESTAMP,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    inactive_at TIMESTAMP,
+    inactive_by UUID REFERENCES authentication.t_users(id),
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
+    deleted_by UUID REFERENCES authentication.t_users(id),
+    idp_id UUID NOT NULL REFERENCES federation.t_idp(id),
+    external_user_id VARCHAR(128) NOT NULL,
+    internal_user_id UUID NOT NULL REFERENCES authentication.t_users(id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_t_idp_user_mappings ON federation.t_idp_user_mappings(idp_id, external_user_id);
+
+COMMENT ON TABLE federation.t_idp_user_mappings IS 'Maps external IdP users to internal users';
+COMMENT ON COLUMN federation.t_idp_user_mappings.id IS 'Primary key of the mapping record';
+COMMENT ON COLUMN federation.t_idp_user_mappings.created_by IS 'User who created the mapping';
+COMMENT ON COLUMN federation.t_idp_user_mappings.created_at IS 'Timestamp when mapping was created';
+COMMENT ON COLUMN federation.t_idp_user_mappings.updated_by IS 'User who last updated the mapping';
+COMMENT ON COLUMN federation.t_idp_user_mappings.updated_at IS 'Timestamp of last update';
+COMMENT ON COLUMN federation.t_idp_user_mappings.is_active IS 'Indicates if mapping is active';
+COMMENT ON COLUMN federation.t_idp_user_mappings.inactive_at IS 'Timestamp when mapping became inactive';
+COMMENT ON COLUMN federation.t_idp_user_mappings.inactive_by IS 'User who deactivated the mapping';
+COMMENT ON COLUMN federation.t_idp_user_mappings.is_deleted IS 'Indicates if mapping is deleted';
+COMMENT ON COLUMN federation.t_idp_user_mappings.deleted_at IS 'Timestamp when mapping was deleted';
+COMMENT ON COLUMN federation.t_idp_user_mappings.deleted_by IS 'User who deleted the mapping';
+COMMENT ON COLUMN federation.t_idp_user_mappings.idp_id IS 'Reference to the IdP';
+COMMENT ON COLUMN federation.t_idp_user_mappings.external_user_id IS 'External user identifier from IdP';
+COMMENT ON COLUMN federation.t_idp_user_mappings.internal_user_id IS 'Reference to internal user';
+```
+
+### Table: federation.t_idp_claim_mappings
+
+Maps external IdP claims to internal attributes.
+
+#### Table Columns
+
+| Key | Column Name    | Data Type    | Default           | Description                                       |
+| --- | -------------- | ------------ | ----------------- | ------------------------------------------------- |
+| PK  | id             | UUID         | GEN_RANDOM_UUID() | Primary key of the claim mapping                  |
+| FK  | created_by     | UUID         |                   | User who created the mapping                      |
+|     | created_at     | TIMESTAMP    | CURRENT_TIMESTAMP | Timestamp when mapping was created                |
+| FK  | updated_by     | UUID         |                   | User who last updated the mapping                 |
+|     | updated_at     | TIMESTAMP    |                   | Timestamp of last update                          |
+|     | is_active      | BOOLEAN      | TRUE              | Indicates if mapping is active                    |
+|     | inactive_at    | TIMESTAMP    |                   | Timestamp when mapping became inactive            |
+| FK  | inactive_by    | UUID         |                   | User who deactivated the mapping                  |
+|     | is_deleted     | BOOLEAN      | FALSE             | Indicates if mapping is deleted                   |
+|     | deleted_at     | TIMESTAMP    |                   | Timestamp when mapping was deleted                |
+| FK  | deleted_by     | UUID         |                   | User who deleted the mapping                      |
+| FK  | idp_id         | UUID         |                   | Reference to the IdP                              |
+|     | external_claim | VARCHAR(128) |                   | External claim name from IdP                      |
+| FK  | attribute_id   | UUID         |                   | Reference to internal attribute (m_attributes.id) |
+
+#### Table Constraints
+
+| Constraint Type | Column Name            | Constraint Name         | Description                                 |
+| --------------- | ---------------------- | ----------------------- | ------------------------------------------- |
+| PRIMARY KEY     | id                     |                         | Defines `id` as primary key                 |
+| FOREIGN KEY     | created_by             |                         | References `authentication.t_users(id)`     |
+| FOREIGN KEY     | updated_by             |                         | References `authentication.t_users(id)`     |
+| FOREIGN KEY     | inactive_by            |                         | References `authentication.t_users(id)`     |
+| FOREIGN KEY     | deleted_by             |                         | References `authentication.t_users(id)`     |
+| FOREIGN KEY     | idp_id                 |                         | References `federation.t_idp(id)`           |
+| FOREIGN KEY     | attribute_id           |                         | References `authorization.m_attributes(id)` |
+| UNIQUE          | idp_id, external_claim | uq_t_idp_claim_mappings | Ensures claim mapping is unique per IdP     |
+
+#### Query
+
+```SQL
+CREATE TABLE IF NOT EXISTS federation.t_idp_claim_mappings
+(
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
+    created_by UUID NOT NULL REFERENCES authentication.t_users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID REFERENCES authentication.t_users(id),
+    updated_at TIMESTAMP,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    inactive_at TIMESTAMP,
+    inactive_by UUID REFERENCES authentication.t_users(id),
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
+    deleted_by UUID REFERENCES authentication.t_users(id),
+    idp_id UUID NOT NULL REFERENCES federation.t_idp(id),
+    external_claim VARCHAR(128) NOT NULL,
+    attribute_id UUID NOT NULL REFERENCES authorization.m_attributes(id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_t_idp_claim_mappings ON federation.t_idp_claim_mappings(idp_id, external_claim);
+
+COMMENT ON TABLE federation.t_idp_claim_mappings IS 'Maps external IdP claims to internal attributes';
+COMMENT ON COLUMN federation.t_idp_claim_mappings.id IS 'Primary key of the claim mapping';
+COMMENT ON COLUMN federation.t_idp_claim_mappings.created_by IS 'User who created the mapping';
+COMMENT ON COLUMN federation.t_idp_claim_mappings.created_at IS 'Timestamp when mapping was created';
+COMMENT ON COLUMN federation.t_idp_claim_mappings.updated_by IS 'User who last updated the mapping';
+COMMENT ON COLUMN federation.t_idp_claim_mappings.updated_at IS 'Timestamp of last update';
+COMMENT ON COLUMN federation.t_idp_claim_mappings.is_active IS 'Indicates if mapping is active';
+COMMENT ON COLUMN federation.t_idp_claim_mappings.inactive_at IS 'Timestamp when mapping became inactive';
+COMMENT ON COLUMN federation.t_idp_claim_mappings.inactive_by IS 'User who deactivated the mapping';
+COMMENT ON COLUMN federation.t_idp_claim_mappings.is_deleted IS 'Indicates if mapping is deleted';
+COMMENT ON COLUMN federation.t_idp_claim_mappings.deleted_at IS 'Timestamp when mapping was deleted';
+COMMENT ON COLUMN federation.t_idp_claim_mappings.deleted_by IS 'User who deleted the mapping';
+COMMENT ON COLUMN federation.t_idp_claim_mappings.idp_id IS 'Reference to the IdP';
+COMMENT ON COLUMN federation.t_idp_claim_mappings.external_claim IS 'External claim name from IdP';
+COMMENT ON COLUMN federation.t_idp_claim_mappings.attribute_id IS 'Reference to internal attribute';
+```
+
+## Schema: infrastructure
+
+### Table: infrastructure.t_auth_logs
+
+Stores authentication and authorization logs including login attempts, logouts, and security events.
+
+#### Table Columns
+
+| Key | Column Name  | Data Type   | Default           | Description                                            |
+| --- | ------------ | ----------- | ----------------- | ------------------------------------------------------ |
+| PK  | id           | UUID        | GEN_RANDOM_UUID() | Primary key of the log record                          |
+| FK  | created_by   | UUID        |                   | User who triggered the log event (nullable)            |
+|     | created_at   | TIMESTAMP   | CURRENT_TIMESTAMP | Timestamp when the log was created                     |
+|     | event_type   | VARCHAR(32) |                   | Type of event: LOGIN, LOGOUT, FAILED_LOGIN, 2FA, OAUTH |
+|     | event_result | VARCHAR(16) |                   | Result of the event: SUCCESS, FAILURE                  |
+|     | user_agent   | TEXT        |                   | Browser or client info                                 |
+|     | ip_address   | VARCHAR(45) |                   | IPv4/IPv6 address of the request                       |
+| FK  | user_id      | UUID        |                   | Reference to user (authentication.t_users.id)          |
+|     | session_id   | UUID        |                   | Optional reference to session (token.t_sessions.id)    |
+|     | description  | TEXT        |                   | Additional info about the log                          |
+
+#### Table Constraints
+
+| Constraint Type | Column Name | Constraint Name          | Description                             |
+| --------------- | ----------- | ------------------------ | --------------------------------------- |
+| PRIMARY KEY     | id          |                          | Defines `id` as the primary key         |
+| FOREIGN KEY     | created_by  | fk_auth_logs_created_by  | References `authentication.t_users(id)` |
+| FOREIGN KEY     | user_id     | fk_auth_logs_user_id     | References `authentication.t_users(id)` |
+| INDEX           | created_at  | idx_auth_logs_created_at | Index for fast lookup by timestamp      |
+
+#### Query
+
+```SQL
+CREATE TABLE IF NOT EXISTS infrastructure.t_auth_logs
+(
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
+    created_by UUID REFERENCES authentication.t_users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    event_type VARCHAR(32) NOT NULL,
+    event_result VARCHAR(16),
+    user_agent TEXT,
+    ip_address VARCHAR(45),
+    user_id UUID REFERENCES authentication.t_users(id),
+    session_id UUID REFERENCES token.t_sessions(id),
+    description TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_auth_logs_created_at ON infrastructure.t_auth_logs(created_at);
+
+COMMENT ON TABLE infrastructure.t_auth_logs IS 'Stores authentication and authorization logs including login, logout, and security events';
+COMMENT ON COLUMN infrastructure.t_auth_logs.id IS 'Primary key of the log record';
+COMMENT ON COLUMN infrastructure.t_auth_logs.created_by IS 'User who triggered the log event';
+COMMENT ON COLUMN infrastructure.t_auth_logs.created_at IS 'Timestamp when the log was created';
+COMMENT ON COLUMN infrastructure.t_auth_logs.event_type IS 'Type of event: LOGIN, LOGOUT, FAILED_LOGIN, 2FA, OAUTH';
+COMMENT ON COLUMN infrastructure.t_auth_logs.event_result IS 'Result of the event: SUCCESS, FAILURE';
+COMMENT ON COLUMN infrastructure.t_auth_logs.user_agent IS 'Browser or client information';
+COMMENT ON COLUMN infrastructure.t_auth_logs.ip_address IS 'IP address of the request';
+COMMENT ON COLUMN infrastructure.t_auth_logs.user_id IS 'Reference to the user (authentication.t_users.id)';
+COMMENT ON COLUMN infrastructure.t_auth_logs.session_id IS 'Optional reference to the session (token.t_sessions.id)';
+COMMENT ON COLUMN infrastructure.t_auth_logs.description IS 'Additional information about the log';
+```
+
+### Table: infrastructure.t_event_queue_messages
+
+Stores messages for internal event bus / message queue system.
+
+#### Table Columns
+
+| Key | Column Name  | Data Type   | Default           | Description                                   |
+| --- | ------------ | ----------- | ----------------- | --------------------------------------------- |
+| PK  | id           | UUID        | GEN_RANDOM_UUID() | Primary key of the event message              |
+|     | event_type   | VARCHAR(64) |                   | Type of event, e.g., USER_CREATED, LOGIN      |
+|     | payload      | JSONB       |                   | Event payload in JSON format                  |
+|     | status       | VARCHAR(16) | 'PENDING'         | Status: PENDING, PROCESSING, DONE, FAILED     |
+|     | retry_count  | INT         | 0                 | Number of retries                             |
+|     | available_at | TIMESTAMP   | CURRENT_TIMESTAMP | Time when message is available for processing |
+|     | processed_at | TIMESTAMP   |                   | Time when message was processed               |
+|     | description  | TEXT        |                   | Additional description about the message      |
+
+#### Table Constraints
+
+| Constraint Type | Column Name  | Constraint Name     | Description                                                |
+| --------------- | ------------ | ------------------- | ---------------------------------------------------------- |
+| PRIMARY KEY     | id           |                     | Defines `id` as the primary key                            |
+| CHECK           | status       | chk_event_status    | Ensures status is one of PENDING, PROCESSING, DONE, FAILED |
+| INDEX           | available_at | idx_event_available | Index for fetching messages by availability                |
+
+#### Query
+
+```SQL
+CREATE TABLE IF NOT EXISTS infrastructure.t_event_queue_messages
+(
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
+    event_type VARCHAR(64) NOT NULL,
+    payload JSONB NOT NULL,
+    status VARCHAR(16) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','PROCESSING','DONE','FAILED')),
+    retry_count INT NOT NULL DEFAULT 0,
+    available_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP,
+    description TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_event_available ON infrastructure.t_event_queue_messages(available_at);
+
+COMMENT ON TABLE infrastructure.t_event_queue_messages IS 'Stores messages for internal event bus / message queue';
+COMMENT ON COLUMN infrastructure.t_event_queue_messages.id IS 'Primary key of the event message';
+COMMENT ON COLUMN infrastructure.t_event_queue_messages.event_type IS 'Type of event, e.g., USER_CREATED, LOGIN';
+COMMENT ON COLUMN infrastructure.t_event_queue_messages.payload IS 'Event payload in JSON format';
+COMMENT ON COLUMN infrastructure.t_event_queue_messages.status IS 'Status of message: PENDING, PROCESSING, DONE, FAILED';
+COMMENT ON COLUMN infrastructure.t_event_queue_messages.retry_count IS 'Number of times the message has been retried';
+COMMENT ON COLUMN infrastructure.t_event_queue_messages.available_at IS 'Timestamp when message is ready for processing';
+COMMENT ON COLUMN infrastructure.t_event_queue_messages.processed_at IS 'Timestamp when message was processed';
+COMMENT ON COLUMN infrastructure.t_event_queue_messages.description IS 'Additional notes about the event';
+```
+
+### Table: infrastructure.t_alerts
+
+Stores security or system alerts to be notified to users or admins.
+
+#### Table Columns
+
+| Key | Column Name  | Data Type   | Default           | Description                                   |
+| --- | ------------ | ----------- | ----------------- | --------------------------------------------- |
+| PK  | id           | UUID        | GEN_RANDOM_UUID() | Primary key of the alert record               |
+| FK  | created_by   | UUID        |                   | User who triggered the alert                  |
+|     | created_at   | TIMESTAMP   | CURRENT_TIMESTAMP | Timestamp when the alert was created          |
+|     | alert_type   | VARCHAR(32) |                   | Type of alert: SECURITY, SYSTEM, NOTIFICATION |
+|     | severity     | VARCHAR(16) |                   | Severity level: INFO, WARNING, CRITICAL       |
+|     | message      | TEXT        |                   | Alert message content                         |
+|     | reference_id | UUID        |                   | Optional reference to related record          |
+|     | is_resolved  | BOOLEAN     | FALSE             | Indicates if the alert has been resolved      |
+|     | resolved_at  | TIMESTAMP   |                   | Timestamp when resolved                       |
+|     | description  | TEXT        |                   | Additional information                        |
+
+#### Table Constraints
+
+| Constraint Type | Column Name | Constraint Name | Description                                 |
+| --------------- | ----------- | --------------- | ------------------------------------------- |
+| PRIMARY KEY     | id          |                 | Defines `id` as primary key                 |
+| FOREIGN KEY     | created_by  | fk_alerts_user  | References `authentication.t_users(id)`     |
+| CHECK           | severity    | chk_alert_sev   | Ensures severity is INFO, WARNING, CRITICAL |
+| INDEX           | created_at  | idx_alerts_date | Index on created_at for faster lookup       |
+
+#### Query
+
+```SQL
+CREATE TABLE IF NOT EXISTS infrastructure.t_alerts
+(
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
+    created_by UUID REFERENCES authentication.t_users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    alert_type VARCHAR(32) NOT NULL,
+    severity VARCHAR(16) CHECK (severity IN ('INFO','WARNING','CRITICAL')),
+    message TEXT NOT NULL,
+    reference_id UUID,
+    is_resolved BOOLEAN NOT NULL DEFAULT FALSE,
+    resolved_at TIMESTAMP,
+    description TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_alerts_date ON infrastructure.t_alerts(created_at);
+
+COMMENT ON TABLE infrastructure.t_alerts IS 'Stores system or security alerts to be notified to users/admins';
+COMMENT ON COLUMN infrastructure.t_alerts.id IS 'Primary key of the alert record';
+COMMENT ON COLUMN infrastructure.t_alerts.created_by IS 'User who triggered the alert';
+COMMENT ON COLUMN infrastructure.t_alerts.created_at IS 'Timestamp when the alert was created';
+COMMENT ON COLUMN infrastructure.t_alerts.alert_type IS 'Type of alert: SECURITY, SYSTEM, NOTIFICATION';
+COMMENT ON COLUMN infrastructure.t_alerts.severity IS 'Severity level: INFO, WARNING, CRITICAL';
+COMMENT ON COLUMN infrastructure.t_alerts.message IS 'Alert message content';
+COMMENT ON COLUMN infrastructure.t_alerts.reference_id IS 'Optional reference to related record';
+COMMENT ON COLUMN infrastructure.t_alerts.is_resolved IS 'Indicates if the alert has been resolved';
+COMMENT ON COLUMN infrastructure.t_alerts.resolved_at IS 'Timestamp when resolved';
+COMMENT ON COLUMN infrastructure.t_alerts.description IS 'Additional info about the alert';
+```
+
+## Schema: audit
+
+### Table: audit.t_request_logs
+
+Stores all API request and response activities, including metadata such as endpoint, request payload, response status, and duration. Used for auditing and tracing user/system activities.
+
+#### Table Columns
+
+| Key | Column Name      | Data Type | Default           | Description                                       |
+| --- | ---------------- | --------- | ----------------- | ------------------------------------------------- |
+| PK  | id               | UUID      | GEN_RANDOM_UUID() | Primary key of the API request log record         |
+| FK  | created_by       | UUID      |                   | User who initiated the request                    |
+|     | created_at       | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp when the request occurred               |
+|     | endpoint         | TEXT      |                   | API endpoint that was accessed                    |
+|     | method           | TEXT      |                   | HTTP method used in the request (GET, POST, etc.) |
+|     | request_payload  | JSONB     |                   | Request data payload                              |
+|     | response_payload | JSONB     |                   | Response data payload                             |
+|     | status_code      | INT       |                   | HTTP status code returned                         |
+|     | ip_address       | TEXT      |                   | IP address of the requester                       |
+|     | user_agent       | TEXT      |                   | User agent or client information                  |
+|     | duration_ms      | INT       |                   | Execution time of the request in milliseconds     |
+
+#### Table Constraints
+
+| Constraint Type | Column Name | Constraint Name               | Description                                  |
+| --------------- | ----------- | ----------------------------- | -------------------------------------------- |
+| PRIMARY KEY     | id          |                               | Defines `id` as the primary key              |
+| FOREIGN KEY     | created_by  |                               | References `authentication.t_users(id)`      |
+| INDEX           | endpoint    | idx_t_request_logs_endpoint   | Creates index for querying by endpoint       |
+| INDEX           | created_at  | idx_t_request_logs_created_at | Creates index for request time range queries |
+
+#### Query
+
+```sql
+CREATE TABLE IF NOT EXISTS audit.t_request_logs
+(
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
+    created_by UUID REFERENCES authentication.t_users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
+    endpoint TEXT NOT NULL,
+    method TEXT NOT NULL,
+    request_payload JSONB,
+    response_payload JSONB,
+    status_code INT,
+    ip_address TEXT,
+    user_agent TEXT,
+    duration_ms INT
+);
+
+CREATE INDEX IF NOT EXISTS idx_t_request_logs_endpoint ON audit.t_request_logs(endpoint);
+CREATE INDEX IF NOT EXISTS idx_t_request_logs_created_at ON audit.t_request_logs(created_at);
+
+COMMENT ON TABLE audit.t_request_logs IS 'Stores all API request and response activities, used for auditing and tracing.';
+COMMENT ON COLUMN audit.t_request_logs.id IS 'Primary key of the API request log record';
+COMMENT ON COLUMN audit.t_request_logs.created_by IS 'User who initiated the request';
+COMMENT ON COLUMN audit.t_request_logs.created_at IS 'Timestamp when the request occurred';
+
+COMMENT ON COLUMN audit.t_request_logs.endpoint IS 'API endpoint that was accessed';
+COMMENT ON COLUMN audit.t_request_logs.method IS 'HTTP method used in the request';
+COMMENT ON COLUMN audit.t_request_logs.request_payload IS 'Request data payload';
+COMMENT ON COLUMN audit.t_request_logs.response_payload IS 'Response data payload';
+COMMENT ON COLUMN audit.t_request_logs.status_code IS 'HTTP status code returned';
+COMMENT ON COLUMN audit.t_request_logs.ip_address IS 'IP address of the requester';
+COMMENT ON COLUMN audit.t_request_logs.user_agent IS 'User agent or client information';
+COMMENT ON COLUMN audit.t_request_logs.duration_ms IS 'Execution time of the request in milliseconds';
+```
+
+### Table: audit.t_change_logs
+
+Stores header-level information for data change events, grouping multiple column-level changes into a single logical transaction (e.g., one UPDATE statement affecting several columns).
+
+#### Table Columns
+
+| Key | Column Name | Data Type | Default           | Description                                          |
+| --- | ----------- | --------- | ----------------- | ---------------------------------------------------- |
+| PK  | id          | UUID      | GEN_RANDOM_UUID() | Primary key of the change log header record          |
+| FK  | created_by  | UUID      |                   | User who made the change                             |
+|     | created_at  | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp when the change occurred                   |
+|     | table_name  | TEXT      |                   | Name of the table where the change occurred          |
+|     | record_id   | UUID      |                   | ID of the affected record                            |
+|     | operation   | TEXT      |                   | Type of operation (INSERT, UPDATE, DELETE)           |
+|     | request_id  | UUID      |                   | Reference to API request in audit.t_api_request_logs |
+
+#### Table Constraints
+
+| Constraint Type | Column Name | Description                                 |
+| --------------- | ----------- | ------------------------------------------- |
+| PRIMARY KEY     | id          | Defines `id` as the primary key             |
+| FOREIGN KEY     | created_by  | References `authentication.t_users(id)`     |
+| FOREIGN KEY     | request_id  | References `audit.t_api_request_logs(id)`   |
+| INDEX           | table_name  | Creates index for querying by table name    |
+| INDEX           | created_at  | Creates index for time-based change queries |
+
+#### Query
+
+```sql
+CREATE TABLE IF NOT EXISTS audit.t_change_logs
+(
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
+    created_by UUID REFERENCES authentication.t_users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    table_name TEXT NOT NULL,
+    record_id UUID NOT NULL,
+    operation TEXT NOT NULL,
+    request_id UUID REFERENCES audit.t_api_request_logs(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_t_data_change_log_headers_table_name ON audit.t_change_logs(table_name);
+CREATE INDEX IF NOT EXISTS idx_t_data_change_log_headers_created_at ON audit.t_change_logs(created_at);
+
+COMMENT ON TABLE audit.t_change_logs IS 'Stores header-level information for grouped data change events (transactions).';
+COMMENT ON COLUMN audit.t_change_logs.id IS 'Primary key of the change log header record';
+COMMENT ON COLUMN audit.t_change_logs.created_by IS 'User who made the change';
+COMMENT ON COLUMN audit.t_change_logs.created_at IS 'Timestamp when the change occurred';
+COMMENT ON COLUMN audit.t_change_logs.table_name IS 'Name of the table where the change occurred';
+COMMENT ON COLUMN audit.t_change_logs.record_id IS 'ID of the affected record';
+COMMENT ON COLUMN audit.t_change_logs.operation IS 'Type of operation (INSERT, UPDATE, DELETE)';
+COMMENT ON COLUMN audit.t_change_logs.request_id IS 'Reference to related API request record';
+```
+
+### Table: audit.t_change_log_items
+
+Stores column-level changes related to a specific change log header. Each record represents a single column modification within a transaction.
+
+#### Table Columns
+
+| Key | Column Name | Data Type | Default           | Description                                      |
+| --- | ----------- | --------- | ----------------- | ------------------------------------------------ |
+| PK  | id          | UUID      | GEN_RANDOM_UUID() | Primary key of the change log item record        |
+| FK  | created_by  | UUID      |                   | User who made the change                         |
+|     | created_at  | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp when the change occurred               |
+| FK  | header_id   | UUID      |                   | Reference to audit.t_data_change_log_headers(id) |
+|     | column_name | TEXT      |                   | Name of the column changed                       |
+|     | old_value   | TEXT      |                   | Previous value before change                     |
+|     | new_value   | TEXT      |                   | Updated value after change                       |
+
+#### Table Constraints
+
+| Constraint Type | Column Name | Description                                  |
+| --------------- | ----------- | -------------------------------------------- |
+| PRIMARY KEY     | id          | Defines `id` as the primary key              |
+| FOREIGN KEY     | header_id   | References `audit.t_data_change_log_headers` |
+| FOREIGN KEY     | created_by  | References `authentication.t_users(id)`      |
+| INDEX           | header_id   | Creates index for querying by header         |
+
+#### Query
+
+```sql
+CREATE TABLE IF NOT EXISTS audit.t_change_log_items
+(
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
+    created_by UUID REFERENCES authentication.t_users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    header_id UUID NOT NULL REFERENCES audit.t_change_logs(id),
+    column_name TEXT NOT NULL,
+    old_value TEXT,
+    new_value TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_t_data_change_log_items_header_id ON audit.t_change_log_items(header_id);
+
+COMMENT ON TABLE audit.t_change_log_items IS 'Stores column-level data changes associated with a change log header.';
+COMMENT ON COLUMN audit.t_change_log_items.id IS 'Primary key of the change log item record';
+COMMENT ON COLUMN audit.t_change_log_items.created_by IS 'User who made the change';
+COMMENT ON COLUMN audit.t_change_log_items.created_at IS 'Timestamp when the change occurred';
+COMMENT ON COLUMN audit.t_change_log_items.header_id IS 'Reference to change log header record';
+COMMENT ON COLUMN audit.t_change_log_items.column_name IS 'Name of the column changed';
+COMMENT ON COLUMN audit.t_change_log_items.old_value IS 'Previous value before change';
+COMMENT ON COLUMN audit.t_change_log_items.new_value IS 'Updated value after change';
 ```
