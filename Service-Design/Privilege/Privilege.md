@@ -19,9 +19,10 @@
   - **Change / Notes:**  
     - Initial draft of Privilege Service Specification. Defined dynamic tier model, rule engine, integrations, and configuration workflow.## 1. Service Name
 
-**Privilege Service — Member Tier & Benefit Management**
+## 1. Service Name
 
-**Description:**  
+> **Privilege Service — Member Tier & Benefit Management**
+
 Privilege Service is the central **Member Privilege Management** microservice that manages **Member Tier**, **Benefit**, **Point Policy**, and **Privilege Events**.  
 It supports both **Dynamic**, **Fixed**, and **Hybrid Tiers**, **manual privilege assignment**, **Benefit Templates**, and **real-time condition evaluation**.  
 The service acts as a **Single Source of Truth** for privileges, integrates with **IAM**, **Loyalty**, **Partner**, **Campaign**, and **Mission** microservices, and enables organizations to configure **Dynamic Reward Logic** without modifying code.  
@@ -1193,35 +1194,112 @@ Responsible for audit logs, reconciliation, and rollback.
 | Alerts / Notifications         | CloudWatch Alarms / SNS    | privilege-alerts-1                           | Notify devops/admins on service failures or anomalies                          |
 
 ```mermaid
-graph LR
-    Client[Admin / Member Client] -->|HTTP/HTTPS| APIGW[API Gateway / NGINX (api-gateway-1)]
-    APIGW --> PrivMS1[Privilege Microservice (service-privilege-1)]
-    APIGW --> PrivMS2[Privilege Microservice (service-privilege-2)]
-    PrivMS1 --> DB1[PostgreSQL / RDS (rds-privilege-primary)]
-    PrivMS1 --> DB2[PostgreSQL / RDS (rds-privilege-replica)]
+flowchart LR
+    %% API Gateway / Ingress
+    subgraph APIGateway["API Gateway"]
+        APIGW["API Gateway / NGINX (api-gateway-1)"]
+    end
+
+    %% Privilege Microservice
+    subgraph PrivMS["Privilege Microservice"]
+        PrivMS1["Privilege Microservice (service-privilege-1)"]
+        PrivMS2["Privilege Microservice (service-privilege-2)"]
+    end
+
+    %% Database
+    subgraph DB["Database"]
+        DB1["PostgreSQL / RDS (rds-privilege-primary)"]
+        DB2["PostgreSQL / RDS (rds-privilege-replica)"]
+    end
+
+    %% Cache
+    subgraph CacheSG["Cache"]
+        Cache1["Redis / ElastiCache (redis-privilege-1)"]
+        Cache2["Redis / ElastiCache (redis-privilege-2)"]
+    end
+
+    %% Event Bus
+    subgraph EventBusSG["Event Bus"]
+        EventBus1["Message Queue / Kafka-SQS (event-bus-1)"]
+        EventBus2["Message Queue / Kafka-SQS (event-bus-2)"]
+    end
+
+    %% Simulation Engine
+    subgraph SimulationSG["Simulation Engine"]
+        Simulation["Simulation Engine (simulation-engine-1)"]
+    end
+
+    %% Audit DB
+    subgraph AuditSG["Audit DB"]
+        AuditDB["Audit & Logging DB (audit-db-1)"]
+    end
+
+    %% Reconciliation
+    subgraph ReconciliationSG["Reconciliation"]
+        Reconciliation1["Reconciliation Job / Scheduler (reconciliation-job-1)"]
+        Reconciliation2["Reconciliation Job / Scheduler (reconciliation-job-2)"]
+    end
+
+    %% Monitoring/Alerts
+    subgraph MonitoringSG["Monitoring / Alerts"]
+        Monitoring1["CloudWatch / Prometheus (privilege-metrics-1)"]
+        Monitoring2["CloudWatch / Prometheus (privilege-metrics-2)"]
+        Alerts["Cloud Alerts / SNS (privilege-alerts-1)"]
+    end
+
+    %% KMS
+    subgraph KMSSG["KMS / Vault"]
+        KMS["KMS / Vault (kms-privilege-1)"]
+    end
+
+    %% Client (not a service, but for completeness)
+    Client["Admin / Member Client"]
+    Client -->|HTTP/HTTPS| APIGW
+
+    %% API Gateway to Privilege Microservice
+    APIGW --> PrivMS1
+    APIGW --> PrivMS2
+
+    %% Privilege Microservice to Database
+    PrivMS1 --> DB1
+    PrivMS1 --> DB2
     PrivMS2 --> DB1
     PrivMS2 --> DB2
-    PrivMS1 --> Cache1[Redis / ElastiCache (redis-privilege-1)]
-    PrivMS2 --> Cache2[Redis / ElastiCache (redis-privilege-2)]
-    PrivMS1 --> EventBus1[Message Queue / Kafka/SQS (event-bus-1)]
-    PrivMS2 --> EventBus2[Message Queue / Kafka/SQS (event-bus-2)]
-    PrivMS1 --> Simulation[Simulation Engine (simulation-engine-1)]
-    PrivMS2 --> Simulation
-    PrivMS1 --> AuditDB[Audit & Logging DB (audit-db-1)]
-    PrivMS2 --> AuditDB
-    PrivMS1 --> KMS[KMS / Vault (kms-privilege-1)]
-    PrivMS2 --> KMS
+
+    %% Privilege Microservice to Cache
+    PrivMS1 --> Cache1
+    PrivMS2 --> Cache2
+
+    %% Privilege Microservice to Event Bus
+    PrivMS1 --> EventBus1
+    PrivMS2 --> EventBus2
     EventBus1 --> PrivMS1
     EventBus2 --> PrivMS2
+
+    %% Privilege Microservice to Simulation Engine
+    PrivMS1 --> Simulation
+    PrivMS2 --> Simulation
     Simulation --> DB1
     Simulation --> Cache1
     Simulation --> Cache2
-    Reconciliation1[Reconciliation Job / Scheduler (reconciliation-job-1)] --> DB1
+
+    %% Privilege Microservice to Audit DB
+    PrivMS1 --> AuditDB
+    PrivMS2 --> AuditDB
+
+    %% Privilege Microservice to KMS
+    PrivMS1 --> KMS
+    PrivMS2 --> KMS
+
+    %% Reconciliation Jobs
+    Reconciliation1 --> DB1
     Reconciliation1 --> Cache1
-    Reconciliation2[Reconciliation Job / Scheduler (reconciliation-job-2)] --> DB2
+    Reconciliation2 --> DB2
     Reconciliation2 --> Cache2
-    PrivMS1 --> Monitoring1[CloudWatch / Prometheus (privilege-metrics-1)]
-    PrivMS2 --> Monitoring2[CloudWatch / Prometheus (privilege-metrics-2)]
-    Monitoring1 --> Alerts[Cloud Alerts / SNS (privilege-alerts-1)]
+
+    %% Privilege Microservice to Monitoring/Alerts
+    PrivMS1 --> Monitoring1
+    PrivMS2 --> Monitoring2
+    Monitoring1 --> Alerts
     Monitoring2 --> Alerts
 ```
