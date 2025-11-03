@@ -999,7 +999,7 @@ Provides logging, monitoring, and security alerting to support authentication, a
 
 ---
 
-## 11. API Endpoints (Complete & Updated IAM Microservices)
+## 11. API Endpoints
 
 | Environment    | URL                      |
 | -------------- | ------------------------ |

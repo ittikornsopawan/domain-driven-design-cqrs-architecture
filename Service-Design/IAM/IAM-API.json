@@ -1,0 +1,1721 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "IAM Microservice API",
+    "description": "Identity & Access Management Microservice API - A comprehensive solution for authentication, authorization, user management, and session handling in a microservices ecosystem.\n\n## Features\n- **Multi-factor Authentication**: Password, OTP (SMS/Email), Social Login\n- **Role-Based Access Control (RBAC)**: User groups and permissions\n- **Attribute-Based Access Control (ABAC)**: Policy-based authorization\n- **Session Management**: JWT tokens with refresh capabilities\n- **User Management**: Registration, profile management, contact handling\n- **Security**: AES-256 encryption for sensitive data\n\n## API Versioning\nThis API follows semantic versioning. Current version: v1.0.0\n\n## Rate Limiting\n- Authentication endpoints: 10 requests/minute per IP\n- Authorization endpoints: 100 requests/minute per user\n- Health check: 1000 requests/minute per IP",
+    "version": "1.0.0",
+    "contact": {
+      "name": "IAM Service Team",
+      "email": "iam-service@example.com",
+      "url": "https://docs.example.com/iam"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "x-service-info": {
+      "service-name": "iam-service",
+      "team": "Platform Engineering",
+      "repository": "https://github.com/example/iam-service",
+      "monitoring": "https://monitoring.example.com/iam",
+      "documentation": "https://docs.example.com/iam"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080/v1/iam",
+      "description": "Local Development Server"
+    },
+    {
+      "url": "https://dev-api.example.com/v1/iam",
+      "description": "Development Environment"
+    },
+    {
+      "url": "https://qa-api.example.com/v1/iam",
+      "description": "Quality Assurance Environment"
+    },
+    {
+      "url": "https://uat-api.example.com/v1/iam",
+      "description": "User Acceptance Testing Environment"
+    },
+    {
+      "url": "https://staging-api.example.com/v1/iam",
+      "description": "Staging Environment"
+    },
+    {
+      "url": "https://pre-prod-api.example.com/v1/iam",
+      "description": "Pre-Production Environment"
+    },
+    {
+      "url": "https://api.example.com/v1/iam",
+      "description": "Production Environment"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User authentication and security controls"
+    },
+    {
+      "name": "Authorization / ABAC",
+      "description": "Access control and permissions"
+    },
+    {
+      "name": "User Management",
+      "description": "Core user identity and profile management"
+    },
+    {
+      "name": "Session Management",
+      "description": "User session lifecycle management"
+    },
+    {
+      "name": "Tenant Management",
+      "description": "Tenant lifecycle and configuration management"
+    },
+    {
+      "name": "Federation / External IdP",
+      "description": "External identity provider federation"
+    },
+    {
+      "name": "Infrastructure / DevOps",
+      "description": "Service health, metrics and operational endpoints"
+    }
+  ],
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Authenticate user via username/password.",
+        "description": "Authenticate user via username/password.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login/mobile": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Authenticate user via mobile number + OTP.",
+        "description": "Authenticate user via mobile number + OTP.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login/email": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Authenticate user via email + OTP.",
+        "description": "Authenticate user via email + OTP.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login/social": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Authenticate user via social provider OAuth.",
+        "description": "Authenticate user via social provider OAuth.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login/2fa": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Verify login using external 2FA mechanism.",
+        "description": "Verify login using external 2FA mechanism.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/token/introspect": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Check validity and claims of a token.",
+        "description": "Check validity and claims of a token.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/token/revoke": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Revoke access/refresh tokens for a session.",
+        "description": "Revoke access/refresh tokens for a session.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}/profile": {
+      "get": {
+        "tags": ["User Management"],
+        "summary": "Retrieve user profile data.",
+        "description": "Retrieve user profile data.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}/attributes": {
+      "post": {
+        "tags": ["User Management"],
+        "summary": "Assign attributes to a user (role, department, etc.).",
+        "description": "Assign attributes to a user (role, department, etc.).",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["User Management"],
+        "summary": "Retrieve attributes assigned to a specific user.",
+        "description": "Retrieve attributes assigned to a specific user.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["User Management"],
+        "summary": "Remove attributes from a user.",
+        "description": "Remove attributes from a user.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}/dynamic-groups": {
+      "get": {
+        "tags": ["User Management"],
+        "summary": "Retrieve dynamic groups assigned based on attributes.",
+        "description": "Retrieve dynamic groups assigned based on attributes.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/validate": {
+      "post": {
+        "tags": ["Session Management"],
+        "summary": "Validate user session or access token.",
+        "description": "Validate user session or access token.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/refresh": {
+      "post": {
+        "tags": ["Session Management"],
+        "summary": "Generate a new access token using refresh.",
+        "description": "Generate a new access token using refresh.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/logout": {
+      "post": {
+        "tags": ["Session Management"],
+        "summary": "Logout user and invalidate active session.",
+        "description": "Logout user and invalidate active session.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tenants": {
+      "post": {
+        "tags": ["Tenant Management"],
+        "summary": "Create a new tenant.",
+        "description": "Create a new tenant.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tenants/{id}": {
+      "put": {
+        "tags": ["Tenant Management"],
+        "summary": "Update tenant configurations.",
+        "description": "Update tenant configurations.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Tenant Management"],
+        "summary": "Remove a tenant and revoke associated data.",
+        "description": "Remove a tenant and revoke associated data.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Tenant Management"],
+        "summary": "Retrieve tenant details.",
+        "description": "Retrieve tenant details.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/federation/idp": {
+      "post": {
+        "tags": ["Federation / External IdP"],
+        "summary": "Register new external IdP (SAML/OIDC).",
+        "description": "Register new external IdP (SAML/OIDC).",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/federation/idp/{id}": {
+      "put": {
+        "tags": ["Federation / External IdP"],
+        "summary": "Update IdP configuration.",
+        "description": "Update IdP configuration.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Federation / External IdP"],
+        "summary": "Remove IdP configuration.",
+        "description": "Remove IdP configuration.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Federation / External IdP"],
+        "summary": "Retrieve IdP details.",
+        "description": "Retrieve IdP details.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/federation/jit-provision": {
+      "post": {
+        "tags": ["Federation / External IdP"],
+        "summary": "Auto-provision users on first login from IdP.",
+        "description": "Auto-provision users on first login from IdP.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/federation/claim-mapping": {
+      "post": {
+        "tags": ["Federation / External IdP"],
+        "summary": "Map external IdP claims to internal user attributes.",
+        "description": "Map external IdP claims to internal user attributes.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/logs/auth": {
+      "post": {
+        "tags": ["Infrastructure / DevOps"],
+        "summary": "Log authentication and security events.",
+        "description": "Log authentication and security events.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/logs/auth/failed": {
+      "get": {
+        "tags": ["Infrastructure / DevOps"],
+        "summary": "Retrieve list of failed login attempts.",
+        "description": "Retrieve list of failed login attempts.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/alerts/security": {
+      "post": {
+        "tags": ["Infrastructure / DevOps"],
+        "summary": "Send security-related notifications or alerts.",
+        "description": "Send security-related notifications or alerts.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mq/publish": {
+      "post": {
+        "tags": ["Infrastructure / DevOps"],
+        "summary": "Publish event to message queue / event bus.",
+        "description": "Publish event to message queue / event bus.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mq/consume": {
+      "get": {
+        "tags": ["Infrastructure / DevOps"],
+        "summary": "Retrieve events from message queue / event bus.",
+        "description": "Retrieve events from message queue / event bus.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "User Login",
+        "description": "Authenticate user credentials and issue a JWT token.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["Authentication", "Session Management"],
+        "summary": "User Logout",
+        "description": "Invalidate user session and revoke all tokens.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/otp/request": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Request OTP",
+        "description": "Request a one-time password for multi-factor authentication.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/otp/verify": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Verify OTP",
+        "description": "Verify the submitted one-time password for authentication.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/social/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Social Login",
+        "description": "Authenticate user via a supported social login provider.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/authorize/abac": {
+      "post": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "ABAC Authorization Decision",
+        "description": "Evaluate attribute-based access control (ABAC) policies to determine if a given action is permitted for a subject on a resource.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/authorize/policy": {
+      "post": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Policy-based Authorization",
+        "description": "Evaluate custom policies for authorization decisions based on supplied context and policy rules.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/policies": {
+      "post": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Create Policy",
+        "description": "Create a new ABAC policy definition for access control.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/policies/{id}": {
+      "get": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Get Policy Details",
+        "description": "Retrieve the details of a specific ABAC policy by its identifier.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Update Policy",
+        "description": "Update the definition or rules of an existing ABAC policy.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Delete Policy",
+        "description": "Remove an ABAC policy from the system.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/policies/{id}/versions": {
+      "get": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "List Policy Versions",
+        "description": "Retrieve all versions of a specific ABAC policy.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Create Policy Version",
+        "description": "Create a new version of an existing ABAC policy.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/attributes": {
+      "post": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Create Attribute",
+        "description": "Create a new attribute for use in ABAC policies.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "List Attributes",
+        "description": "Retrieve all ABAC attributes defined in the system.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/attributes/{id}": {
+      "put": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Update Attribute",
+        "description": "Update the definition or value of an existing ABAC attribute.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Delete Attribute",
+        "description": "Remove an attribute from the ABAC system.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/attributes/groups": {
+      "post": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Create Attribute Group",
+        "description": "Create a new group of attributes for ABAC policy grouping.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/attributes/groups/{id}": {
+      "get": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Get Attribute Group Details",
+        "description": "Retrieve details of a specific attribute group.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Update Attribute Group",
+        "description": "Update the definition of an existing attribute group.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Delete Attribute Group",
+        "description": "Remove an attribute group from the ABAC system.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": ["User Management"],
+        "summary": "List Users",
+        "description": "Retrieve a paginated list of users.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["User Management"],
+        "summary": "Create User",
+        "description": "Register a new user account.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{userId}": {
+      "get": {
+        "tags": ["User Management"],
+        "summary": "Get User Details",
+        "description": "Retrieve details for a specific user.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["User Management"],
+        "summary": "Update User",
+        "description": "Update the profile information of a user.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["User Management"],
+        "summary": "Delete User",
+        "description": "Remove a user account from the system.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{userId}/roles": {
+      "get": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Get User Roles",
+        "description": "Retrieve the roles assigned to a specific user.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Assign Roles to User",
+        "description": "Assign one or more roles to a user.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Remove Roles from User",
+        "description": "Remove one or more roles from a user.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/roles": {
+      "get": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "List Roles",
+        "description": "Retrieve all available roles in the system.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Create Role",
+        "description": "Create a new role definition.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/roles/{roleId}": {
+      "get": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Get Role Details",
+        "description": "Retrieve details for a specific role.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Update Role",
+        "description": "Update the definition or permissions of a role.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Authorization / ABAC"],
+        "summary": "Delete Role",
+        "description": "Remove a role from the system.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions": {
+      "get": {
+        "tags": ["Session Management"],
+        "summary": "List Active Sessions",
+        "description": "Retrieve a list of all active user sessions.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}": {
+      "delete": {
+        "tags": ["Session Management"],
+        "summary": "Invalidate Session",
+        "description": "Terminate a specific active user session.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tenants": {
+      "get": {
+        "tags": ["Tenant Management"],
+        "summary": "List Tenants",
+        "description": "Retrieve a list of all tenants.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Tenant Management"],
+        "summary": "Create Tenant",
+        "description": "Register a new tenant in the system.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tenants/{tenantId}": {
+      "get": {
+        "tags": ["Tenant Management"],
+        "summary": "Get Tenant Details",
+        "description": "Retrieve information about a specific tenant.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Tenant Management"],
+        "summary": "Update Tenant",
+        "description": "Update the information of a tenant.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Tenant Management"],
+        "summary": "Delete Tenant",
+        "description": "Remove a tenant from the system.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/federation/external-idp": {
+      "get": {
+        "tags": ["Federation / External IdP"],
+        "summary": "List External IdPs",
+        "description": "Retrieve a list of configured external identity providers.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Federation / External IdP"],
+        "summary": "Add External IdP",
+        "description": "Configure and add a new external identity provider.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/federation/external-idp/{idpId}": {
+      "get": {
+        "tags": ["Federation / External IdP"],
+        "summary": "Get External IdP Details",
+        "description": "Retrieve details for a specific external identity provider.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Federation / External IdP"],
+        "summary": "Update External IdP",
+        "description": "Update the configuration of an external identity provider.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Federation / External IdP"],
+        "summary": "Delete External IdP",
+        "description": "Remove an external identity provider configuration.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/infrastructure/health": {
+      "get": {
+        "tags": ["Infrastructure / DevOps"],
+        "summary": "Health Check",
+        "description": "Check the health status of the IAM service.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/infrastructure/metrics": {
+      "get": {
+        "tags": ["Infrastructure / DevOps"],
+        "summary": "Service Metrics",
+        "description": "Retrieve operational metrics for the IAM service.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "x-microservice-info": {
+    "service-name": "iam-service",
+    "version": "1.0.0",
+    "team": "Platform Engineering",
+    "repository": "https://github.com/example/iam-service",
+    "documentation": "https://docs.example.com/iam",
+    "monitoring": "https://monitoring.example.com/iam",
+    "health-check": "/api/health",
+    "metrics": "/api/metrics",
+    "dependencies": [
+      {
+        "name": "postgresql",
+        "type": "database",
+        "version": "14+"
+      },
+      {
+        "name": "redis",
+        "type": "cache",
+        "version": "6+"
+      },
+      {
+        "name": "notification-service",
+        "type": "microservice",
+        "version": "1.0.0"
+      }
+    ],
+    "deployment": {
+      "environment": "kubernetes",
+      "replicas": 3,
+      "resources": {
+        "cpu": "500m",
+        "memory": "1Gi"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CommonResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "integer"
+              },
+              "message": {
+                "type": "string"
+              },
+              "bizErrorCode": {
+                "type": "string"
+              },
+              "bizErrorMessage": {
+                "type": "string"
+              }
+            },
+            "required": ["code", "message", "bizErrorCode", "bizErrorMessage"]
+          },
+          "data": {
+            "type": "object",
+            "description": "Response payload"
+          }
+        },
+        "required": ["status", "data"]
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "x-data-dictionary": {
+      "version": "1.0.0",
+      "last-updated": "2024-01-15T10:30:00Z",
+      "description": "Comprehensive data dictionary for IAM Microservice API",
+      "data-classifications": {
+        "public": "Data that can be freely shared",
+        "internal": "Data for internal use only",
+        "personal": "Personal information requiring GDPR compliance",
+        "sensitive": "Sensitive data requiring encryption",
+        "highly-sensitive": "Highly sensitive data requiring strong encryption and audit"
+      },
+      "field-types": {
+        "primary-key": "Unique identifier for database records",
+        "business-key": "Human-readable business identifier",
+        "personal-data": "Personal information about individuals",
+        "authentication-data": "Data used for user authentication",
+        "authentication-token": "JWT or similar authentication tokens",
+        "refresh-token": "Long-lived token for token refresh",
+        "reference-data": "Reference information linking related data",
+        "session-identifier": "Unique identifier for user sessions",
+        "duration-data": "Time-based data (durations, intervals)",
+        "constant-value": "Fixed values that don't change",
+        "role-list": "List of user roles",
+        "permission-list": "List of user permissions",
+        "audit-data": "Data for audit and compliance tracking"
+      },
+      "business-domains": {
+        "Identity Management": "Core user identity and profile management",
+        "Authentication & Security": "User authentication and security controls",
+        "Authorization": "Access control and permissions",
+        "Session Management": "User session lifecycle management",
+        "Audit & Compliance": "Audit trails and compliance tracking"
+      },
+      "compliance-frameworks": {
+        "GDPR": "General Data Protection Regulation",
+        "CCPA": "California Consumer Privacy Act",
+        "SOX": "Sarbanes-Oxley Act",
+        "PCI-DSS": "Payment Card Industry Data Security Standard",
+        "HIPAA": "Health Insurance Portability and Accountability Act",
+        "OAuth 2.0": "OAuth 2.0 Authorization Framework",
+        "JWT": "JSON Web Token standard"
+      },
+      "retention-policies": {
+        "permanent": "Data retained permanently",
+        "7-years-after-deletion": "Data retained for 7 years after user deletion",
+        "expires-after-5-minutes": "Data expires after 5 minutes",
+        "expires-after-10-minutes": "Data expires after 10 minutes",
+        "expires-after-session-end": "Data expires when session ends",
+        "expires-after-token-lifetime": "Data expires with token lifetime",
+        "expires-after-refresh-lifetime": "Data expires with refresh token lifetime",
+        "not-applicable": "Retention policy not applicable"
+      },
+      "data-lineage-patterns": {
+        "Generated by IAM service during user creation": "System-generated during user registration",
+        "Provided by user during registration": "User-provided during account creation",
+        "Assigned by business rules during user creation": "Business logic assigned identifiers",
+        "Generated by OTP service and sent to user's device": "OTP service generated codes",
+        "Generated by OTP service during code generation": "OTP service reference codes",
+        "Generated by IAM service during OTP request": "IAM service session tracking",
+        "Generated by IAM service after successful authentication": "Post-authentication token generation",
+        "Calculated based on security policy and user preferences": "Policy-based calculations",
+        "Fixed value per OAuth 2.0 standard": "Standards-compliant fixed values",
+        "Generated by IAM service during token issuance": "Token issuance process",
+        "Assigned by administrators or derived from user groups": "Administrative role assignment",
+        "Derived from roles and policies": "Policy-based permission derivation"
+      },
+      "access-patterns": {
+        "Read-heavy": "Frequent read operations, infrequent writes",
+        "Write-once": "Data written once, rarely updated",
+        "Read-once": "Data read once, then discarded",
+        "Short-lived": "Data with short lifecycle",
+        "Occasional updates": "Infrequent update operations",
+        "Frequent updates": "Regular update operations"
+      },
+      "security-considerations": {
+        "encryption-required": "Data must be encrypted at rest and in transit",
+        "token-rotation": "Tokens must be rotated regularly",
+        "secure-storage": "Data must be stored securely",
+        "audit-logging": "All access must be logged for audit",
+        "access-control": "Strict access control required",
+        "data-masking": "Sensitive data must be masked in logs"
+      },
+      "business-rules": {
+        "Default: 1 hour": "Default token expiration time",
+        "Max: 24 hours": "Maximum token expiration time",
+        "Min: 1 minute": "Minimum token expiration time",
+        "Valid for 30 days": "Refresh token validity period",
+        "Single-use per access token": "Refresh token usage rule",
+        "Must be predefined roles": "Role validation rule",
+        "Case-sensitive": "Case sensitivity requirement",
+        "Uppercase only": "Uppercase format requirement",
+        "Format: RESOURCE:ACTION": "Permission format specification",
+        "Must be predefined permissions": "Permission validation rule"
+      },
+      "schema-evolution": {
+        "versioning-strategy": "Semantic versioning with backward compatibility",
+        "deprecation-policy": "Fields deprecated for 2 major versions before removal",
+        "breaking-changes": "Require major version increment",
+        "non-breaking-changes": "Minor version increment allowed",
+        "field-lifecycle": {
+          "introduced": "Field added in version X.Y.Z",
+          "deprecated": "Field marked for removal in version X+2.Y.Z",
+          "removed": "Field removed in version X+2.Y.Z"
+        }
+      },
+      "extensibility-patterns": {
+        "additional-properties": "Use additionalProperties: false for strict schemas",
+        "custom-fields": "Use x-custom-* extensions for non-standard fields",
+        "polymorphism": "Use allOf/oneOf/anyOf for flexible object composition",
+        "conditional-fields": "Use if/then/else for conditional field requirements",
+        "dynamic-enums": "Use x-enum-values for dynamically populated enums"
+      },
+      "data-quality-rules": {
+        "required-fields": "All required fields must be present and non-null",
+        "format-validation": "All fields must match specified format patterns",
+        "length-constraints": "String fields must be within min/max length limits",
+        "enum-validation": "Enum fields must contain only predefined values",
+        "pattern-matching": "String fields must match specified regex patterns",
+        "range-validation": "Numeric fields must be within min/max value ranges"
+      },
+      "api-versioning": {
+        "current-version": "v1.0.0",
+        "supported-versions": ["v1.0.0"],
+        "version-strategy": "URL path versioning (/v1/iam/)",
+        "deprecation-notice": "Minimum 6 months notice for API version deprecation",
+        "migration-guide": "https://docs.example.com/iam/migration-guide"
+      }
+    }
+  }
+}
