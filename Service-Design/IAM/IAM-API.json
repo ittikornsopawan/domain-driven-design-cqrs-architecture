@@ -85,15 +85,135 @@
     "/api/v1/auth/login": {
       "post": {
         "tags": ["Authentication"],
-        "summary": "Authenticate user via username/password.",
-        "description": "Authenticate user via username/password.",
+        "summary": "Authenticate user via username/password. The username must be a valid email address or a registered username.",
+        "description": "Authenticate user via username/password. The login process works as follows:\n\n1. **Receive Encrypted Credentials**:\n   - Client sends a POST request with `username` and `password`.\n   - Both fields must be encrypted using AES-256-CBC with the agreed key and IV.\n   - Ciphertext must be base64-encoded.\n\n2. **Decrypt Credentials**:\n   - Backend decrypts the `username` and `password` using the provided key and IV.\n\n3. **Validate Input Format**:\n   - `username` must be a valid email address or a registered username.\n   - `password` must meet complexity requirements (minimum 8 characters, including uppercase, lowercase, number, and special character).\n\n4. **Authenticate User**:\n   - Compare decrypted credentials with stored user records.\n   - If valid, proceed; otherwise return `401 Unauthorized`.\n\n5. **Check Account Status**:\n   - Ensure the account is active and not locked or disabled.\n\n6. **Generate Tokens**:\n   - Issue a JWT access token and a refresh token.\n   - Include user roles, permissions, and attributes in the token payload.\n\n7. **Respond to Client**:\n   - Return a structured JSON containing `status` and `data`:\n     - `status`: Success or failure with business error codes.\n     - `data`: `accessToken`, `refreshToken`, `expiresIn`, `tokenType`, `attributes`, `permissions`.\n\n8. **Audit Logging**:\n   - Log authentication events, including failed and successful logins, for security and compliance.\n\n9. **Error Handling**:\n   - `400`: Invalid input format.\n   - `401`: Unauthorized (invalid credentials).\n   - `409`: Password complexity not met.\n   - `500`: Internal server errors.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "examples": {
+                "success": {
+                  "summary": "Valid credentials",
+                  "description": "Username and password are correctly encrypted and valid",
+                  "value": {
+                    "username": "Base64EncryptedUsername==",
+                    "password": "Base64EncryptedPassword=="
+                  }
+                },
+                "fail_invalid_format": {
+                  "summary": "Invalid input format",
+                  "description": "Username or password does not meet expected format",
+                  "value": {
+                    "username": "invalid_base64",
+                    "password": "short"
+                  }
+                },
+                "fail_unauthorized": {
+                  "summary": "Invalid credentials",
+                  "description": "Username and password are properly encrypted but do not match any user",
+                  "value": {
+                    "username": "Base64EncryptedWrongUsername==",
+                    "password": "Base64EncryptedWrongPassword=="
+                  }
+                },
+                "fail_complexity": {
+                  "summary": "Password complexity not met",
+                  "description": "Password does not satisfy complexity requirements",
+                  "value": {
+                    "username": "Base64EncryptedUsername==",
+                    "password": "Base64EncryptedSimplePassword=="
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "$ref": "#/components/schemas/CommonResponse" },
+                    "data": { "$ref": "#/components/schemas/TokenDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
                   "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "400",
+                    "message": "Bad Request",
+                    "bizErrorCode": "20001",
+                    "bizErrorMessage": "The provided username or password format is invalid."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "401",
+                    "message": "Unauthorized",
+                    "bizErrorCode": "20002",
+                    "bizErrorMessage": "Invalid username or password."
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Invalid password format or complexity requirements not met",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "409",
+                    "message": "Conflict",
+                    "bizErrorCode": "20003",
+                    "bizErrorMessage": "Invalid password format or complexity requirements not met."
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "500",
+                    "message": "Internal Server Error",
+                    "bizErrorCode": "20004",
+                    "bizErrorMessage": "An unexpected error occurred."
+                  }
                 }
               }
             }
@@ -104,15 +224,135 @@
     "/api/v1/auth/login/mobile": {
       "post": {
         "tags": ["Authentication"],
-        "summary": "Authenticate user via mobile number + OTP.",
-        "description": "Authenticate user via mobile number + OTP.",
+        "summary": "Authenticate user via mobile number + OTP. The mobile number must be encrypted and accompanied by a valid otpReferenceId.",
+        "description": "Authenticate user via mobile number and OTP. The login process works as follows:\n\n1. **Receive Encrypted Mobile Number & OTP Reference**:\n   - Client sends a POST request with `mobileNumber` and `otpReferenceId`.\n   - `mobileNumber` MUST be encrypted using AES-256-CBC with the agreed key and IV and base64-encoded.\n   - `otpReferenceId` is a UUID returned from the OTP request flow.\n\n2. **Decrypt Mobile Number**:\n   - Backend decrypts the `mobileNumber` using the provided key and IV to obtain the plaintext phone number.\n\n3. **Validate Input Format**:\n   - `mobileNumber` plaintext must be a valid phone number (E.164 recommended).\n   - `otpReferenceId` must be a valid UUID and correspond to an issued OTP session.\n\n4. **Verify OTP**:\n   - Lookup OTP by `otpReferenceId` and ensure it was issued for the decrypted mobile number.\n   - Verify OTP code validity, expiry, and that it has not been consumed.\n\n5. **Authenticate or Provision User**:\n   - If the mobile number maps to an existing account, authenticate; otherwise optionally auto-provision per tenant policy.\n   - If authentication fails, return `401 Unauthorized`.\n\n6. **Generate Tokens**:\n   - Issue a JWT access token and a refresh token.\n   - Include user roles, permissions, and attributes in the token payload.\n\n7. **Consume OTP & Audit Logging**:\n   - Mark the OTP as used to prevent replay attacks.\n   - Log authentication events for security and compliance (successful and failed attempts).\n\n8. **Respond to Client**:\n   - Return a structured JSON containing `status` and `data`:\n     - `status`: Success or failure with business error codes.\n     - `data`: `accessToken`, `refreshToken`, `expiresIn`, `tokenType`, `attributes`, `permissions`.\n\n9. **Error Handling**:\n   - `400`: Invalid input format.\n   - `401`: Unauthorized (invalid mobile number or OTP).\n   - `409`: Conflict (OTP expired or already used).\n   - `500`: Internal server errors.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginMobileRequest"
+              },
+              "examples": {
+                "success": {
+                  "summary": "Valid mobile number and OTP",
+                  "description": "Mobile number is encrypted and OTP is correct",
+                  "value": {
+                    "mobileNumber": "AES256EncryptedMobileNumber==",
+                    "otpReferenceId": "550e8400-e29b-41d4-a716-446655440000"
+                  }
+                },
+                "fail_invalid_format": {
+                  "summary": "Invalid input format",
+                  "description": "Mobile number encryption or OTP does not meet expected format",
+                  "value": {
+                    "mobileNumber": "invalid_aes256",
+                    "otpReferenceId": "550e8400-e29b-41d4-a716-446655440000"
+                  }
+                },
+                "fail_unauthorized": {
+                  "summary": "Invalid credentials",
+                  "description": "Encrypted mobile number and OTP do not match any user",
+                  "value": {
+                    "mobileNumber": "AES256EncryptedWrongMobileNumber==",
+                    "otpReferenceId": "550e8400-e29b-41d4-a716-446655440000"
+                  }
+                },
+                "fail_conflict": {
+                  "summary": "OTP expired or already used",
+                  "description": "The OTP has expired or has already been consumed",
+                  "value": {
+                    "mobileNumber": "AES256EncryptedMobileNumber==",
+                    "otpReferenceId": "550e8400-e29b-41d4-a716-446655440000"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "$ref": "#/components/schemas/CommonResponse" },
+                    "data": { "$ref": "#/components/schemas/TokenDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
                   "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "400",
+                    "message": "Bad Request",
+                    "bizErrorCode": "20011",
+                    "bizErrorMessage": "The provided mobile number or OTP format is invalid."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "401",
+                    "message": "Unauthorized",
+                    "bizErrorCode": "20012",
+                    "bizErrorMessage": "Invalid mobile number or OTP."
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - OTP expired or already used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "409",
+                    "message": "Conflict",
+                    "bizErrorCode": "20013",
+                    "bizErrorMessage": "OTP has expired or was already used."
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "500",
+                    "message": "Internal Server Error",
+                    "bizErrorCode": "20014",
+                    "bizErrorMessage": "An unexpected error occurred."
+                  }
                 }
               }
             }
@@ -123,15 +363,135 @@
     "/api/v1/auth/login/email": {
       "post": {
         "tags": ["Authentication"],
-        "summary": "Authenticate user via email + OTP.",
-        "description": "Authenticate user via email + OTP.",
+        "summary": "Authenticate user via email + OTP. The email must be encrypted and accompanied by a valid otpReferenceId.",
+        "description": "Authenticate user via email and OTP. The login process works as follows:\n\n1. **Receive Encrypted Email & OTP Reference**:\n   - Client sends a POST request with `email` and `otpReferenceId`.\n   - `email` MUST be encrypted using AES-256-CBC with the agreed key and IV and base64-encoded.\n   - `otpReferenceId` is a UUID returned from the OTP request flow.\n\n2. **Decrypt Email**:\n   - Backend decrypts the `email` using the provided key and IV to obtain the plaintext email address.\n\n3. **Validate Input Format**:\n   - `email` plaintext must be a valid email address (RFC 5322 recommended).\n   - `otpReferenceId` must be a valid UUID and correspond to an issued OTP session.\n\n4. **Verify OTP**:\n   - Lookup OTP by `otpReferenceId` and ensure it was issued for the decrypted email.\n   - Verify OTP code validity, expiry, and that it has not been consumed.\n\n5. **Authenticate or Provision User**:\n   - If the email maps to an existing account, authenticate; otherwise optionally auto-provision per tenant policy.\n   - If authentication fails, return `401 Unauthorized`.\n\n6. **Generate Tokens**:\n   - Issue a JWT access token and a refresh token.\n   - Include user roles, permissions, and attributes in the token payload.\n\n7. **Consume OTP & Audit Logging**:\n   - Mark the OTP as used to prevent replay attacks.\n   - Log authentication events for security and compliance (successful and failed attempts).\n\n8. **Respond to Client**:\n   - Return a structured JSON containing `status` and `data`:\n     - `status`: Success or failure with business error codes.\n     - `data`: `accessToken`, `refreshToken`, `expiresIn`, `tokenType`, `attributes`, `permissions`.\n\n9. **Error Handling**:\n   - `400`: Invalid input format.\n   - `401`: Unauthorized (invalid email or OTP).\n   - `409`: Conflict (OTP expired or already used).\n   - `500`: Internal server errors.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginEmailRequest"
+              },
+              "examples": {
+                "success": {
+                  "summary": "Valid email and OTP",
+                  "description": "Email is encrypted and OTP is correct",
+                  "value": {
+                    "email": "AES256EncryptedEmail==",
+                    "otpReferenceId": "550e8400-e29b-41d4-a716-446655440000"
+                  }
+                },
+                "fail_invalid_format": {
+                  "summary": "Invalid input format",
+                  "description": "Email encryption or OTP does not meet expected format",
+                  "value": {
+                    "email": "invalid_aes256",
+                    "otpReferenceId": "550e8400-e29b-41d4-a716-446655440000"
+                  }
+                },
+                "fail_unauthorized": {
+                  "summary": "Invalid credentials",
+                  "description": "Encrypted email and OTP do not match any user",
+                  "value": {
+                    "email": "AES256EncryptedWrongEmail==",
+                    "otpReferenceId": "550e8400-e29b-41d4-a716-446655440000"
+                  }
+                },
+                "fail_conflict": {
+                  "summary": "OTP expired or already used",
+                  "description": "The OTP has expired or has already been consumed",
+                  "value": {
+                    "email": "AES256EncryptedEmail==",
+                    "otpReferenceId": "550e8400-e29b-41d4-a716-446655440000"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "$ref": "#/components/schemas/CommonResponse" },
+                    "data": { "$ref": "#/components/schemas/TokenDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
                   "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "400",
+                    "message": "Bad Request",
+                    "bizErrorCode": "20021",
+                    "bizErrorMessage": "The provided email or OTP format is invalid."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "401",
+                    "message": "Unauthorized",
+                    "bizErrorCode": "20022",
+                    "bizErrorMessage": "Invalid email or OTP."
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - OTP expired or already used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "409",
+                    "message": "Conflict",
+                    "bizErrorCode": "20023",
+                    "bizErrorMessage": "OTP has expired or was already used."
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "500",
+                    "message": "Internal Server Error",
+                    "bizErrorCode": "20024",
+                    "bizErrorMessage": "An unexpected error occurred."
+                  }
                 }
               }
             }
@@ -142,15 +502,175 @@
     "/api/v1/auth/login/social": {
       "post": {
         "tags": ["Authentication"],
-        "summary": "Authenticate user via social provider OAuth.",
-        "description": "Authenticate user via social provider OAuth.",
+        "summary": "Authenticate user via social provider OAuth. Supports token validation, account linking/provisioning, and token issuance.",
+        "description": "Authenticate user via social provider OAuth.\n\n1. **Receive Social Credentials**:\n   - Client sends `provider`, `accessToken`, and `socialId`.\n   - `provider` MUST be one of the supported providers (GOOGLE, FACEBOOK, TWITTER, LINKEDIN).\n\n2. **Validate Access Token with Provider**:\n   - Validate `accessToken` using the provider's token introspection or userinfo endpoint.\n   - Ensure the provider response contains a subject/id that matches the supplied `socialId` and that the token is not expired or revoked.\n\n3. **Validate Input Format**:\n   - `provider` must match supported enum values.\n   - `accessToken` must be present and well-formed for the provider.\n   - `socialId` must conform to provider-specific identifier constraints.\n\n4. **Authenticate, Provision or Link Account**:\n   - If the social account is already linked to a local user, authenticate that user.\n   - If not linked, follow tenant policy: auto-provision a new user or return a linking required response.\n   - Prevent linking conflicts where the social account is already associated with another user (return 409).\n\n5. **Generate Tokens**:\n   - Issue a JWT access token and a refresh token containing user attribute, permissions and attributes.\n   - Apply tenant and security policies (token TTL, scopes, claims) when building tokens.\n\n6. **Account Linking Flows**:\n   - Support explicit linking/unlinking workflows and confirm user consent when binding social identities.\n   - Enforce verification and anti-duplication checks before linking.\n\n7. **Audit Logging & Security Controls**:\n   - Audit successful and failed social authentication and linking events.\n   - Rate-limit provider validation calls and monitor for suspicious activity.\n\n8. **Respond to Client**:\n   - On success return structured JSON with `status` and `data` (see `TokenDTO`).\n   - On provisioning/linking flows return appropriate status and instructions for next steps.\n\n9. **Error Handling**:\n   - `400`: Invalid input format.\n   - `401`: Unauthorized (invalid/expired access token or mismatched socialId).\n   - `409`: Conflict (social account already linked to another user).\n   - `500`: Internal server errors.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginSocialRequest"
+              },
+              "examples": {
+                "google_login": {
+                  "summary": "Google OAuth Login",
+                  "description": "Authenticate using Google OAuth provider",
+                  "value": {
+                    "provider": "GOOGLE",
+                    "accessToken": "ya29.a0AfH6SMC...",
+                    "socialId": "117238947123456789"
+                  }
+                },
+                "facebook_login": {
+                  "summary": "Facebook OAuth Login",
+                  "description": "Authenticate using Facebook OAuth provider",
+                  "value": {
+                    "provider": "FACEBOOK",
+                    "accessToken": "EAAJZCZA...",
+                    "socialId": "117238947123456789"
+                  }
+                },
+                "twitter_login": {
+                  "summary": "Twitter OAuth Login",
+                  "description": "Authenticate using Twitter OAuth provider",
+                  "value": {
+                    "provider": "TWITTER",
+                    "accessToken": "AAAAAAAAAA...",
+                    "socialId": "117238947123456789"
+                  }
+                },
+                "linkedin_login": {
+                  "summary": "LinkedIn OAuth Login",
+                  "description": "Authenticate using LinkedIn OAuth provider",
+                  "value": {
+                    "provider": "LINKEDIN",
+                    "accessToken": "AQVxyz...",
+                    "socialId": "117238947123456789"
+                  }
+                },
+                "invalid_provider": {
+                  "summary": "Invalid Provider",
+                  "description": "Example of invalid provider request",
+                  "value": {
+                    "provider": "INVALID",
+                    "accessToken": "xyz...",
+                    "socialId": "123"
+                  }
+                },
+                "invalid_token": {
+                  "summary": "Invalid Access Token",
+                  "description": "Example of invalid/expired access token",
+                  "value": {
+                    "provider": "GOOGLE",
+                    "accessToken": "invalid_token",
+                    "socialId": "117238947123456789"
+                  }
+                },
+                "conflict_account": {
+                  "summary": "Conflicting Account",
+                  "description": "Example when social account already linked to another user",
+                  "value": {
+                    "provider": "GOOGLE",
+                    "accessToken": "ya29.a0AfH6SMC...",
+                    "socialId": "existing_account_id"
+                  }
+                },
+                "server_error": {
+                  "summary": "Server Error",
+                  "description": "Example when provider service is unavailable",
+                  "value": {
+                    "provider": "FACEBOOK",
+                    "accessToken": "valid_token_but_service_down",
+                    "socialId": "117238947123456789"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "$ref": "#/components/schemas/CommonResponse" },
+                    "data": { "$ref": "#/components/schemas/TokenDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
                   "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "400",
+                    "message": "Bad Request",
+                    "bizErrorCode": "20031",
+                    "bizErrorMessage": "The provided input format is invalid."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "401",
+                    "message": "Unauthorized",
+                    "bizErrorCode": "20032",
+                    "bizErrorMessage": "Invalid credentials."
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Account already linked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "409",
+                    "message": "Conflict",
+                    "bizErrorCode": "20033",
+                    "bizErrorMessage": "The account is already linked to another user."
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "500",
+                    "message": "Internal Server Error",
+                    "bizErrorCode": "20034",
+                    "bizErrorMessage": "An unexpected error occurred."
+                  }
                 }
               }
             }
@@ -208,6 +728,119 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/profile": {
+      "get": {
+        "tags": ["User Management"],
+        "summary": "Get Current User",
+        "description": "Retrieve the profile information of the currently authenticated user.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "$ref": "#/components/schemas/CommonResponse" },
+                    "data": { "$ref": "#/components/schemas/PersonalInfoDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "400",
+                    "message": "Bad Request",
+                    "bizErrorCode": "20041",
+                    "bizErrorMessage": "Invalid request parameters."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "401",
+                    "message": "Unauthorized",
+                    "bizErrorCode": "20042",
+                    "bizErrorMessage": "Authentication token is missing or invalid."
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - User profile not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "404",
+                    "message": "Not Found",
+                    "bizErrorCode": "20043",
+                    "bizErrorMessage": "User profile not found."
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Data conflict or inconsistency",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "409",
+                    "message": "Conflict",
+                    "bizErrorCode": "20044",
+                    "bizErrorMessage": "Data conflict or concurrent update detected."
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "500",
+                    "message": "Internal Server Error",
+                    "bizErrorCode": "20045",
+                    "bizErrorMessage": "An unexpected error occurred while processing the request."
+                  }
                 }
               }
             }
@@ -349,78 +982,6 @@
         "tags": ["Session Management"],
         "summary": "Logout user and invalidate active session.",
         "description": "Logout user and invalidate active session.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/tenants": {
-      "post": {
-        "tags": ["Tenant Management"],
-        "summary": "Create a new tenant.",
-        "description": "Create a new tenant.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/tenants/{id}": {
-      "put": {
-        "tags": ["Tenant Management"],
-        "summary": "Update tenant configurations.",
-        "description": "Update tenant configurations.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": ["Tenant Management"],
-        "summary": "Remove a tenant and revoke associated data.",
-        "description": "Remove a tenant and revoke associated data.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "tags": ["Tenant Management"],
-        "summary": "Retrieve tenant details.",
-        "description": "Retrieve tenant details.",
         "responses": {
           "200": {
             "description": "Success",
@@ -626,101 +1187,6 @@
         "tags": ["Infrastructure / DevOps"],
         "summary": "Retrieve events from message queue / event bus.",
         "description": "Retrieve events from message queue / event bus.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/login": {
-      "post": {
-        "tags": ["Authentication"],
-        "summary": "User Login",
-        "description": "Authenticate user credentials and issue a JWT token.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/logout": {
-      "post": {
-        "tags": ["Authentication", "Session Management"],
-        "summary": "User Logout",
-        "description": "Invalidate user session and revoke all tokens.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/otp/request": {
-      "post": {
-        "tags": ["Authentication"],
-        "summary": "Request OTP",
-        "description": "Request a one-time password for multi-factor authentication.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/otp/verify": {
-      "post": {
-        "tags": ["Authentication"],
-        "summary": "Verify OTP",
-        "description": "Verify the submitted one-time password for authentication.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/social/login": {
-      "post": {
-        "tags": ["Authentication"],
-        "summary": "Social Login",
-        "description": "Authenticate user via a supported social login provider.",
         "responses": {
           "200": {
             "description": "Success",
@@ -1036,7 +1502,16 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
+                  "type": "object",
+                  "properties": {
+                    "status": { "$ref": "#/components/schemas/CommonResponse" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PersonalInfoDTO"
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -1114,148 +1589,6 @@
         }
       }
     },
-    "/users/{userId}/roles": {
-      "get": {
-        "tags": ["Authorization / ABAC"],
-        "summary": "Get User Roles",
-        "description": "Retrieve the roles assigned to a specific user.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": ["Authorization / ABAC"],
-        "summary": "Assign Roles to User",
-        "description": "Assign one or more roles to a user.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": ["Authorization / ABAC"],
-        "summary": "Remove Roles from User",
-        "description": "Remove one or more roles from a user.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/roles": {
-      "get": {
-        "tags": ["Authorization / ABAC"],
-        "summary": "List Roles",
-        "description": "Retrieve all available roles in the system.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": ["Authorization / ABAC"],
-        "summary": "Create Role",
-        "description": "Create a new role definition.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/roles/{roleId}": {
-      "get": {
-        "tags": ["Authorization / ABAC"],
-        "summary": "Get Role Details",
-        "description": "Retrieve details for a specific role.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": ["Authorization / ABAC"],
-        "summary": "Update Role",
-        "description": "Update the definition or permissions of a role.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": ["Authorization / ABAC"],
-        "summary": "Delete Role",
-        "description": "Remove a role from the system.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/sessions": {
       "get": {
         "tags": ["Session Management"],
@@ -1280,95 +1613,6 @@
         "tags": ["Session Management"],
         "summary": "Invalidate Session",
         "description": "Terminate a specific active user session.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/tenants": {
-      "get": {
-        "tags": ["Tenant Management"],
-        "summary": "List Tenants",
-        "description": "Retrieve a list of all tenants.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": ["Tenant Management"],
-        "summary": "Create Tenant",
-        "description": "Register a new tenant in the system.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/tenants/{tenantId}": {
-      "get": {
-        "tags": ["Tenant Management"],
-        "summary": "Get Tenant Details",
-        "description": "Retrieve information about a specific tenant.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": ["Tenant Management"],
-        "summary": "Update Tenant",
-        "description": "Update the information of a tenant.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": ["Tenant Management"],
-        "summary": "Delete Tenant",
-        "description": "Remove a tenant from the system.",
         "responses": {
           "200": {
             "description": "Success",
@@ -1556,30 +1800,354 @@
       "CommonResponse": {
         "type": "object",
         "properties": {
-          "status": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "integer"
-              },
-              "message": {
-                "type": "string"
-              },
-              "bizErrorCode": {
-                "type": "string"
-              },
-              "bizErrorMessage": {
-                "type": "string"
-              }
-            },
-            "required": ["code", "message", "bizErrorCode", "bizErrorMessage"]
+          "code": {
+            "type": "integer"
           },
-          "data": {
-            "type": "object",
-            "description": "Response payload"
+          "message": {
+            "type": "string"
+          },
+          "bizErrorCode": {
+            "type": "string"
+          },
+          "bizErrorMessage": {
+            "type": "string"
           }
         },
-        "required": ["status", "data"]
+        "required": ["code", "message", "bizErrorCode", "bizErrorMessage"]
+      },
+      "TokenDTO": {
+        "type": "object",
+        "description": "JWT token information for user authentication and authorization",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "minLength": 100,
+            "maxLength": 2000,
+            "pattern": "^[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$",
+            "description": "JWT access token for API authentication",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+            "x-data-dictionary": {
+              "field-type": "authentication-token",
+              "business-meaning": "Bearer token for API access authorization",
+              "data-lineage": "Generated by IAM service after successful authentication",
+              "sensitivity": "highly-sensitive",
+              "retention-policy": "expires-after-token-lifetime",
+              "encryption-required": true,
+              "token-claims": ["sub", "iat", "exp", "roles", "permissions"]
+            }
+          },
+          "expiresIn": {
+            "type": "integer",
+            "minimum": 60,
+            "maximum": 86400,
+            "description": "Token expiration time in seconds (1 minute to 24 hours)",
+            "example": 3600,
+            "x-data-dictionary": {
+              "field-type": "duration-data",
+              "business-meaning": "Token validity period for security control",
+              "data-lineage": "Calculated based on security policy and user preferences",
+              "sensitivity": "internal",
+              "retention-policy": "not-applicable",
+              "business-rules": [
+                "Default: 1 hour",
+                "Max: 24 hours",
+                "Min: 1 minute"
+              ]
+            }
+          },
+          "tokenType": {
+            "type": "string",
+            "enum": ["Bearer"],
+            "default": "Bearer",
+            "description": "Token type, always 'Bearer' for JWT tokens",
+            "example": "Bearer",
+            "x-data-dictionary": {
+              "field-type": "constant-value",
+              "business-meaning": "OAuth 2.0 token type specification",
+              "data-lineage": "Fixed value per OAuth 2.0 standard",
+              "sensitivity": "public",
+              "retention-policy": "not-applicable"
+            }
+          },
+          "refreshToken": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Refresh token UUID for obtaining new access tokens",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "x-data-dictionary": {
+              "field-type": "refresh-token",
+              "business-meaning": "Long-lived token for obtaining new access tokens",
+              "data-lineage": "Generated by IAM service during token issuance",
+              "sensitivity": "highly-sensitive",
+              "retention-policy": "expires-after-refresh-lifetime",
+              "encryption-required": true,
+              "business-rules": [
+                "Valid for 30 days",
+                "Single-use per access token"
+              ]
+            }
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 50,
+              "pattern": "^[A-Z_]+$"
+            },
+            "uniqueItems": true,
+            "maxItems": 20,
+            "description": "List of user attributes",
+            "example": ["USER-GROUP", "POLICY", "ATTRIBUTES"],
+            "x-data-dictionary": {
+              "field-type": "role-list",
+              "business-meaning": "User roles for role-based access control",
+              "data-lineage": "Assigned by administrators or derived from user groups",
+              "sensitivity": "internal",
+              "retention-policy": "permanent",
+              "business-rules": [
+                "Must be predefined roles",
+                "Case-sensitive",
+                "Uppercase only"
+              ]
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 100,
+              "pattern": "^[A-Z_]+:[A-Z_]+$"
+            },
+            "uniqueItems": true,
+            "maxItems": 100,
+            "description": "List of user permissions in format 'RESOURCE:ACTION'",
+            "example": ["USER:READ", "PROFILE:WRITE", "ADMIN:DELETE"],
+            "x-data-dictionary": {
+              "field-type": "permission-list",
+              "business-meaning": "Granular permissions for fine-grained access control",
+              "data-lineage": "Derived from roles and policies",
+              "sensitivity": "internal",
+              "retention-policy": "permanent",
+              "business-rules": [
+                "Format: RESOURCE:ACTION",
+                "Must be predefined permissions"
+              ]
+            }
+          }
+        },
+        "required": ["accessToken", "expiresIn", "tokenType"],
+        "additionalProperties": false,
+        "x-data-dictionary": {
+          "schema-purpose": "Authentication token management",
+          "business-domain": "Authentication & Authorization",
+          "data-classification": "Authentication Data",
+          "compliance-requirements": ["OAuth 2.0", "JWT", "PCI-DSS"],
+          "update-frequency": "High",
+          "access-patterns": ["Read-heavy", "Frequent updates"],
+          "security-considerations": [
+            "Token rotation",
+            "Secure storage",
+            "Audit logging"
+          ]
+        }
+      },
+      "PersonalInfoDTO": {
+        "type": "object",
+        "description": "Personal information DTO for user profiles (camelCase fields).",
+        "properties": {
+          "sid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "System identifier for the person",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "prefixName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4,
+            "description": "Name prefix or title (e.g., Mr, Mrs, Dr)",
+            "example": "Dr"
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Given name",
+            "example": "John"
+          },
+          "middleName": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 128,
+            "description": "Middle name(s)",
+            "example": "Michael"
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Family name / surname",
+            "example": "Doe"
+          },
+          "nickName": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 32,
+            "description": "Preferred or informal name",
+            "example": "Johnny"
+          },
+          "gender": {
+            "type": "string",
+            "enum": ["MALE", "FEMALE", "NON_BINARY", "UNSPECIFIED", "OTHER"],
+            "description": "Gender classification",
+            "example": "MALE"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date",
+            "description": "Date of birth (YYYY-MM-DD)",
+            "example": "1980-01-01"
+          }
+        },
+        "required": ["sid", "firstName", "lastName"],
+        "additionalProperties": false,
+        "x-data-dictionary": {
+          "field-purpose": "User personal identity information",
+          "sensitivity": "personal",
+          "retention-policy": "permanent",
+          "business-rules": [
+            "sid must be a valid UUID",
+            "firstName and lastName are required",
+            "dateOfBirth must follow ISO 8601 date format"
+          ]
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "description": "User login request payload. The username and password properties MUST contain AES-256 encrypted ciphertexts (see x-encryption for spec). Ciphertexts MUST be base64-encoded.",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "Base64-encoded AES-256-CBC ciphertext of the username (plaintext UTF-8). Encrypt with agreed key and iv before sending.",
+            "pattern": "^[A-Za-z0-9+/]+={0,2}$",
+            "example": "z0Fh3v...base64..."
+          },
+          "password": {
+            "type": "string",
+            "description": "Base64-encoded AES-256-CBC ciphertext of the password (plaintext UTF-8). Encrypt with agreed key and iv before sending.",
+            "pattern": "^[A-Za-z0-9+/]+={0,2}$",
+            "example": "Y2FtcGx...base64..."
+          }
+        },
+        "required": ["username", "password"],
+        "additionalProperties": false,
+        "x-encryption": {
+          "algorithm": "AES-256-CBC",
+          "key-length-bits": 256,
+          "iv-length-bytes": 16,
+          "ciphertext-encoding": "base64",
+          "padding": "PKCS#7 (or PKCS#5 equivalently for block size 16)",
+          "key-management": "Key material MUST be provisioned/rotated out-of-band and referenced via encryption.keyId. Do NOT include raw keys in requests.",
+          "security-notes": [
+            "Use secure random IV per encryption operation",
+            "Do not reuse IV with same key for different plaintexts",
+            "Use authenticated encryption (e.g., AES-GCM) if possible; if using CBC, ensure integrity via HMAC or equivalent"
+          ]
+        }
+      },
+      "LoginMobileRequest": {
+        "type": "object",
+        "description": "User mobile login request payload. The phoneNumber and otpReferenceId properties MUST contain AES-256 encrypted ciphertexts (see x-encryption for spec). Ciphertexts MUST be base64-encoded.",
+        "properties": {
+          "phoneNumber": {
+            "type": "string",
+            "description": "Base64-encoded AES-256-CBC ciphertext of the phone number (plaintext UTF-8). Encrypt with agreed key and iv before sending.",
+            "pattern": "^[A-Za-z0-9+/]+={0,2}$",
+            "example": "bXlQaG9uZ...base64..."
+          },
+          "otpReferenceId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID reference from OTP request for validation",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        },
+        "required": ["phoneNumber", "otpReferenceId"],
+        "additionalProperties": false,
+        "x-encryption": {
+          "algorithm": "AES-256-CBC",
+          "key-length-bits": 256,
+          "iv-length-bytes": 16,
+          "ciphertext-encoding": "base64",
+          "padding": "PKCS#7 (or PKCS#5 equivalently for block size 16)",
+          "key-management": "Key material MUST be provisioned/rotated out-of-band and referenced via encryption.keyId. Do NOT include raw keys in requests.",
+          "security-notes": [
+            "Use secure random IV per encryption operation",
+            "Do not reuse IV with same key for different plaintexts",
+            "Use authenticated encryption (e.g., AES-GCM) if possible; if using CBC, ensure integrity via HMAC or equivalent"
+          ]
+        }
+      },
+      "LoginEmailRequest": {
+        "type": "object",
+        "description": "User email login request payload. The email and otpReferenceId properties MUST contain AES-256 encrypted ciphertexts (see x-encryption for spec). Ciphertexts MUST be base64-encoded.",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Base64-encoded AES-256-CBC ciphertext of the email address (plaintext UTF-8). Encrypt with agreed key and iv before sending.",
+            "pattern": "^[A-Za-z0-9+/]+={0,2}$",
+            "example": "bXlFbWFpbA...base64..."
+          },
+          "otpReferenceId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID reference from OTP request for validation",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        },
+        "required": ["email", "otpReferenceId"],
+        "additionalProperties": false,
+        "x-encryption": {
+          "algorithm": "AES-256-CBC",
+          "key-length-bits": 256,
+          "iv-length-bytes": 16,
+          "ciphertext-encoding": "base64",
+          "padding": "PKCS#7 (or PKCS#5 equivalently for block size 16)",
+          "key-management": "Key material MUST be provisioned/rotated out-of-band and referenced via encryption.keyId. Do NOT include raw keys in requests.",
+          "security-notes": [
+            "Use secure random IV per encryption operation",
+            "Do not reuse IV with same key for different plaintexts",
+            "Use authenticated encryption (e.g., AES-GCM) if possible; if using CBC, ensure integrity via HMAC or equivalent"
+          ]
+        }
+      },
+      "LoginSocialRequest": {
+        "type": "object",
+        "description": "User social login request payload.",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": ["GOOGLE", "FACEBOOK", "TWITTER", "LINKEDIN"],
+            "description": "Social identity provider name",
+            "example": "google"
+          },
+          "accessToken": {
+            "type": "string",
+            "description": "Access token obtained from the social identity provider",
+            "example": "ya29.a0AfH6SMC..."
+          },
+          "socialId": {
+            "type": "string",
+            "description": "Unique identifier of the user in the social provider (provider-specific user id / sub).",
+            "example": "117238947123456789",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": ["provider", "accessToken", "socialId"],
+        "additionalProperties": false
       }
     },
     "securitySchemes": {

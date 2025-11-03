@@ -719,6 +719,85 @@ COMMENT ON COLUMN m_parameters.language IS 'Language of the parameter value';
 COMMENT ON COLUMN m_parameters.value IS 'Parameter value';
 ```
 
+### Table: public.m_error_handlers
+
+Stores system error handler definitions and runtime error records used for centralized error classification, routing to handlers, retry strategies, and operational diagnostics.
+
+#### Table Columns
+
+| Key | Column Name | Data Type    | Default           | Description                              |
+| --- | ----------- | ------------ | ----------------- | ---------------------------------------- |
+| PK  | id          | UUID         | GEN_RANDOM_UUID() | Primary key of the table, UUID           |
+| FK  | created_by  | UUID         |                   | User who created the record              |
+|     | created_at  | TIMESTAMP    | CURRENT_TIMESTAMP | Timestamp when the record was created    |
+| FK  | updated_by  | UUID         |                   | User who last updated the record         |
+|     | updated_at  | TIMESTAMP    |                   | Timestamp of last update                 |
+|     | is_active   | BOOLEAN      | FALSE             | Indicates if the parameter is active     |
+| FK  | inactive_by | UUID         |                   | Timestamp when parameter became inactive |
+|     | inactive_at | TIMESTAMP    |                   | User who set inactive                    |
+|     | is_deleted  | BOOLEAN      | FALSE             | Indicates if the parameter is deleted    |
+| FK  | deleted_by  | UUID         |                   | Timestamp when parameter was deleted     |
+|     | deleted_at  | TIMESTAMP    |                   | User who deleted the record              |
+|     | status_code | VARCHAR(4)   |                   | Http Status Code                         |
+|     | code        | VARCHAR(8)   |                   | Business Error Code                      |
+|     | message     | VARCHAR(128) |                   | Business Error Message                   |
+|     | language    | VARCHAR(16)  |                   | Language of the parameter value          |
+
+#### Table Constraints
+
+| Constraint Type | Column Name | Constraint Name               | Description                                      |
+| --------------- | ----------- | ----------------------------- | ------------------------------------------------ |
+| PRIMARY KEY     | id          |                               | Defines `id` as the primary key                  |
+| FOREIGN KEY     | created_by  |                               | References `authentication.t_users(id)`          |
+| FOREIGN KEY     | updated_by  |                               | References `authentication.t_users(id)`          |
+| FOREIGN KEY     | inactive_by |                               | References `authentication.t_users(id)`          |
+| INDEX           | key         | idx_m_error_handlers_code     | Creates an index on `code` for faster lookup     |
+| INDEX           | key         | idx_m_error_handlers_language | Creates an index on `language` for faster lookup |
+
+#### Query
+
+```SQL
+CREATE TABLE IF NOT EXISTS m_parameters
+(
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
+    created_by UUID NOT NULL REFERENCES authentication.t_users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID REFERENCES authentication.t_users(id),
+    updated_at TIMESTAMP,
+
+    is_active BOOLEAN NOT NULL DEFAULT FALSE,
+    inactive_at TIMESTAMP,
+    inactive_by UUID REFERENCES authentication.t_users(id),
+
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
+    deleted_by UUID REFERENCES authentication.t_users(id),
+
+    status_code VARCHAR(8) NOT NULL,
+    code VARCHAR(8) NOT NULL,
+    message VARCHAR(128) NOT NULL,
+    language VARCHAR(16)
+);
+CREATE INDEX IF NOT EXISTS idx_m_parameters_key ON m_parameters(key);
+
+COMMENT ON TABLE m_parameters IS 'Stores system parameters, configuration settings, or key-value pairs for various modules';
+COMMENT ON COLUMN m_parameters.id IS 'Primary key of the table, UUID';
+COMMENT ON COLUMN m_parameters.created_by IS 'User who created the record';
+COMMENT ON COLUMN m_parameters.created_at IS 'Timestamp when the record was created';
+COMMENT ON COLUMN m_parameters.updated_by IS 'User who last updated the record';
+COMMENT ON COLUMN m_parameters.updated_at IS 'Timestamp of last update';
+COMMENT ON COLUMN m_parameters.is_active IS 'Indicates if the parameter is active';
+COMMENT ON COLUMN m_parameters.inactive_at IS 'Timestamp when parameter became inactive';
+COMMENT ON COLUMN m_parameters.inactive_by IS 'User who set inactive';
+COMMENT ON COLUMN m_parameters.is_deleted IS 'Indicates if the parameter is deleted';
+COMMENT ON COLUMN m_parameters.deleted_at IS 'Timestamp when parameter was deleted';
+COMMENT ON COLUMN m_parameters.deleted_by IS 'User who deleted the record';
+COMMENT ON COLUMN m_parameters.status_code IS 'Http Status Code';
+COMMENT ON COLUMN m_parameters.code IS 'Business Error Code';
+COMMENT ON COLUMN m_parameters.message IS 'Business Error Message';
+COMMENT ON COLUMN m_parameters.language IS 'Language of the parameter value';
+```
+
 ### Table: public.t_addresses
 
 Stores addresses, administrative information, and optional geofence data.

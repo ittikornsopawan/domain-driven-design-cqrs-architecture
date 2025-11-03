@@ -746,47 +746,76 @@ Responsible for verifying user identities via multiple mechanisms (username/pass
   - **token status:** Indicates if a token is valid, revoked, or expired.
 
 - **Entities:**
-  - **User:** User profile containing credentials, contact info, status, and authentication history.
-  - **AuthToken:** JWTs (access, ID, refresh) for session management and SSO.
-  - **LoginAttempt:** Records authentication attempts with timestamp, IP, device, and result.
-  - **Session:** Active authentication context.
+  - **User:** Represents the authenticated entity with credentials, contact info, and status.
+  - **AuthToken:** Contains JWTs (access, ID, refresh) used for SSO and session continuity.
+  - **LoginAttempt:** Records authentication attempts, including timestamp, IP, device, and result.
+  - **Session:** Represents the active authenticated context of a user, including issued tokens.
 
 - **Use Cases:**
+
   1. **Login via username/password**
-     - **Command:** LoginUserCommand - Authenticate user via username/password.
-     - **CommandHandler:** LoginUserCommandHandler - Handles authentication, issues tokens, records login attempts.
-     - **Query:** GetUserSessionQuery - Retrieve session and token information for authenticated user.
-     - **QueryHandler:** GetUserSessionQueryHandler - Fetches user session data.
+     - **Command:**
+       - `LoginUserCommand` — Authenticate user via username/password credentials.
+     - **CommandHandler:**
+       - `LoginUserCommandHandler` — Validates credentials, issues tokens, and records login attempts.
+     - **Query:**
+       - `GetUserSessionQuery` — Retrieve active session and token details for the authenticated user.
+     - **QueryHandler:**
+       - `GetUserSessionQueryHandler` — Fetches current session data from session store.
+
   2. **Login via mobile OTP**
-     - **Command:** LoginViaMobileOtpCommand - Authenticate user via mobile number and OTP.
-     - **CommandHandler:** LoginViaMobileOtpCommandHandler - Verifies OTP, issues tokens, records login.
-     - **Query:** GetUserSessionQuery - Retrieve session and token information.
-     - **QueryHandler:** GetUserSessionQueryHandler - Fetches user session data.
+     - **Command:**
+       - `LoginViaMobileOtpCommand` — Authenticate user via registered mobile number and OTP.
+     - **CommandHandler:**
+       - `LoginViaMobileOtpCommandHandler` — Verifies OTP, issues tokens, and records login.
+     - **Query:**
+       - `GetUserSessionQuery` — Retrieve active session and token information.
+     - **QueryHandler:**
+       - `GetUserSessionQueryHandler` — Fetches user session and token state.
+
   3. **Login via email OTP**
-     - **Command:** LoginViaEmailOtpCommand - Authenticate user via email OTP.
-     - **CommandHandler:** LoginViaEmailOtpCommandHandler - Verifies OTP, issues tokens, records login.
-     - **Query:** GetUserSessionQuery - Retrieve session and token information.
-     - **QueryHandler:** GetUserSessionQueryHandler - Fetches user session data.
+     - **Command:**
+       - `LoginViaEmailOtpCommand` — Authenticate user via email OTP verification.
+     - **CommandHandler:**
+       - `LoginViaEmailOtpCommandHandler` — Verifies OTP, issues authentication tokens, and logs activity.
+     - **Query:**
+       - `GetUserSessionQuery` — Retrieve session and token details.
+     - **QueryHandler:**
+       - `GetUserSessionQueryHandler` — Returns user session data for verification.
+
   4. **Login with 2FA (external 2FA)**
-     - **Command:** VerifyTwoFactorCommand - Verify second factor authentication code.
-     - **CommandHandler:** VerifyTwoFactorCommandHandler - Handles external 2FA verification, issues tokens.
-     - **Query:** GetUserSessionQuery - Retrieve session and token information.
-     - **QueryHandler:** GetUserSessionQueryHandler - Fetches user session data.
+     - **Command:**
+       - `VerifyTwoFactorCommand` — Verify user-provided second factor (TOTP or external provider).
+     - **CommandHandler:**
+       - `VerifyTwoFactorCommandHandler` — Handles verification with external 2FA provider and issues tokens.
+     - **Query:**
+       - `GetUserSessionQuery` — Retrieve authenticated session details.
+     - **QueryHandler:**
+       - `GetUserSessionQueryHandler` — Fetches user session information post-2FA validation.
+
   5. **Login via social provider**
-     - **Command:** LoginViaSocialCommand - Authenticate user via social provider OAuth.
-     - **CommandHandler:** LoginViaSocialCommandHandler - Validates token from provider, maps user attributes, issues tokens.
-     - **Query:** GetUserSessionQuery - Retrieve session and token information.
-     - **QueryHandler:** GetUserSessionQueryHandler - Fetches user session data.
+     - **Command:**
+       - `LoginViaSocialCommand` — Authenticate user using OAuth token from a social provider.
+     - **CommandHandler:**
+       - `LoginViaSocialCommandHandler` — Validates provider token, maps identity attributes, and issues tokens.
+     - **Query:**
+       - `GetUserSessionQuery` — Retrieve session and token details post social login.
+     - **QueryHandler:**
+       - `GetUserSessionQueryHandler` — Fetches authenticated session linked to social identity.
+
   6. **Token Introspection**
-     - **Query:** IntrospectTokenQuery - Check validity and claims of a token.
-     - **QueryHandler:** IntrospectTokenQueryHandler - Validates token signature, expiry, and returns claims/status.
+     - **Query:**
+       - `IntrospectTokenQuery` — Validate and inspect token details (claims, expiry, status).
+     - **QueryHandler:**
+       - `IntrospectTokenQueryHandler` — Checks token signature, expiration, and revocation status before returning claims.
+
   7. **Token Revocation**
-     - **Command:** RevokeTokenCommand - Revoke access/refresh tokens for a session.
-     - **CommandHandler:** RevokeTokenCommandHandler - Marks token as revoked, terminates session if needed.
+     - **Command:**
+       - `RevokeTokenCommand` — Revoke active access or refresh tokens for a user session.
+     - **CommandHandler:**
+       - `RevokeTokenCommandHandler` — Marks tokens as revoked, terminates related sessions, and updates token state.
 
----
-
-### 10.2 Authorization / ABAC Domain
+### 10.2 Authorization
 
 Governs access to resources and APIs using RBAC (via attribute: role) and ABAC. Evaluates user attributes, resource context, and dynamic policies to grant or deny access. Supports context-aware, flexible authorization and policy management.
 
@@ -799,203 +828,310 @@ Governs access to resources and APIs using RBAC (via attribute: role) and ABAC. 
   - **policy versions:** Versioned policy definitions for rollback/audit.
 
 - **Entities:**
-  - **Attribute:** Data used in policy evaluation.
-  - **Policy:** ABAC rules with conditions and effects (Permit/Deny).
-  - **PolicyVersion:** Versioned snapshot of policy for audit/rollback.
-  - **Resource:** Object or service being protected.
+  - **Attribute:** Represents metadata about users, resources, or the environment that can be evaluated in ABAC policies.
+  - **Policy:** Defines conditional rules (if-then logic) using attributes and determines access decisions (Permit/Deny).
+  - **PolicyVersion:** Stores versioned snapshots of policy configurations for audit, rollback, and traceability.
+  - **Resource:** Represents a system object or service endpoint that requires controlled access.
 
 - **Use Cases:**
-  1. **Evaluate Access**
-     - **Query:** EvaluateAccessQuery - Evaluate user access using attributes and context.
-     - **QueryHandler:** EvaluateAccessQueryHandler - Loads user/resource attributes, evaluates ABAC policies.
-  2. **Evaluate Policy**
-     - **Query:** EvaluatePolicyQuery - Evaluate user access based on ABAC policies.
-     - **QueryHandler:** EvaluatePolicyQueryHandler - Evaluates specific policy for access decision.
-  3. **Policy Management**
-     - **Command:** CreatePolicyCommand / UpdatePolicyCommand / DeletePolicyCommand
-     - **CommandHandler:** Corresponding handlers manage policy lifecycle.
-     - **Query:** GetPolicyQuery / GetPolicyVersionQuery
-     - **QueryHandler:** Corresponding handlers fetch policy and version details.
-  4. **Attribute Management**
-     - **Command:** CreateAttributeCommand / UpdateAttributeCommand / DeleteAttributeCommand
-     - **CommandHandler:** Corresponding handlers manage attributes.
-     - **Query:** GetUserAttributesQuery
-     - **QueryHandler:** GetUserAttributesQueryHandler
 
----
+  1. **Evaluate Access**
+     - **Query:**
+       - `EvaluateAccessQuery` — Evaluates whether a user has permission to access a given resource based on attributes and context.
+     - **QueryHandler:**
+       - `EvaluateAccessQueryHandler` — Loads user and resource attributes, evaluates applicable ABAC policies, and returns an access decision.
+
+  2. **Evaluate Policy**
+     - **Query:**
+       - `EvaluatePolicyQuery` — Evaluates a specific policy definition for a given access request.
+     - **QueryHandler:**
+       - `EvaluatePolicyQueryHandler` — Executes ABAC policy logic and returns Permit/Deny/NotApplicable based on conditions.
+
+  3. **Policy Management**
+     - **Command:**
+       - `CreatePolicyCommand` — Creates a new ABAC policy definition with conditions, effect, and metadata.
+       - `UpdatePolicyCommand` — Updates an existing policy with modified rules or attributes.
+       - `DeletePolicyCommand` — Soft-deletes or deactivates an existing policy from the system.
+     - **CommandHandler:**
+       - `CreatePolicyCommandHandler` — Validates and persists new policy definitions into the repository.
+       - `UpdatePolicyCommandHandler` — Handles policy modification and version increment.
+       - `DeletePolicyCommandHandler` — Manages policy removal or archival.
+     - **Query:**
+       - `GetPolicyQuery` — Retrieves policy details by ID or name.
+       - `GetPolicyVersionQuery` — Fetches a specific policy version for audit or rollback.
+     - **QueryHandler:**
+       - `GetPolicyQueryHandler` — Loads and returns current policy information.
+       - `GetPolicyVersionQueryHandler` — Returns details of a specified policy version from the audit store.
+
+  4. **Attribute Management**
+     - **Command:**
+       - `CreateAttributeCommand` — Creates a new attribute definition for use in ABAC policies (e.g., role, department).
+       - `UpdateAttributeCommand` — Updates an existing attribute’s metadata or value source.
+       - `DeleteAttributeCommand` — Removes or deprecates an attribute from policy evaluation.
+     - **CommandHandler:**
+       - `CreateAttributeCommandHandler` — Validates and persists attribute definitions.
+       - `UpdateAttributeCommandHandler` — Handles updates to attribute properties.
+       - `DeleteAttributeCommandHandler` — Deactivates or removes attribute records.
+     - **Query:**
+       - `GetUserAttributesQuery` — Retrieves all attribute values associated with a specific user.
+     - **QueryHandler:**
+       - `GetUserAttributesQueryHandler` — Aggregates user-related attributes from identity and contextual sources for policy evaluation.
 
 ### 10.3 User Management Domain
 
-Manages user profiles, preferences, account settings, and assigned attributes across the platform.
+Manages user profiles, preferences, account settings, and assigned attributes across the platform. Supports dynamic user grouping, organizational mapping, and integration with the authorization domain for attribute-based access control (ABAC).
 
 - **Object Values:**
-  - **personal details:** Name, email, and contact information.
-  - **department:** Organizational unit or team.
-  - **preferences:** User-specific settings.
-  - **account settings:** Security and notification configurations.
-  - **user attributes:** Assigned roles (as attributes), department, dynamic groups.
+  - **personal details:** Name, email, and contact information used for identification and communication.
+  - **department:** Represents the user’s organizational unit or assigned team.
+  - **preferences:** Customizable user-specific UI or functional settings.
+  - **account settings:** Includes security configurations, notification preferences, and privacy options.
+  - **user attributes:** Assigned roles, departments, and dynamically computed attributes used for access control.
 
 - **Entities:**
-  - **UserProfile:** Core user information.
-  - **UserSettings:** Preferences and account configuration.
+  - **UserProfile:** Core entity representing user identity and profile details.
+  - **UserSettings:** Stores user preferences, notification settings, and configuration data.
 
 - **Use Cases:**
-  1. **Create / Update / Delete User**
-     - **Command:** CreateUserCommand / UpdateUserCommand / DeleteUserCommand
-     - **CommandHandler:** Handles user profile lifecycle.
-  2. **Get User Profile**
-     - **Query:** GetUserProfileQuery
-     - **QueryHandler:** GetUserProfileQueryHandler
-  3. **Assign / Revoke User Attributes**
-     - **Command:** AssignUserAttributeCommand / RevokeUserAttributeCommand
-     - **CommandHandler:** Assign/Revoke handler
-     - **Query:** GetUserAttributesQuery
-     - **QueryHandler:** GetUserAttributesQueryHandler
-  4. **Get User Dynamic Groups**
-     - **Query:** GetUserDynamicGroupsQuery
-     - **QueryHandler:** GetUserDynamicGroupsQueryHandler
 
----
+  1. **Create / Update / Delete User**
+     - **Command:**
+       - `CreateUserCommand` — Creates a new user profile with associated details and settings.
+       - `UpdateUserCommand` — Updates existing user information and preferences.
+       - `DeleteUserCommand` — Deactivates or permanently removes a user account.
+     - **CommandHandler:**
+       - `CreateUserCommandHandler` — Validates and persists user data in the repository.
+       - `UpdateUserCommandHandler` — Applies modifications and ensures consistency across domains.
+       - `DeleteUserCommandHandler` — Handles user deactivation, cleanup, and audit logging.
+
+  2. **Get User**
+     - **Query:**
+       - `GetUserQuery` — Retrieves basic user information by ID, email, or username.
+     - **QueryHandler:**
+       - `GetUserQueryHandler` — Fetches user record from the repository and returns key profile details.
+
+  3. **Get User Profile**
+     - **Query:**
+       - `GetUserProfileQuery` — Retrieves detailed user profile, including settings and attributes.
+     - **QueryHandler:**
+       - `GetUserProfileQueryHandler` — Combines profile, settings, and attributes for full user context.
+
+  4. **Assign / Revoke User Attributes**
+     - **Command:**
+       - `AssignUserAttributeCommand` — Assigns new roles, departments, or ABAC attributes to a user.
+       - `RevokeUserAttributeCommand` — Removes or disables existing user attributes.
+     - **CommandHandler:**
+       - `AssignUserAttributeCommandHandler` — Updates user attribute mappings and triggers re-evaluation of policies.
+       - `RevokeUserAttributeCommandHandler` — Revokes assigned attributes and updates user authorization context.
+     - **Query:**
+       - `GetUserAttributesQuery` — Retrieves all attributes currently assigned to a user.
+     - **QueryHandler:**
+       - `GetUserAttributesQueryHandler` — Aggregates user attributes from user and policy contexts.
+
+  5. **Get User Dynamic Groups**
+     - **Query:**
+       - `GetUserDynamicGroupsQuery` — Retrieves all dynamic groups computed from user attributes and conditions.
+     - **QueryHandler:**
+       - `GetUserDynamicGroupsQueryHandler` — Evaluates group membership rules and returns applicable dynamic groups.
 
 ### 10.4 Session Management Domain
 
-Manages active sessions, token issuance, session validation, refresh tokens, and logout processes.
+Manages active sessions, token lifecycle, session validation, refresh token handling, and logout processes. Ensures secure session tracking and supports concurrent session policies across devices.
 
 - **Object Values:**
-  - **session tokens:** JWT representing active sessions.
-  - **refresh tokens:** Tokens to renew session validity.
-  - **session metadata:** Session start time, last activity, status.
-  - **device info:** Device used to access the system.
-  - **IP address:** Client IP address.
+  - **session tokens:** JWTs representing active authenticated sessions.
+  - **refresh tokens:** Secure tokens used to renew session validity without re-login.
+  - **session metadata:** Includes session start time, last activity, expiration, and status.
+  - **device info:** Information about the device used to access the system (browser, OS, device ID).
+  - **IP address:** Client’s originating IP address used for session validation and security monitoring.
 
 - **Entities:**
-  - **Session:** Represents an active user session.
-  - **AuthToken:** Access and refresh token objects.
+  - **Session:** Represents an active user session and its metadata.
+  - **AuthToken:** Holds access and refresh tokens tied to user sessions.
 
 - **Use Cases:**
-  1. **Validate Session**
-     - **Query:** ValidateSessionQuery
-     - **QueryHandler:** ValidateSessionQueryHandler
-  2. **Refresh Token**
-     - **Command:** RefreshTokenCommand
-     - **CommandHandler:** RefreshTokenCommandHandler
-  3. **Logout**
-     - **Command:** LogoutUserCommand
-     - **CommandHandler:** LogoutUserCommandHandler
 
----
+  1. **Validate Session**
+     - **Query:**
+       - `ValidateSessionQuery` — Checks whether a session is valid, active, and unexpired.
+     - **QueryHandler:**
+       - `ValidateSessionQueryHandler` — Validates session token, expiration, and user association.
+
+  2. **Refresh Token**
+     - **Command:**
+       - `RefreshTokenCommand` — Generates a new access token using a valid refresh token.
+     - **CommandHandler:**
+       - `RefreshTokenCommandHandler` — Validates refresh token, reissues new access token, and updates session metadata.
+
+  3. **Logout**
+     - **Command:**
+       - `LogoutUserCommand` — Terminates a user’s active session and invalidates associated tokens.
+     - **CommandHandler:**
+       - `LogoutUserCommandHandler` — Revokes tokens, clears session data, and logs logout event for audit purposes.
 
 ### 10.5 Attribute Management Domain
 
-Manages user, resource, and environment attributes for ABAC policies, dynamic groups, and policy evaluation.
+Manages user, resource, and environment attributes for ABAC policy evaluation, dynamic group computation, and access control decisions. Enables fine-grained, attribute-based access management through reusable attribute definitions and automated group logic.
 
 - **Object Values:**
-  - **attribute definition:** Name, type, validation, scope.
-  - **user attributes:** Role, department, project, etc.
-  - **attribute groups:** Logical groupings for policy or assignment.
-  - **dynamic group rules:** Logic for automatic group membership.
-  - **dynamic permissions:** Access rights calculated from attribute/group rules.
+  - **attribute definition:** Defines attribute name, type, validation rules, and applicable scope (user, resource, environment).
+  - **user attributes:** Represent user-related properties such as role, department, project, or clearance level.
+  - **attribute groups:** Logical groupings of attributes for easier assignment and policy referencing.
+  - **dynamic group rules:** Rule-based logic that automatically determines group membership based on user or resource attributes.
+  - **dynamic permissions:** Access rights derived from evaluated attributes or dynamic group membership.
 
 - **Entities:**
-  - **Attribute:** Single attribute for user or resource.
-  - **AttributeGroup:** Group of attributes used for policy evaluation.
-  - **DynamicGroup:** Group with rule-based membership.
+  - **Attribute:** Represents a single attribute definition or instance assigned to a user, resource, or environment.
+  - **AttributeGroup:** Collection of attributes used collectively for policy evaluation or role grouping.
+  - **DynamicGroup:** Group defined by logical conditions that dynamically include or exclude members based on attributes.
 
 - **Use Cases:**
-  1. **Manage Attribute Definitions**
-     - **Command:** Create/Update/DeleteAttributeCommand
-     - **CommandHandler:** Corresponding handler
-     - **Query:** GetUserAttributesQuery
-     - **QueryHandler:** GetUserAttributesQueryHandler
-  2. **Manage Dynamic Groups**
-     - **Command:** Create/Update/DeleteAttributeGroupCommand
-     - **CommandHandler:** Corresponding handler
-     - **Query:** GetAttributeGroupQuery
-     - **QueryHandler:** GetAttributeGroupQueryHandler
-  3. **Assign/Revoke Attributes to Users**
-     - **Command:** AssignUserAttributeCommand / RevokeUserAttributeCommand
-     - **CommandHandler:** Corresponding handler
-     - **Query:** GetUserAttributesQuery
-     - **QueryHandler:** GetUserAttributesQueryHandler
 
----
+  1. **Manage Attribute Definitions**
+     - **Command:**
+       - `CreateAttributeCommand` — Creates a new attribute definition for use in ABAC evaluation.
+       - `UpdateAttributeCommand` — Updates existing attribute definition metadata or constraints.
+       - `DeleteAttributeCommand` — Removes or deprecates an existing attribute definition.
+     - **CommandHandler:**
+       - `CreateAttributeCommandHandler` — Validates and persists attribute definitions.
+       - `UpdateAttributeCommandHandler` — Applies modifications and maintains consistency in dependent policies.
+       - `DeleteAttributeCommandHandler` — Handles safe deletion and version tracking of attribute definitions.
+     - **Query:**
+       - `GetUserAttributesQuery` — Retrieves attributes currently assigned to a given user.
+     - **QueryHandler:**
+       - `GetUserAttributesQueryHandler` — Aggregates and returns all attributes applicable to a specific user.
+
+  2. **Manage Dynamic Groups**
+     - **Command:**
+       - `CreateAttributeGroupCommand` — Defines a new group of attributes for ABAC or role mapping.
+       - `UpdateAttributeGroupCommand` — Modifies attribute grouping or associated logic.
+       - `DeleteAttributeGroupCommand` — Removes a group and its associated mappings.
+     - **CommandHandler:**
+       - `CreateAttributeGroupCommandHandler` — Validates and creates new attribute group definitions.
+       - `UpdateAttributeGroupCommandHandler` — Applies updates and re-evaluates affected policies.
+       - `DeleteAttributeGroupCommandHandler` — Handles deletion and cleans up related references.
+     - **Query:**
+       - `GetAttributeGroupQuery` — Retrieves details of an attribute group.
+     - **QueryHandler:**
+       - `GetAttributeGroupQueryHandler` — Fetches group definitions and related attributes from the repository.
+
+  3. **Assign / Revoke Attributes to Users**
+     - **Command:**
+       - `AssignUserAttributeCommand` — Assigns an attribute (e.g., role, department) to a specific user.
+       - `RevokeUserAttributeCommand` — Revokes or disables an assigned attribute for a user.
+     - **CommandHandler:**
+       - `AssignUserAttributeCommandHandler` — Updates user attribute mapping and triggers dynamic group evaluation.
+       - `RevokeUserAttributeCommandHandler` — Removes assigned attribute and refreshes user’s access context.
+     - **Query:**
+       - `GetUserAttributesQuery` — Retrieves a list of attributes associated with a specific user.
+     - **QueryHandler:**
+       - `GetUserAttributesQueryHandler` — Loads all user attributes and merges results from direct and derived sources.
 
 ### 10.6 Tenant Management Domain
 
-Manages organizational boundaries, tenant-specific configuration, and isolation.
+Manages organizational boundaries, tenant-specific configuration, and multi-tenant isolation. Supports tenant-level authentication policies, branding, encryption, and lifecycle management for SaaS platforms.
 
 - **Object Values:**
-  - **tenant name:** Organization identifier.
-  - **tenant config:** MFA, branding, federation, policy namespace.
-  - **tenant status:** Active, suspended, deleted.
-  - **encryption keys:** Per-tenant signing/encryption.
+  - **tenant name:** Unique name or code identifying the organization or tenant.
+  - **tenant config:** Configuration data such as MFA enforcement, branding, SSO federation, and policy namespace.
+  - **tenant status:** Indicates whether a tenant is active, suspended, or deleted.
+  - **encryption keys:** Per-tenant cryptographic keys used for signing, encryption, and data isolation.
 
 - **Entities:**
-  - **Tenant:** Represents an organization/tenant.
-  - **TenantConfig:** Configuration for authentication, federation, branding, etc.
+  - **Tenant:** Represents a distinct organization or tenant, including identity, configuration, and lifecycle state.
+  - **TenantConfig:** Stores tenant-level configurations for authentication, federation, and branding customization.
 
 - **Use Cases:**
-  1. **Tenant Lifecycle**
-     - **Command:** CreateTenantCommand / UpdateTenantCommand / DeleteTenantCommand
-     - **CommandHandler:** Corresponding handler
-     - **Query:** GetTenantQuery
-     - **QueryHandler:** GetTenantQueryHandler
 
----
+  1. **Tenant Lifecycle**
+     - **Command:**
+       - `CreateTenantCommand` — Registers a new tenant with default configuration and generates encryption keys.
+       - `UpdateTenantCommand` — Updates tenant metadata, configuration settings, or federation parameters.
+       - `DeleteTenantCommand` — Deactivates or permanently removes a tenant and related data.
+     - **CommandHandler:**
+       - `CreateTenantCommandHandler` — Initializes new tenant configurations and securely provisions encryption keys.
+       - `UpdateTenantCommandHandler` — Applies tenant configuration updates and synchronizes changes across dependent services.
+       - `DeleteTenantCommandHandler` — Handles tenant deactivation, cleanup, and archival for audit compliance.
+     - **Query:**
+       - `GetTenantQuery` — Retrieves tenant details and configuration by ID, name, or domain.
+     - **QueryHandler:**
+       - `GetTenantQueryHandler` — Fetches tenant data from repository for management, reporting, or audit purposes.
 
 ### 10.7 Federation / External IdP Domain
 
-Manages integration with external IdPs, handles federation flows, claim mapping, and just-in-time (JIT) provisioning.
+Manages integration with external Identity Providers (IdPs), handles federation flows, claim mapping, and Just-In-Time (JIT) user provisioning for seamless external authentication.
 
 - **Object Values:**
-  - **IdP config:** SAML/OIDC endpoints, metadata, keys.
-  - **claim mapping:** Rules for mapping external claims to internal attributes.
-  - **jit provisioning:** Rules for auto-creating users on first login.
-  - **federation status:** Active, pending, disabled.
+  - **IdP config:** Configuration details for SAML/OIDC integration, including endpoints, metadata, and cryptographic keys.
+  - **claim mapping:** Rules for transforming external IdP claims into internal user attributes.
+  - **jit provisioning:** Policy-driven rules for automatically creating internal user accounts upon first successful external login.
+  - **federation status:** Indicates federation connection state — active, pending, or disabled.
 
 - **Entities:**
-  - **IdentityProvider (IdP)**
-  - **ClaimMapping**
-  - **FederatedUser**
+  - **IdentityProvider (IdP):** Represents an external authentication provider and its integration parameters.
+  - **ClaimMapping:** Defines how external claims map to internal attributes or roles.
+  - **FederatedUser:** Represents a user authenticated through an external IdP and linked to an internal identity.
 
 - **Use Cases:**
-  1. **Manage IdP Configurations**
-     - **Command:** Create/Update/DeleteIdPCommand
-     - **CommandHandler:** Corresponding handler
-     - **Query:** GetIdPQuery
-     - **QueryHandler:** GetIdPQueryHandler
-  2. **JIT Provisioning**
-     - **Command:** JITProvisionCommand
-     - **CommandHandler:** JITProvisionCommandHandler
-  3. **Claim Mapping**
-     - **Command:** MapClaimsCommand
-     - **CommandHandler:** MapClaimsCommandHandler
 
----
+  1. **Manage IdP Configurations**
+     - **Command:**
+       - `CreateIdPCommand` — Registers a new external IdP with configuration details.
+       - `UpdateIdPCommand` — Updates existing IdP settings or metadata.
+       - `DeleteIdPCommand` — Removes or disables an IdP integration.
+     - **CommandHandler:**
+       - `CreateIdPCommandHandler` — Validates and saves IdP configuration to the repository.
+       - `UpdateIdPCommandHandler` — Updates metadata, certificates, and endpoint details.
+       - `DeleteIdPCommandHandler` — Deactivates IdP and clears associated trust relationships.
+     - **Query:**
+       - `GetIdPQuery` — Retrieves configuration details of a registered IdP.
+     - **QueryHandler:**
+       - `GetIdPQueryHandler` — Fetches IdP configuration and status for management or diagnostics.
+
+  2. **JIT Provisioning**
+     - **Command:**
+       - `JITProvisionCommand` — Automatically creates or updates a user upon successful federated login.
+     - **CommandHandler:**
+       - `JITProvisionCommandHandler` — Handles user provisioning workflow, linking federated identity with internal user records.
+
+  3. **Claim Mapping**
+     - **Command:**
+       - `MapClaimsCommand` — Defines or updates claim mapping rules for an IdP.
+     - **CommandHandler:**
+       - `MapClaimsCommandHandler` — Processes and stores claim transformation rules used during federation authentication.
 
 ### 10.8 Infrastructure / DevOps Domain
 
-Provides logging, monitoring, and security alerting to support authentication, authorization, and compliance.
+Provides centralized logging, monitoring, and alerting for authentication and authorization operations. Ensures traceability, compliance, and proactive detection of anomalous security events.
 
 - **Object Values:**
-  - **audit events:** Records of security-relevant actions.
-  - **operational events:** System events related to service health and runtime operations.
-  - **security alerts:** Notifications for anomalous or potentially malicious activity.
+  - **audit events:** Records all security-sensitive operations such as logins, token issuance, and policy changes.
+  - **operational events:** Tracks service-level activities, uptime metrics, and runtime operations.
+  - **security alerts:** Notifies security systems or administrators of potential threats or policy violations.
 
 - **Entities:**
-  - **AuditLog**
-  - **EventLog**
+  - **AuditLog:** Persistent record of authentication and authorization events for audit and compliance.
+  - **EventLog:** Captures operational and system-level events for monitoring and diagnostics.
 
 - **Use Cases:**
+
   1. **Log Authentication Events**
-     - **Command:** LogAuthEventCommand
-     - **CommandHandler:** LogAuthEventCommandHandler
+     - **Command:**
+       - `LogAuthEventCommand` — Records login, logout, or token-related events.
+     - **CommandHandler:**
+       - `LogAuthEventCommandHandler` — Persists event data to the audit log repository for compliance tracking.
+
   2. **Monitor Failed Login Attempts**
-     - **Query:** GetFailedLoginAttemptsQuery
-     - **QueryHandler:** GetFailedLoginAttemptsQueryHandler
+     - **Query:**
+       - `GetFailedLoginAttemptsQuery` — Retrieves records of failed login attempts for a specific user or time range.
+     - **QueryHandler:**
+       - `GetFailedLoginAttemptsQueryHandler` — Aggregates failed login data for anomaly detection or rate-limiting.
+
   3. **Send Notifications / Alerts**
-     - **Command:** SendSecurityAlertCommand
-     - **CommandHandler:** SendSecurityAlertCommandHandler
+     - **Command:**
+       - `SendSecurityAlertCommand` — Triggers alerts or notifications for critical security events.
+     - **CommandHandler:**
+       - `SendSecurityAlertCommandHandler` — Integrates with notification systems (email, webhook, SIEM) to deliver alerts in real-time.
 
 ---
 
@@ -1047,6 +1183,7 @@ Provides logging, monitoring, and security alerting to support authentication, a
 
 | Endpoint                          | Method | Command / Query            | Description                                           |
 | --------------------------------- | ------ | -------------------------- | ----------------------------------------------------- |
+| /api/v1/users                     | GET    | GetUserCommand             | Get user record.                                      |
 | /api/v1/users                     | POST   | CreateUserCommand          | Create a new user record.                             |
 | /api/v1/users/{id}                | PUT    | UpdateUserCommand          | Update user details.                                  |
 | /api/v1/users/{id}                | DELETE | DeleteUserCommand          | Delete a user from the system.                        |
