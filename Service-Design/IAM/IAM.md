@@ -1162,8 +1162,8 @@ Provides centralized logging, monitoring, and alerting for authentication and au
 
 | Endpoint                       | Method | Command / Query             | Description                                               |
 | ------------------------------ | ------ | --------------------------- | --------------------------------------------------------- |
-| /api/v1/auth/authorize/abac    | POST   | EvaluateAccessQuery         | Evaluate user access using attributes and context.        |
-| /api/v1/auth/authorize/policy  | POST   | EvaluatePolicyQuery         | Evaluate user access based on ABAC policies.              |
+| /api/v1/authorize/abac         | POST   | EvaluateAccessQuery         | Evaluate user access using attributes and context.        |
+| /api/v1/authorize/policy       | POST   | EvaluatePolicyQuery         | Evaluate user access based on ABAC policies.              |
 | /api/v1/policies               | POST   | CreatePolicyCommand         | Create a new ABAC policy.                                 |
 | /api/v1/policies/{id}          | GET    | GetPolicyQuery              | Retrieve a single ABAC policy details.                    |
 | /api/v1/policies/{id}          | PUT    | UpdatePolicyCommand         | Update an existing ABAC policy.                           |

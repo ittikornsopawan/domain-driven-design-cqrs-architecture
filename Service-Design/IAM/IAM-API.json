@@ -69,10 +69,6 @@
       "description": "User session lifecycle management"
     },
     {
-      "name": "Tenant Management",
-      "description": "Tenant lifecycle and configuration management"
-    },
-    {
       "name": "Federation / External IdP",
       "description": "External identity provider federation"
     },
@@ -700,15 +696,115 @@
     "/api/v1/token/introspect": {
       "post": {
         "tags": ["Authentication"],
-        "summary": "Check validity and claims of a token.",
-        "description": "Check validity and claims of a token.",
+        "summary": "Perform secure introspection to validate Access and Refresh Tokens.",
+        "description": "Executes a secure OAuth 2.0 token introspection to validate the Access and Refresh Tokens provided by the client. Ensures both tokens are valid, synchronized, and belong to the same authenticated session.\n\n**Process Overview:**\n\n1. **Token Reception**:\n   - Client includes `Authorization: Bearer <access_token>` and `Refresh-Token: <uuid>` headers.\n   - Both tokens must belong to the same session and tenant context.\n\n2. **Token Validation**:\n   - Verify the signature and integrity of the access token (JWT).\n   - Check that the refresh token exists, is active, and linked to the same session.\n\n3. **Cross Verification**:\n   - Match tokens to confirm ownership, session integrity, and tenant scope.\n   - Reject mismatched, expired, or revoked token pairs.\n\n4. **Claim Inspection**:\n   - Decode claims (`sub`, `exp`, `iat`, `scope`, `permissions`, `attributes`) from the access token.\n   - Validate expiration, issuer, audience, and attribute consistency.\n   - Use token attributes for ABAC (Attribute-Based Access Control) policy evaluation.\n\n5. **Response Handling**:\n   - If valid, return token metadata (`TokenDTO`) and session status.\n   - If invalid, respond with a standardized `CommonResponse` error object.\n\n6. **Audit & Security Monitoring**:\n   - Log introspection requests and results for compliance.\n   - Support integration with IAM and ABAC policy monitoring systems.\n\n**Error Codes:**\n- `400`: Invalid or malformed tokens.\n- `401`: Unauthorized – invalid signature or expired token.\n- `409`: Conflict – mismatched token pair or revoked session.\n- `500`: Internal server error during introspection.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Standard OAuth 2.0 Bearer token used for access token introspection (e.g., 'Bearer eyJhbGciOi...').",
+            "schema": {
+              "type": "string",
+              "pattern": "^Bearer\\s[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$"
+            },
+            "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          {
+            "name": "Refresh-Token",
+            "in": "header",
+            "required": true,
+            "description": "UUID Refresh Token associated with the Access Token for validation.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Token introspection result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "$ref": "#/components/schemas/CommonResponse" },
+                    "data": { "$ref": "#/components/schemas/TokenDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "400",
+                    "message": "Bad Request",
+                    "bizErrorCode": "20001",
+                    "bizErrorMessage": "Invalid or malformed token format."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "401",
+                    "message": "Unauthorized",
+                    "bizErrorCode": "20002",
+                    "bizErrorMessage": "Access token or refresh token is invalid or expired."
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "409",
+                    "message": "Conflict",
+                    "bizErrorCode": "20003",
+                    "bizErrorMessage": "Access token and refresh token do not match or session revoked."
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "500",
+                    "message": "Internal Server Error",
+                    "bizErrorCode": "20004",
+                    "bizErrorMessage": "Internal server error occurred during token introspection."
+                  }
                 }
               }
             }
@@ -719,8 +815,32 @@
     "/api/v1/token/revoke": {
       "post": {
         "tags": ["Authentication"],
-        "summary": "Revoke access/refresh tokens for a session.",
-        "description": "Revoke access/refresh tokens for a session.",
+        "summary": "Securely revoke Access and Refresh Tokens to terminate a session.",
+        "description": "Performs secure token revocation to invalidate both Access and Refresh Tokens, ensuring session termination and preventing further use.\n\n**Process Overview:**\n\n1. **Receive Tokens via Headers**:\n   - Client includes both `Authorization: Bearer <access_token>` and `Refresh-Token: <uuid>` headers.\n   - Tokens must correspond to the same authenticated session.\n\n2. **Validate Token Authenticity**:\n   - Verify the Access Token signature and check that the Refresh Token is active and registered.\n\n3. **Revoke Tokens**:\n   - Mark both tokens as revoked in the session store.\n   - Ensure that subsequent introspection or refresh attempts fail.\n\n4. **Audit & Monitoring**:\n   - Log the revocation event for compliance and traceability.\n   - Optionally notify dependent microservices of session termination.\n\n**Error Responses:**\n- `400`: Invalid or malformed tokens.\n- `401`: Unauthorized – token invalid or expired.\n- `409`: Conflict – session already revoked.\n- `500`: Internal server error during revocation.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Standard OAuth 2.0 Bearer token used for access token introspection (e.g., 'Bearer eyJhbGciOi...').",
+            "schema": {
+              "type": "string",
+              "pattern": "^Bearer\\s[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$"
+            },
+            "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          {
+            "name": "Refresh-Token",
+            "in": "header",
+            "required": true,
+            "description": "UUID Refresh Token associated with the Access Token for validation.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success",
@@ -1201,18 +1321,157 @@
         }
       }
     },
-    "/api/v1/auth/authorize/abac": {
+    "/api/v1/authorize/abac": {
       "post": {
         "tags": ["Authorization / ABAC"],
-        "summary": "ABAC Authorization Decision",
-        "description": "Evaluate attribute-based access control (ABAC) policies to determine if a given action is permitted for a subject on a resource.",
+        "summary": "Evaluate and determine authorization decision based on ABAC policies.",
+        "description": "Performs an Attribute-Based Access Control (ABAC) evaluation to determine if the specified subject is permitted to perform an action on a resource.\n\n**Process Overview:**\n\n1. **Receive Tokens via Headers**:\n   - Client includes both `Authorization: Bearer <access_token>` and `Refresh-Token: <uuid>` headers.\n   - Tokens must correspond to the same authenticated session.\n\n2. **Extract Attributes from Tokens**:\n   - Decode and extract subject attributes (`attributes`, `permissions`, `scope`) from the access token.\n   - Validate attribute integrity and tenant context.\n\n3. **Policy Evaluation**:\n   - Evaluate ABAC policies using subject, resource, and action attributes.\n   - Apply policy rules and conditions defined in the system.\n\n4. **Decision Logic**:\n   - Determine `Permit`, `Deny`, or `NotApplicable` based on the evaluated policies.\n   - Include all matched policies and attributes used in the evaluation.\n\n5. **Response Handling**:\n   - If permitted, return evaluated attributes and authorization metadata.\n   - If denied or no matching policy, return appropriate error status.\n\n6. **Audit & Security Monitoring**:\n   - Log all authorization evaluations with decision outcomes.\n   - Integrate with IAM audit and compliance monitoring systems.\n\n**Error Codes:**\n- `400`: Invalid or malformed tokens or attribute data.\n- `401`: Unauthorized – invalid, expired, or mismatched tokens.\n- `404`: No applicable policy found for given subject or resource.\n- `409`: Conflict – attribute or policy evaluation inconsistency.\n- `500`: Internal server error during ABAC evaluation.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Standard OAuth 2.0 Bearer token used for access token introspection (e.g., 'Bearer eyJhbGciOi...').",
+            "schema": {
+              "type": "string",
+              "pattern": "^Bearer\\s[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$"
+            },
+            "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          {
+            "name": "Refresh-Token",
+            "in": "header",
+            "required": true,
+            "description": "UUID Refresh Token associated with the Access Token for validation.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "$ref": "#/components/schemas/CommonResponse" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AttributeDTO"
+                      }
+                    }
+                  },
+                  "example": {
+                    "status": {
+                      "code": 200,
+                      "message": "Ok",
+                      "bizErrorCode": "00000",
+                      "bizErrorMessage": "Authorization decision successfully evaluated."
+                    },
+                    "data": [
+                      {
+                        "key": "MEMBER",
+                        "value": "ID:GUID-1234-5678-9012"
+                      },
+                      {
+                        "key": "MEMBER",
+                        "value": "CODE:1000001-1"
+                      },
+                      {
+                        "key": "DEPARTMENT",
+                        "value": "Development"
+                      },
+                      {
+                        "key": "POSITION",
+                        "value": "System Analyst"
+                      },
+                      {
+                        "key": "LEVEL",
+                        "value": "Supervisor"
+                      },
+                      {
+                        "key": "USER-GROUP",
+                        "value": "ADMIN:READONLY"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
                   "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "401",
+                    "message": "Unauthorized",
+                    "bizErrorCode": "30001",
+                    "bizErrorMessage": "Authentication token is missing, invalid, or expired."
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - No applicable policy or subject attributes found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "404",
+                    "message": "Not Found",
+                    "bizErrorCode": "30002",
+                    "bizErrorMessage": "No matching policy or attribute context found for evaluation."
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Policy evaluation conflict or inconsistent attribute state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "409",
+                    "message": "Conflict",
+                    "bizErrorCode": "30003",
+                    "bizErrorMessage": "Conflicting attributes or policy rules detected during evaluation."
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error - ABAC evaluation failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "500",
+                    "message": "Internal Server Error",
+                    "bizErrorCode": "30004",
+                    "bizErrorMessage": "Unexpected error occurred during ABAC authorization evaluation."
+                  }
                 }
               }
             }
@@ -1220,18 +1479,202 @@
         }
       }
     },
-    "/api/v1/auth/authorize/policy": {
+    "/api/v1/authorize/policy": {
       "post": {
         "tags": ["Authorization / ABAC"],
-        "summary": "Policy-based Authorization",
-        "description": "Evaluate custom policies for authorization decisions based on supplied context and policy rules.",
+        "summary": "Evaluate and determine authorization decision based on ABAC policies.",
+        "description": "Performs an Attribute-Based Access Control (ABAC) evaluation to determine if the specified subject is permitted to perform an action on a resource.\n\n**Process Overview:**\n\n1. **Receive Tokens via Headers**:\n   - Client includes both `Authorization: Bearer <access_token>` and `Refresh-Token: <uuid>` headers.\n   - Tokens must correspond to the same authenticated session.\n\n2. **Extract Attributes from Tokens**:\n   - Decode and extract subject attributes (`attributes`, `permissions`, `scope`) from the access token.\n   - Validate attribute integrity and tenant context.\n\n3. **Policy Evaluation**:\n   - Evaluate ABAC policies using subject, resource, and action attributes.\n   - Apply policy rules and conditions defined in the system.\n\n4. **Decision Logic**:\n   - Determine `Permit`, `Deny`, or `NotApplicable` based on the evaluated policies.\n   - Include all matched policies and attributes used in the evaluation.\n\n5. **Response Handling**:\n   - If permitted, return evaluated attributes and authorization metadata.\n   - If denied or no matching policy, return appropriate error status.\n\n6. **Audit & Security Monitoring**:\n   - Log all authorization evaluations with decision outcomes.\n   - Integrate with IAM audit and compliance monitoring systems.\n\n**Error Codes:**\n- `400`: Invalid or malformed tokens or attribute data.\n- `401`: Unauthorized – invalid, expired, or mismatched tokens.\n- `404`: No applicable policy found for given subject or resource.\n- `409`: Conflict – attribute or policy evaluation inconsistency.\n- `500`: Internal server error during ABAC evaluation.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Standard OAuth 2.0 Bearer token used for access token introspection (e.g., 'Bearer eyJhbGciOi...').",
+            "schema": {
+              "type": "string",
+              "pattern": "^Bearer\\s[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$"
+            },
+            "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          {
+            "name": "Refresh-Token",
+            "in": "header",
+            "required": true,
+            "description": "UUID Refresh Token associated with the Access Token for validation.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttributeDTO"
+              },
+              "examples": {
+                "success": {
+                  "summary": "Valid attribute input",
+                  "value": {
+                    "key": "RESOURCE",
+                    "value": "DOCUMENT:REPORT"
+                  }
+                },
+                "fail1": {
+                  "summary": "Missing required key field",
+                  "value": {
+                    "value": "DOCUMENT:REPORT"
+                  }
+                },
+                "fail2": {
+                  "summary": "Missing required value field",
+                  "value": {
+                    "key": "RESOURCE"
+                  }
+                },
+                "fail3": {
+                  "summary": "Invalid value format (not uppercase)",
+                  "value": {
+                    "key": "RESOURCE",
+                    "value": "document:report"
+                  }
+                },
+                "fail4": {
+                  "summary": "Invalid key pattern (contains space)",
+                  "value": {
+                    "key": "RESOURCE NAME",
+                    "value": "DOCUMENT:REPORT"
+                  }
+                },
+                "fail5": {
+                  "summary": "Empty attribute object",
+                  "value": {}
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Authorization decision result",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
+                  "type": "object",
+                  "properties": {
+                    "status": { "$ref": "#/components/schemas/CommonResponse" },
+                    "data": {
+                      "type": "string",
+                      "enum": [
+                        "ALLOW",
+                        "DENY",
+                        "NOT_APPLICABLE",
+                        "INDETERMINATE"
+                      ],
+                      "description": "Authorization decision outcome based on policy evaluation."
+                    }
+                  }
+                },
+                "examples": {
+                  "allow": {
+                    "summary": "Access granted based on policy evaluation",
+                    "value": {
+                      "status": {
+                        "code": 200,
+                        "message": "Ok",
+                        "bizErrorCode": "00000",
+                        "bizErrorMessage": "Access granted."
+                      },
+                      "data": "ALLOW"
+                    }
+                  },
+                  "deny": {
+                    "summary": "Access denied due to policy restrictions",
+                    "value": {
+                      "status": {
+                        "code": 200,
+                        "message": "Ok",
+                        "bizErrorCode": "00001",
+                        "bizErrorMessage": "Access denied by policy."
+                      },
+                      "data": "DENY"
+                    }
+                  },
+                  "notApplicable": {
+                    "summary": "No matching policy found",
+                    "value": {
+                      "status": {
+                        "code": 200,
+                        "message": "Ok",
+                        "bizErrorCode": "00002",
+                        "bizErrorMessage": "No applicable policy found for the given attributes."
+                      },
+                      "data": "NOT_APPLICABLE"
+                    }
+                  },
+                  "indeterminate": {
+                    "summary": "Policy evaluation error due to missing attributes",
+                    "value": {
+                      "status": {
+                        "code": 200,
+                        "message": "Ok",
+                        "bizErrorCode": "00003",
+                        "bizErrorMessage": "Unable to determine decision due to incomplete attribute context."
+                      },
+                      "data": "INDETERMINATE"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" },
+                "example": {
+                  "status": {
+                    "code": "401",
+                    "message": "Unauthorized",
+                    "bizErrorCode": "40001",
+                    "bizErrorMessage": "Authentication token is missing, invalid, or expired."
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Policy evaluation inconsistency or conflicting rules",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" },
+                "example": {
+                  "status": {
+                    "code": "409",
+                    "message": "Conflict",
+                    "bizErrorCode": "40002",
+                    "bizErrorMessage": "Conflicting policy definitions or evaluation results detected."
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error - Unexpected error during policy evaluation",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" },
+                "example": {
+                  "status": {
+                    "code": "500",
+                    "message": "Internal Server Error",
+                    "bizErrorCode": "40003",
+                    "bizErrorMessage": "Unexpected error occurred while evaluating authorization policies."
+                  }
                 }
               }
             }
@@ -1311,54 +1754,233 @@
         }
       }
     },
-    "/api/v1/policies/{id}/versions": {
-      "get": {
-        "tags": ["Authorization / ABAC"],
-        "summary": "List Policy Versions",
-        "description": "Retrieve all versions of a specific ABAC policy.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": ["Authorization / ABAC"],
-        "summary": "Create Policy Version",
-        "description": "Create a new version of an existing ABAC policy.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/attributes": {
       "post": {
         "tags": ["Authorization / ABAC"],
-        "summary": "Create Attribute",
-        "description": "Create a new attribute for use in ABAC policies.",
+        "summary": "Create a new ABAC attribute with metadata for authorization evaluation.",
+        "description": "Create a new ABAC attribute for use in authorization policies. The process works as follows:\n\n1. **Receive Tokens via Headers**:\n   - Client must include `Authorization: Bearer <access_token>` and `Refresh-Token: <uuid>` headers.\n   - Tokens must belong to an authenticated session with Admin privileges.\n\n2. **Receive Attribute Data**:\n   - Client sends a POST request with attribute details including `key`, `value`, and metadata fields (`isParameter`, `isRequired`, `isDisplay`, `category`, `group`, `name`, `dataType`, `title`, `description`).\n\n3. **Validate Input**:\n   - `key` and `value` are required.\n   - Ensure `value` is uppercase and matches allowed patterns.\n   - Check metadata fields for correct types and allowed values.\n\n4. **Check for Conflicts**:\n   - Ensure the attribute `key` does not already exist.\n   - Validate that there are no duplicate keys in the same request.\n\n5. **Persist Attribute**:\n   - Save the attribute definition to the database.\n   - Assign a unique `id` to the record.\n\n6. **Audit Logging**:\n   - Log the creation event for auditing and compliance purposes.\n\n7. **Respond to Client**:\n   - Return `201 Created` with a structured JSON containing `status` and optionally the created attribute data.\n\n8. **Error Handling**:\n   - `400`: Invalid input format or missing required fields.\n   - `401`: Unauthorized – invalid or expired tokens.\n   - `403`: Forbidden – insufficient privileges (Admin required).\n   - `409`: Conflict – duplicate or inconsistent attribute key.\n   - `500`: Internal server error during creation.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Standard OAuth 2.0 Bearer token used for access token introspection (e.g., 'Bearer eyJhbGciOi...').",
+            "schema": {
+              "type": "string",
+              "pattern": "^Bearer\\s[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$"
+            },
+            "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          {
+            "name": "Refresh-Token",
+            "in": "header",
+            "required": true,
+            "description": "UUID Refresh Token associated with the Access Token for validation.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttributeDTO"
+              },
+              "examples": {
+                "success": {
+                  "summary": "Valid attribute definition",
+                  "description": "Example of a valid and complete attribute definition used for ABAC policy evaluation.",
+                  "value": {
+                    "key": "USER-GROUP",
+                    "value": "ADMIN:ALL",
+                    "isParameter": true,
+                    "isRequired": false,
+                    "isDisplay": true,
+                    "category": "subject",
+                    "group": "ACCESS_CONTROL",
+                    "name": "User Group",
+                    "dataType": "STRING",
+                    "title": "User Group Permission",
+                    "description": "Defines the permission scope of a user group for ABAC decisions."
+                  }
+                },
+                "missing_required_field": {
+                  "summary": "Missing required field",
+                  "description": "The 'key' field is missing, which is required for identifying the attribute.",
+                  "value": {
+                    "value": "ADMIN:ALL",
+                    "isParameter": true,
+                    "isRequired": false,
+                    "isDisplay": true,
+                    "category": "subject",
+                    "group": "ACCESS_CONTROL",
+                    "name": "User Group",
+                    "dataType": "STRING",
+                    "title": "User Group Permission"
+                  }
+                },
+                "invalid_value_format": {
+                  "summary": "Invalid value format (must be uppercase)",
+                  "description": "The 'value' field must use uppercase characters only.",
+                  "value": {
+                    "key": "USER-GROUP",
+                    "value": "admin:all",
+                    "isParameter": true,
+                    "isRequired": false,
+                    "isDisplay": true,
+                    "category": "subject",
+                    "group": "ACCESS_CONTROL",
+                    "name": "User Group",
+                    "dataType": "STRING",
+                    "title": "User Group Permission"
+                  }
+                },
+                "duplicate_key": {
+                  "summary": "Duplicate key conflict",
+                  "description": "Multiple attributes with the same key were submitted in one request, causing a conflict.",
+                  "value": [
+                    {
+                      "key": "USER-GROUP",
+                      "value": "ADMIN:ALL",
+                      "isParameter": true,
+                      "isRequired": false,
+                      "isDisplay": true,
+                      "category": "subject",
+                      "group": "ACCESS_CONTROL",
+                      "name": "User Group",
+                      "dataType": "STRING",
+                      "title": "User Group Permission"
+                    },
+                    {
+                      "key": "USER-GROUP",
+                      "value": "ADMIN:READ",
+                      "isParameter": true,
+                      "isRequired": false,
+                      "isDisplay": true,
+                      "category": "subject",
+                      "group": "ACCESS_CONTROL",
+                      "name": "User Group",
+                      "dataType": "STRING",
+                      "title": "User Group Permission"
+                    }
+                  ]
+                },
+                "invalid_dataType": {
+                  "summary": "Invalid data type value",
+                  "description": "The 'dataType' field must be one of STRING, NUMBER, BOOLEAN, or DATE.",
+                  "value": {
+                    "key": "USER-GROUP",
+                    "value": "ADMIN:ALL",
+                    "isParameter": true,
+                    "isRequired": false,
+                    "isDisplay": true,
+                    "category": "subject",
+                    "group": "ACCESS_CONTROL",
+                    "name": "User Group",
+                    "dataType": "ARRAY",
+                    "title": "User Group Permission"
+                  }
+                },
+                "empty_request_body": {
+                  "summary": "Empty request body",
+                  "description": "The request body is empty and missing all required fields.",
+                  "value": {}
+                }
+              }
+            }
+          }
+        },
         "responses": {
-          "200": {
-            "description": "Success",
+          "201": {
+            "description": "Created - Attribute successfully created",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 201,
+                    "message": "Created",
+                    "bizErrorCode": "00000",
+                    "bizErrorMessage": "Attribute has been successfully created."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid or malformed input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 400,
+                    "message": "Bad Request",
+                    "bizErrorCode": "20001",
+                    "bizErrorMessage": "The provided attribute payload format is invalid or missing required fields."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid authentication credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 401,
+                    "message": "Unauthorized",
+                    "bizErrorCode": "40001",
+                    "bizErrorMessage": "Authentication token is missing, invalid, or expired."
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Duplicate or inconsistent attribute definition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 409,
+                    "message": "Conflict",
+                    "bizErrorCode": "40002",
+                    "bizErrorMessage": "An attribute with the same key already exists or conflicts with an existing definition."
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error - Unexpected processing failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 500,
+                    "message": "Internal Server Error",
+                    "bizErrorCode": "50000",
+                    "bizErrorMessage": "An unexpected error occurred while processing the request."
+                  }
                 }
               }
             }
@@ -1367,15 +1989,170 @@
       },
       "get": {
         "tags": ["Authorization / ABAC"],
-        "summary": "List Attributes",
-        "description": "Retrieve all ABAC attributes defined in the system.",
+        "summary": "Retrieve all ABAC attributes available in the system (Admin access required).",
+        "description": "Retrieve all ABAC attributes defined in the system. The process works as follows:\n\n1. **Receive Tokens via Headers**:\n   - Client must include `Authorization: Bearer <access_token>` and `Refresh-Token: <uuid>` headers.\n   - Tokens must belong to an authenticated session with Admin privileges.\n\n2. **Validate Tokens**:\n   - Verify that access token is valid, not expired, and properly signed.\n   - Ensure that the session has sufficient privileges (Admin role required).\n\n3. **Fetch Attributes**:\n   - Query the ABAC attribute store for all defined attributes.\n   - Include metadata fields like `key`, `value`, `isParameter`, `isRequired`, `isDisplay`, `category`, `group`, `name`, `dataType`, `title`, and `description`.\n\n4. **Audit Logging**:\n   - Log the attribute retrieval action for auditing and compliance.\n\n5. **Respond to Client**:\n   - Return a structured JSON containing `status` and `data` array of attributes.\n\n6. **Error Handling**:\n   - `401`: Unauthorized – missing, invalid, or expired token.\n   - `403`: Forbidden – insufficient privileges (Admin access required).\n   - `404`: Not Found – no attributes found.\n   - `500`: Internal Server Error – unexpected failure while retrieving attributes.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Standard OAuth 2.0 Bearer token used for access token introspection (e.g., 'Bearer eyJhbGciOi...').",
+            "schema": {
+              "type": "string",
+              "pattern": "^Bearer\\s[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$"
+            },
+            "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          {
+            "name": "Refresh-Token",
+            "in": "header",
+            "required": true,
+            "description": "UUID Refresh Token associated with the Access Token for validation.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Success - Retrieved list of ABAC attributes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "$ref": "#/components/schemas/CommonResponse" },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/AttributeDTO" }
+                    }
+                  }
+                },
+                "example": {
+                  "status": {
+                    "code": 200,
+                    "message": "OK",
+                    "bizErrorCode": "00000",
+                    "bizErrorMessage": "Attributes retrieved successfully."
+                  },
+                  "data": [
+                    {
+                      "id": "550e8400-e29b-41d4-a716-446655440000",
+                      "key": "USER-GROUP",
+                      "value": "ADMIN:ALL",
+                      "isParameter": true,
+                      "isRequired": false,
+                      "isDisplay": true,
+                      "category": "subject",
+                      "group": "ACCESS_CONTROL",
+                      "name": "User Group",
+                      "dataType": "STRING",
+                      "title": "User Group Permission",
+                      "description": "Defines the permission scope of a user group for ABAC decisions."
+                    },
+                    {
+                      "id": "660e8400-a21b-42d9-b617-447755440999",
+                      "key": "RESOURCE-TYPE",
+                      "value": "DOCUMENT:CONFIDENTIAL",
+                      "isParameter": false,
+                      "isRequired": true,
+                      "isDisplay": true,
+                      "category": "resource",
+                      "group": "DOCUMENT_CONTROL",
+                      "name": "Resource Type",
+                      "dataType": "STRING",
+                      "title": "Document Resource Classification",
+                      "description": "Defines the classification level of a document resource."
+                    },
+                    {
+                      "id": "770e8400-c45a-49d3-c811-556655441234",
+                      "key": "LOGIN-LOCATION",
+                      "value": "THAILAND:BANGKOK",
+                      "isParameter": true,
+                      "isRequired": false,
+                      "isDisplay": false,
+                      "category": "environment",
+                      "group": "SECURITY_CONTEXT",
+                      "name": "Login Location",
+                      "dataType": "STRING",
+                      "title": "User Login Location",
+                      "description": "Captures the geographical login context for ABAC evaluation."
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid token",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 401,
+                    "message": "Unauthorized",
+                    "bizErrorCode": "40001",
+                    "bizErrorMessage": "Authentication token is missing, invalid, or expired."
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient privileges (Admin access required)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 403,
+                    "message": "Forbidden",
+                    "bizErrorCode": "40005",
+                    "bizErrorMessage": "User does not have permission to view attribute list (admin only)."
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - The specified attribute or related resource was not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": "404",
+                    "message": "Not Found",
+                    "bizErrorCode": "40004",
+                    "bizErrorMessage": "The requested attribute or related resource could not be found."
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 500,
+                    "message": "Internal Server Error",
+                    "bizErrorCode": "50000",
+                    "bizErrorMessage": "Unexpected error occurred while retrieving attributes."
+                  }
                 }
               }
             }
@@ -1386,15 +2163,207 @@
     "/api/v1/attributes/{id}": {
       "put": {
         "tags": ["Authorization / ABAC"],
-        "summary": "Update Attribute",
-        "description": "Update the definition or value of an existing ABAC attribute.",
+        "summary": "Update an existing ABAC attribute with new definition or value (Admin access required).",
+        "description": "Update an existing ABAC attribute for authorization evaluation. The process works as follows:\n\n1. **Receive Tokens via Headers**:\n   - Client must include `Authorization: Bearer <access_token>` and `Refresh-Token: <uuid>` headers.\n   - Tokens must belong to an authenticated session with Admin privileges.\n\n2. **Receive Update Data**:\n   - Client sends a PUT request with the updated attribute details including `key`, `value`, and metadata fields (`isParameter`, `isRequired`, `isDisplay`, `category`, `group`, `name`, `dataType`, `title`, `description`).\n\n3. **Validate Input**:\n   - `key` and `value` are required.\n   - Ensure `value` is uppercase and matches allowed patterns.\n   - Check metadata fields for correct types and allowed values.\n\n4. **Check Attribute Existence**:\n   - Verify that the attribute ID exists.\n   - Ensure there are no conflicts with existing attribute keys.\n\n5. **Persist Changes**:\n   - Update the attribute record in the database.\n   - Maintain data integrity and consistency.\n\n6. **Audit Logging**:\n   - Log the update action for auditing and compliance purposes.\n\n7. **Respond to Client**:\n   - Return `200 OK` with a structured JSON containing `status`.\n\n8. **Error Handling**:\n   - `400`: Invalid input format or missing required fields.\n   - `401`: Unauthorized – invalid or expired tokens.\n   - `403`: Forbidden – insufficient privileges (Admin required).\n   - `404`: Not Found – attribute ID does not exist.\n   - `409`: Conflict – duplicate or inconsistent attribute key.\n   - `500`: Internal server error during update.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Bearer token for authorization (Admin required).",
+            "schema": {
+              "type": "string",
+              "pattern": "^Bearer\\s[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$"
+            },
+            "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          {
+            "name": "Refresh-Token",
+            "in": "header",
+            "required": true,
+            "description": "UUID Refresh Token associated with the Access Token for validation.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique identifier of the attribute to update.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttributeDTO"
+              },
+              "examples": {
+                "success": {
+                  "summary": "Valid update payload",
+                  "value": {
+                    "key": "USER-GROUP",
+                    "value": "ADMIN:READ",
+                    "isParameter": true,
+                    "isRequired": false,
+                    "isDisplay": true,
+                    "category": "subject",
+                    "group": "ACCESS_CONTROL",
+                    "name": "User Group",
+                    "dataType": "STRING",
+                    "title": "User Group Permission",
+                    "description": "Updated access scope for user group."
+                  }
+                },
+                "invalid_format": {
+                  "summary": "Invalid value format",
+                  "value": {
+                    "key": "USER-GROUP",
+                    "value": "admin:read"
+                  }
+                },
+                "missing_field": {
+                  "summary": "Missing required key",
+                  "value": {
+                    "value": "ADMIN:READ"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Success - Attribute updated successfully",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 200,
+                    "message": "OK",
+                    "bizErrorCode": null,
+                    "bizErrorMessage": null
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid payload format or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 400,
+                    "message": "Bad Request",
+                    "bizErrorCode": "40010",
+                    "bizErrorMessage": "Invalid input data or missing required fields."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 401,
+                    "message": "Unauthorized",
+                    "bizErrorCode": "40011",
+                    "bizErrorMessage": "Missing or invalid authentication token."
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient privileges (Admin required)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 403,
+                    "message": "Forbidden",
+                    "bizErrorCode": "40012",
+                    "bizErrorMessage": "User does not have permission to update attributes."
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Attribute ID not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 404,
+                    "message": "Not Found",
+                    "bizErrorCode": "40013",
+                    "bizErrorMessage": "The specified attribute was not found."
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Duplicate or inconsistent attribute key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 409,
+                    "message": "Conflict",
+                    "bizErrorCode": "40014",
+                    "bizErrorMessage": "Conflicting attribute key or concurrent update detected."
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error - Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 500,
+                    "message": "Internal Server Error",
+                    "bizErrorCode": "50001",
+                    "bizErrorMessage": "Unexpected error occurred while updating the attribute."
+                  }
                 }
               }
             }
@@ -1403,15 +2372,119 @@
       },
       "delete": {
         "tags": ["Authorization / ABAC"],
-        "summary": "Delete Attribute",
-        "description": "Remove an attribute from the ABAC system.",
+        "summary": "Delete an existing ABAC attribute by ID (Admin access required).",
+        "description": "Remove an existing ABAC attribute from the system. The process works as follows:\n\n1. **Receive Tokens via Headers**:\n   - Client must include `Authorization: Bearer <access_token>` and `Refresh-Token: <uuid>` headers.\n   - Tokens must belong to an authenticated session with Admin privileges.\n\n2. **Validate Tokens**:\n   - Verify that the access token is valid, not expired, and properly signed.\n   - Ensure the session has sufficient privileges (Admin role required).\n\n3. **Check Attribute Existence**:\n   - Verify that the attribute ID exists in the system.\n\n4. **Delete Attribute**:\n   - Remove the attribute record from the database.\n   - Maintain data integrity and audit trail.\n\n5. **Audit Logging**:\n   - Log the deletion action for auditing and compliance purposes.\n\n6. **Respond to Client**:\n   - Return `200 OK` with a structured JSON containing `status` confirming deletion.\n\n7. **Error Handling**:\n   - `401`: Unauthorized – missing or invalid tokens.\n   - `403`: Forbidden – insufficient privileges (Admin required).\n   - `404`: Not Found – attribute ID does not exist.\n   - `500`: Internal server error during deletion.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Bearer token for authorization (Admin required).",
+            "schema": {
+              "type": "string",
+              "pattern": "^Bearer\\s[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$"
+            },
+            "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "UUID of the attribute to be deleted.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Success - Attribute deleted successfully",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 200,
+                    "message": "OK",
+                    "bizErrorCode": "00000",
+                    "bizErrorMessage": "Attribute deleted successfully."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 401,
+                    "message": "Unauthorized",
+                    "bizErrorCode": "40011",
+                    "bizErrorMessage": "Missing or invalid authentication token."
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient privileges",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 403,
+                    "message": "Forbidden",
+                    "bizErrorCode": "40012",
+                    "bizErrorMessage": "User does not have permission to delete attributes."
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Attribute not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 404,
+                    "message": "Not Found",
+                    "bizErrorCode": "40013",
+                    "bizErrorMessage": "The specified attribute was not found."
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error - Unexpected error during deletion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "status": {
+                    "code": 500,
+                    "message": "Internal Server Error",
+                    "bizErrorCode": "50002",
+                    "bizErrorMessage": "Unexpected error occurred while deleting the attribute."
+                  }
                 }
               }
             }
@@ -1419,79 +2492,7 @@
         }
       }
     },
-    "/api/v1/attributes/groups": {
-      "post": {
-        "tags": ["Authorization / ABAC"],
-        "summary": "Create Attribute Group",
-        "description": "Create a new group of attributes for ABAC policy grouping.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/attributes/groups/{id}": {
-      "get": {
-        "tags": ["Authorization / ABAC"],
-        "summary": "Get Attribute Group Details",
-        "description": "Retrieve details of a specific attribute group.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": ["Authorization / ABAC"],
-        "summary": "Update Attribute Group",
-        "description": "Update the definition of an existing attribute group.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": ["Authorization / ABAC"],
-        "summary": "Delete Attribute Group",
-        "description": "Remove an attribute group from the ABAC system.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/users": {
+    "/api/v1/users": {
       "get": {
         "tags": ["User Management"],
         "summary": "List Users",
@@ -1536,7 +2537,7 @@
         }
       }
     },
-    "/users/{userId}": {
+    "/api/v1/users/{userId}": {
       "get": {
         "tags": ["User Management"],
         "summary": "Get User Details",
@@ -1589,7 +2590,7 @@
         }
       }
     },
-    "/sessions": {
+    "/api/v1/sessions": {
       "get": {
         "tags": ["Session Management"],
         "summary": "List Active Sessions",
@@ -1608,7 +2609,7 @@
         }
       }
     },
-    "/sessions/{sessionId}": {
+    "/api/v1/sessions/{sessionId}": {
       "delete": {
         "tags": ["Session Management"],
         "summary": "Invalidate Session",
@@ -1627,7 +2628,7 @@
         }
       }
     },
-    "/federation/external-idp": {
+    "/api/v1/federation/external-idp": {
       "get": {
         "tags": ["Federation / External IdP"],
         "summary": "List External IdPs",
@@ -1663,7 +2664,7 @@
         }
       }
     },
-    "/federation/external-idp/{idpId}": {
+    "/api/v1/federation/external-idp/{idpId}": {
       "get": {
         "tags": ["Federation / External IdP"],
         "summary": "Get External IdP Details",
@@ -1716,7 +2717,7 @@
         }
       }
     },
-    "/infrastructure/health": {
+    "/api/v1/infrastructure/health": {
       "get": {
         "tags": ["Infrastructure / DevOps"],
         "summary": "Health Check",
@@ -1735,7 +2736,7 @@
         }
       }
     },
-    "/infrastructure/metrics": {
+    "/api/v1/infrastructure/metrics": {
       "get": {
         "tags": ["Infrastructure / DevOps"],
         "summary": "Service Metrics",
@@ -2021,6 +3022,93 @@
             "sid must be a valid UUID",
             "firstName and lastName are required",
             "dateOfBirth must follow ISO 8601 date format"
+          ]
+        }
+      },
+      "AttributeDTO": {
+        "type": "object",
+        "description": "Represents a key-value attribute with metadata used in ABAC or user context.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier of the attribute record.",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[A-Za-z0-9_]+$",
+            "description": "The attribute key name (system identifier).",
+            "example": "USER-GROUP"
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[A-Z0-9_:]+$",
+            "description": "The UPPERCASE value assigned to the attribute.",
+            "example": "ADMIN:ALL"
+          },
+          "isParameter": {
+            "type": "boolean",
+            "description": "Indicates whether this attribute is used as a dynamic input parameter for ABAC evaluation.",
+            "example": true
+          },
+          "isRequired": {
+            "type": "boolean",
+            "description": "Defines if this attribute must be provided during ABAC evaluation.",
+            "example": false
+          },
+          "isDisplay": {
+            "type": "boolean",
+            "description": "Specifies whether this attribute should be visible in UI or reports.",
+            "example": true
+          },
+          "category": {
+            "type": "string",
+            "description": "Defines the logical ABAC category (e.g., subject, resource, environment).",
+            "example": "subject"
+          },
+          "group": {
+            "type": "string",
+            "description": "Logical grouping or tag for this attribute.",
+            "example": "ACCESS_CONTROL"
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name of the attribute.",
+            "example": "User Group"
+          },
+          "dataType": {
+            "type": "string",
+            "description": "Data type of the attribute (e.g., STRING, NUMBER, BOOLEAN, ENUM).",
+            "example": "STRING"
+          },
+          "title": {
+            "type": "string",
+            "description": "Display title for this attribute, used in UI or documentation.",
+            "example": "User Group Permission"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed explanation of the attribute purpose or logic.",
+            "example": "Defines the permission scope of a user group for ABAC decisions."
+          }
+        },
+        "required": ["key", "value"],
+        "additionalProperties": false,
+        "x-data-dictionary": {
+          "field-type": "attribute-definition",
+          "business-meaning": "Represents a system attribute with metadata used for ABAC policy evaluation or contextual authorization.",
+          "sensitivity": "internal",
+          "retention-policy": "permanent",
+          "business-rules": [
+            "Attributes must have unique keys within their category or group.",
+            "Values must be uppercase and may include colons or underscores.",
+            "Optional metadata fields like 'category', 'group', and 'title' enhance traceability and UI rendering.",
+            "Boolean flags (isParameter, isRequired, isDisplay) determine runtime evaluation and visibility behavior."
           ]
         }
       },
