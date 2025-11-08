@@ -1687,6 +1687,106 @@
         "tags": ["Authorization / ABAC"],
         "summary": "Create Policy",
         "description": "Create a new ABAC policy definition for access control.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Standard OAuth 2.0 Bearer token used for access token introspection (e.g., 'Bearer eyJhbGciOi...').",
+            "schema": {
+              "type": "string",
+              "pattern": "^Bearer\\s[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$"
+            },
+            "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          {
+            "name": "Refresh-Token",
+            "in": "header",
+            "required": true,
+            "description": "UUID Refresh Token associated with the Access Token for validation.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyDTO"
+              },
+              "examples": {
+                "success": {
+                  "summary": "Valid policy definition with structured conditionLogic",
+                  "description": "A valid example of a new ABAC policy with structured condition logic.",
+                  "value": {
+                    "code": "POLICY_USER_READ",
+                    "effect": "ALLOW",
+                    "action": "USER:READ",
+                    "resource": "USER_PROFILE",
+                    "conditionLogic": {
+                      "logic": "AND",
+                      "conditions": [
+                        {
+                          "attributeId": "USER-GROUP",
+                          "operator": "EQUALS",
+                          "value": "ADMIN"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "missing_required_field": {
+                  "summary": "Missing required field",
+                  "description": "The 'code' field is missing, which is required to identify the policy.",
+                  "value": {
+                    "effect": "ALLOW",
+                    "action": "USER:READ",
+                    "resource": "USER_PROFILE",
+                    "conditionLogic": {
+                      "logic": "AND",
+                      "conditions": [
+                        {
+                          "attributeId": "USER-GROUP",
+                          "operator": "EQUALS",
+                          "value": "ADMIN"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "invalid_effect_value": {
+                  "summary": "Invalid effect value",
+                  "description": "The 'effect' field must be either 'ALLOW' or 'DENY'.",
+                  "value": {
+                    "code": "POLICY_USER_READ",
+                    "effect": "PERMIT",
+                    "action": "USER:READ",
+                    "resource": "USER_PROFILE",
+                    "conditionLogic": {
+                      "logic": "AND",
+                      "conditions": [
+                        {
+                          "attributeId": "USER-GROUP",
+                          "operator": "EQUALS",
+                          "value": "ADMIN"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "empty_request_body": {
+                  "summary": "Empty request body",
+                  "description": "The request body is empty and missing all required fields.",
+                  "value": {}
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success",
@@ -3111,6 +3211,40 @@
             "Boolean flags (isParameter, isRequired, isDisplay) determine runtime evaluation and visibility behavior."
           ]
         }
+      },
+      "PolicyDTO": {
+        "type": "object",
+        "description": "Represents an ABAC policy used for authorization evaluation.",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Unique code identifying the policy.",
+            "example": "POLICY_USER_READ"
+          },
+          "effect": {
+            "type": "string",
+            "enum": ["ALLOW", "DENY"],
+            "description": "The effect of the policy.",
+            "example": "ALLOW"
+          },
+          "action": {
+            "type": "string",
+            "description": "The action(s) this policy governs.",
+            "example": "USER:READ"
+          },
+          "resource": {
+            "type": "string",
+            "description": "The resource(s) this policy applies to.",
+            "example": "USER_PROFILE"
+          },
+          "conditionLogic": {
+            "type": "string",
+            "description": "Optional logic expression or condition for policy evaluation (JSON or textual format).",
+            "example": "{\"if\":\"USER-GROUP=='ADMIN'\"}"
+          }
+        },
+        "required": ["code", "effect", "action", "resource"],
+        "additionalProperties": false
       },
       "LoginRequest": {
         "type": "object",
